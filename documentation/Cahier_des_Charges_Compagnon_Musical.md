@@ -19,13 +19,24 @@ Chaque chanson du répertoire est une entité unique qui regroupe :
 * Enchaînement fluide d'un morceau à un autre, peu importe que la ressource principale soit un PDF ou un lien web.
 
 ## 4. Fonctionnalités Mains Libres (Commandes Vocales "Hors-Jeu")
-L'écoute s'active uniquement lors des moments de pause (pas de détection pendant le jeu musical pour éviter les erreurs).
-* **Contrôle du lecteur :** *"Suivant"*, *"Précédent"*.
-* **Contrôle de l'écran :** *"Descends"* (scrolling), *"Monte"*, *"Haut"* (retour au début).
-* **Contrôle du playback audio (YouTube/Spotify) :** *"Play"*, *"Pause"*, *"Recule"* (retour de 10s), *"Recommence"*.
+L'écoute s'active uniquement lors des moments de pause (pas de détection pendant le jeu musical pour éviter les erreurs). L'utilisateur peut configurer la langue des commandes vocales dans les réglages de l'application (Français ou Anglais).
+
+* **Contrôle du lecteur :** 
+  * Français : *"Suivant"*, *"Précédent"*
+  * Anglais : *"Next"*, *"Previous"* (ou *"Back"*)
+* **Contrôle de l'écran (défilement) :** 
+  * Français : *"Descends"*, *"Monte"*, *"Haut"* (retour au début)
+  * Anglais : *"Down"*, *"Up"*, *"Top"*
+* **Contrôle du playback audio (YouTube/Spotify) :** 
+  * Français : *"Play"*, *"Pause"*, *"Recule"* (retour de 10s), *"Recommence"*
+  * Anglais : *"Play"*, *"Pause"*, *"Rewind"* ou *"Back"*, *"Restart"*
 * **Outils intégrés :**
-  * Métronome : *"Métronome [BPM]"*, *"Stop métronome"*.
-  * Accordeur : *"Accordeur"* (activation du visuel).
+  * Métronome : 
+    * Français : *"Métronome [BPM]"* (ex: "Métronome 120"), *"Stop métronome"*
+    * Anglais : *"Metronome [BPM]"*, *"Stop metronome"* (ou *"Metronome stop"*)
+  * Accordeur : 
+    * Français : *"Accordeur"* (activation du visuel)
+    * Anglais : *"Tuner"*
 
 ## 5. Outils Vocaux et Intégration Audio
 * **Pitch Tracker (Outil de chant) :** Intégration du module existant basé sur la *Web Audio API*. Analyse de la fréquence de la voix en temps réel.

@@ -6,8 +6,8 @@ Ce document regroupe les directives techniques à suivre pour le développement 
 * Garder les différentes parties de l'application les plus **découplées possible**.
 * Utiliser **Vue 3** (Composition API) avec TypeScript :
   * **Composants d'Interface (SFC - Single File Components)** : Fichiers `.vue` pour la structure, le style Tailwind et la réactivité locale.
-  * **Composables / Services (TypeScript)** : Fonctions réutilisables typées (ex: `useAudio.ts` pour la Web Audio API, `useSpeech.ts` pour la reconnaissance vocale) pour isoler complètement la logique métier de l'affichage.
-  * **Gestion d'État (Store réactif)** : Utiliser un état global réactif simple (via `reactive` ou Pinia si nécessaire, mais un simple store réactif Vue suffit pour la simplicité) pour gérer les morceaux et playlists.
+  * **Composables / Services (TypeScript)** : Fonctions réutilisables typées (ex: `useAudio.ts` pour la Web Audio API, `useSpeech.ts` pour la reconnaissance vocale supportant le français et l'anglais) pour isoler complètement la logique métier de l'affichage.
+  * **Gestion d'État (Store réactif)** : Utiliser un état global réactif simple pour gérer les morceaux, les playlists, et les préférences de l'utilisateur (telles que la langue des commandes vocales : fr-FR ou en-US).
 
 ## 2. Simplicité du Code
 * Écrire le code le plus **simple et lisible possible** (KISS - Keep It Simple, Stupid).
