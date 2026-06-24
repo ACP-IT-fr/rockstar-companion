@@ -423,6 +423,7 @@ if (!SpeechRecognition) {
       
       function normalize(text) {
         let normalized = text.toLowerCase()
+                   .replace(/[\u2019’]/g, "'")
                    .replace(/-/g, ' ')
                    .trim();
         
@@ -669,9 +670,9 @@ if (!SpeechRecognition) {
     let isSuccess = true;
     const cmd = command.toLowerCase().trim();
 
-    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas'];
+    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'play', 'lecture', 'joue', 'lancer', 'démarrer', 'c\'est parti', 'c’est parti', 'commence', 'joue la chanson', 'resume', 'start music', 'play song'];
     const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
-    const pauseVariants = ['pause', 'stop scroll', 'arrête le scroll', 'arrete le scroll', 'fige', 'bloque', 'suspend'];
+    const pauseVariants = ['pause', 'pose', 'stop scroll', 'arrête le scroll', 'arrete le scroll', 'fige', 'bloque', 'suspend'];
     const sleepVariants = ['stop', 'arrête', 'arrete', 'arrêt', 'arret', 'stoppe', 'stopper', 'stopp', 'dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
     const topVariants = ['début', 'debut', 'tout en haut', 'go to top', 'top', 'reviens', 'commencement'];
     const searchPlaylistPrefixes = [

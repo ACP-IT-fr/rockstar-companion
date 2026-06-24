@@ -11,11 +11,10 @@ export const COMMAND_DICTIONARY: Record<'fr-FR' | 'en-US', CommandDefinition[]> 
   'fr-FR': [
     { action: 'next', keywords: ['suivant', 'suivante', 'chanson suivante', 'morceau suivant'] },
     { action: 'prev', keywords: ['précédent', 'précédente', 'retour', 'chanson précédente', 'morceau précédent'] },
-    { action: 'scroll-down', keywords: ['descends', 'descendre', 'plus bas', 'défile bas'] },
+    { action: 'scroll-down', keywords: ['descends', 'descendre', 'plus bas', 'défile bas', 'play', 'lecture', 'joue', 'lancer', 'démarrer', 'c\'est parti', 'commence', 'joue la chanson'] },
     { action: 'scroll-up', keywords: ['monte', 'monter', 'plus haut', 'défile haut'] },
     { action: 'scroll-top', keywords: ['haut', 'début', 'tout en haut', 'revenir en haut'] },
-    { action: 'play', keywords: ['play', 'lecture', 'joue', 'lancer', 'démarrer'] },
-    { action: 'pause', keywords: ['pause', 'stop lecture', 'arrêter musique'] },
+    { action: 'pause', keywords: ['pause', 'pose', 'stop lecture', 'arrêter musique'] },
     { action: 'rewind', keywords: ['recule', 'reculer', 'retour 10 secondes', 'reculer de 10 secondes'] },
     { action: 'restart', keywords: ['recommence', 'recommencer', 'depuis le début', 'rembobiner'] },
     { action: 'metronome-stop', keywords: ['stop métronome', 'arrêter métronome', 'métronome stop', 'couper métronome'] },
@@ -25,10 +24,9 @@ export const COMMAND_DICTIONARY: Record<'fr-FR' | 'en-US', CommandDefinition[]> 
   'en-US': [
     { action: 'next', keywords: ['next', 'next song', 'next track', 'forward'] },
     { action: 'prev', keywords: ['previous', 'prev', 'back', 'previous song', 'previous track'] },
-    { action: 'scroll-down', keywords: ['scroll down', 'down', 'page down'] },
+    { action: 'scroll-down', keywords: ['scroll down', 'down', 'page down', 'play', 'resume', 'start music', 'play song'] },
     { action: 'scroll-up', keywords: ['scroll up', 'up', 'page up'] },
     { action: 'scroll-top', keywords: ['top', 'scroll to top', 'start of page'] },
-    { action: 'play', keywords: ['play', 'resume', 'start music', 'play song'] },
     { action: 'pause', keywords: ['pause', 'stop', 'freeze', 'stop music'] },
     { action: 'rewind', keywords: ['rewind', 'go back', 'back 10 seconds'] },
     { action: 'restart', keywords: ['restart', 'start over', 'replay'] },
@@ -43,7 +41,8 @@ export function useSpeech() {
   const lastRecognizedText = ref('');
   const errorMsg = ref('');
   
-  let recognition: SpeechRecognition | null = null;
+  let explicitlyStopped = false;
+  let recognition: any = null;
   let onCommandCallback: ((action: string, arg?: any) => void) | null = null;
 
   const initRecognition = (locale: 'fr-FR' | 'en-US') => {
@@ -80,9 +79,10 @@ export function useSpeech() {
     rec.onend = () => {
       isListening.value = false;
       // Auto-restart if we want continuous listening and didn't stop explicitly
-      if (recognition && isListening.value) {
+      if (recognition && !explicitlyStopped) {
         try {
           recognition.start();
+          isListening.value = true;
         } catch (e) {
           console.error(e);
         }
@@ -105,6 +105,9 @@ export function useSpeech() {
   const processSpeechText = (text: string, locale: 'fr-FR' | 'en-US') => {
     if (!onCommandCallback) return;
 
+    // Normalize curly apostrophes to straight apostrophes
+    const normalizedText = text.replace(/[\u2019’]/g, "'");
+
     // 1. Check for metronome with BPM (dynamic command)
     // French match: "métronome 120"
     // English match: "metronome 120"
@@ -112,10 +115,11 @@ export function useSpeech() {
       ? /m[eé]tronome\s+(\d+)/i 
       : /metronome\s+(\d+)/i;
       
-    const match = text.match(metronomeRegex);
+    const match = normalizedText.match(metronomeRegex);
     if (match && match[1]) {
       const bpmValue = parseInt(match[1], 10);
       if (bpmValue >= 40 && bpmValue <= 240) {
+        console.log(`Matched dynamic metronome command: ${bpmValue} BPM`);
         onCommandCallback('metronome-start-bpm', bpmValue);
         return;
       }
@@ -125,8 +129,10 @@ export function useSpeech() {
     const dict = COMMAND_DICTIONARY[locale];
     for (const cmd of dict) {
       for (const keyword of cmd.keywords) {
+        const normalizedKeyword = keyword.replace(/[\u2019’]/g, "'");
         // Use inclusive matching, e.g. if voice input contains the keyword, fire action
-        if (text.includes(keyword)) {
+        if (normalizedText.includes(normalizedKeyword)) {
+          console.log(`Matched command "${cmd.action}" for keyword "${keyword}" from text "${text}"`);
           onCommandCallback(cmd.action);
           return;
         }
@@ -135,6 +141,7 @@ export function useSpeech() {
   };
 
   const startListening = (locale: 'fr-FR' | 'en-US', callback: (action: string, arg?: any) => void) => {
+    explicitlyStopped = false;
     onCommandCallback = callback;
     
     // Re-initialize if language changed
@@ -159,6 +166,7 @@ export function useSpeech() {
   };
 
   const stopListening = () => {
+    explicitlyStopped = true;
     if (recognition && isListening.value) {
       recognition.stop();
       isListening.value = false;
