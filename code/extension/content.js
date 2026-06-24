@@ -25,6 +25,8 @@ if (!SpeechRecognition) {
 
   let scrollSpeed = 1; // Default speed 1
   let lastSpeedChange = 0;
+  let wakeWord = 'Rockstar';
+  let wakeWordLower = 'rockstar';
   const storageKey = 'ug_voice_speed_' + window.location.pathname;
   const savedSpeed = localStorage.getItem(storageKey);
   if (savedSpeed) {
@@ -179,15 +181,33 @@ if (!SpeechRecognition) {
     }
   }
 
+  function updateUIForWakeWord() {
+    if (isListening && !isAwake) {
+      statusSpan.innerText = `Listening (Say ${wakeWord}...)`;
+      btn.title = `Listening for "${wakeWord}"... Click to turn off`;
+    }
+  }
+
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
-    chrome.storage.sync.get(['chord7th', 'chordSus'], (result) => {
+    chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord'], (result) => {
       buildChordTemplates(result.chord7th || false, result.chordSus || false);
+      if (result.wakeWord !== undefined) {
+        wakeWord = result.wakeWord.trim() || 'Rockstar';
+        wakeWordLower = wakeWord.toLowerCase();
+        updateUIForWakeWord();
+      }
     });
 
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'sync') {
-        chrome.storage.sync.get(['chord7th', 'chordSus'], (result) => {
+        chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord'], (result) => {
           buildChordTemplates(result.chord7th || false, result.chordSus || false);
+          const oldWakeWord = wakeWord;
+          wakeWord = (result.wakeWord !== undefined ? result.wakeWord.trim() : 'Rockstar') || 'Rockstar';
+          wakeWordLower = wakeWord.toLowerCase();
+          if (oldWakeWord !== wakeWord) {
+            updateUIForWakeWord();
+          }
         });
       }
     });
@@ -419,8 +439,8 @@ if (!SpeechRecognition) {
         recognition.start();
         isListening = true;
         btn.classList.add('listening');
-        statusSpan.innerText = 'Listening (Say Rockstar...)';
-        btn.title = 'Listening for "Rockstar"... Click to turn off';
+        statusSpan.innerText = `Listening (Say ${wakeWord}...)`;
+        btn.title = `Listening for "${wakeWord}"... Click to turn off`;
       } catch (e) {
         console.error("Speech recognition could not start", e);
       }
@@ -453,7 +473,7 @@ if (!SpeechRecognition) {
     isAwake = true;
     btn.classList.add('awake');
     statusSpan.innerText = "À l'écoute";
-    showFeedback("🎸 Rockstar is listening...", true);
+    showFeedback(`🎸 ${wakeWord} is listening...`, true);
     clearTimeout(awakeTimeout);
     awakeTimeout = setTimeout(() => {
       goToSleep();
@@ -464,7 +484,7 @@ if (!SpeechRecognition) {
     isAwake = false;
     btn.classList.remove('awake');
     statusSpan.innerText = 'Veille';
-    showFeedback("💤 Rockstar is sleeping...", true);
+    showFeedback(`💤 ${wakeWord} is sleeping...`, true);
   }
 
   recognition.onend = () => {
@@ -487,12 +507,21 @@ if (!SpeechRecognition) {
     let interimRaw = '';
     
     function normalize(text) {
-      return text.toLowerCase()
+      let normalized = text.toLowerCase()
                  .replace(/-/g, ' ') // Remove hyphens that break commands
-                 .replace(/rock\s*star/g, 'rockstar') // Unify wake word
-                 .replace(/roxstar/g, 'rockstar')
-                 .replace(/rock's tar/g, 'rockstar')
                  .trim();
+      
+      if (wakeWordLower === 'rockstar') {
+        normalized = normalized.replace(/rock\s*star/g, 'rockstar') // Unify wake word
+                               .replace(/roxstar/g, 'rockstar')
+                               .replace(/rock's tar/g, 'rockstar');
+      } else {
+        const escaped = wakeWordLower.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const pattern = escaped.replace(/\s+/g, '\\s*');
+        const regex = new RegExp(pattern, 'g');
+        normalized = normalized.replace(regex, wakeWordLower);
+      }
+      return normalized;
     }
 
     for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -501,13 +530,13 @@ if (!SpeechRecognition) {
       
       // Wake up early on interim results for instant feedback
       if (!isAwake) {
-        if (normalized.includes('rockstar')) {
+        if (normalized.includes(wakeWordLower)) {
           wakeUp();
         }
       }
 
       // Fast-track speed adjustments on interim results for instant response
-      if (isAwake || normalized.includes('rockstar')) {
+      if (isAwake || normalized.includes(wakeWordLower)) {
         const now = Date.now();
         if (now - lastSpeedChange > 500) {
           let changed = false;
@@ -547,10 +576,10 @@ if (!SpeechRecognition) {
         liveTextContainer.innerText = '';
         liveTextContainer.style.display = 'none';
 
-        if (finalTranscript.includes('rockstar')) {
+        if (finalTranscript.includes(wakeWordLower)) {
           // In case interim didn't catch it
           if (!isAwake) wakeUp();
-          finalTranscript = finalTranscript.replace('rockstar', '').trim();
+          finalTranscript = finalTranscript.replace(wakeWordLower, '').trim();
           if (finalTranscript.length > 0) {
             handleCommand(finalTranscript);
           }
@@ -578,7 +607,7 @@ if (!SpeechRecognition) {
         return;
       }
 
-      if (!isAwake && !normalizedInterim.includes('rockstar')) {
+      if (!isAwake && !normalizedInterim.includes(wakeWordLower)) {
         // Optionally don't show live text if not awake and not saying wake word
         liveTextContainer.style.display = 'none';
       } else {
