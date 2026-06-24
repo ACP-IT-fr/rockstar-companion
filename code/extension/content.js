@@ -8,6 +8,8 @@ if (!SpeechRecognition) {
   let isAutoStart = false;
   let awakeTimeout = null;
   let scrollInterval = null;
+  let scrollSpeed = 2;
+  let currentDirection = 0;
   const recognition = new SpeechRecognition();
   
   recognition.continuous = true;
@@ -183,6 +185,9 @@ if (!SpeechRecognition) {
     const scrollDownVariants = ['scroll down', 'descend', 'descends', 'dessin', 'descent', 'descente', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'descendre'];
     const scrollUpVariants = ['scroll up', 'monte', 'monter', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte', 'remonter'];
     const stopVariants = ['stop', 'arrête', 'arrete', 'arrêter', 'arreter', 'pause', 'halte', 'stoppe', 'stopper'];
+    const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere'];
+    const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis'];
+    const searchPlaylistPrefixes = ['playlist search ', 'search playlist ', 'cherche dans ma playlist ', 'cherche playlist ', 'trouve dans ma playlist '];
     const searchPrefixes = ['search for ', 'search ', 'cherche ', 'chercher ', 'trouve ', 'trouver ', 'find '];
 
     if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
@@ -194,16 +199,39 @@ if (!SpeechRecognition) {
     } else if (stopVariants.some(v => cmd === v || cmd.includes(v))) {
       stopScrolling();
       action = 'Stopping';
+    } else if (speedUpVariants.some(v => cmd === v || cmd.includes(v))) {
+      scrollSpeed = Math.min(scrollSpeed + 1, 10);
+      action = `Speeding up (Level ${scrollSpeed})`;
+    } else if (slowDownVariants.some(v => cmd === v || cmd.includes(v))) {
+      scrollSpeed = Math.max(scrollSpeed - 1, 1);
+      action = `Slowing down (Level ${scrollSpeed})`;
     } else {
       let isSearch = false;
-      for (const prefix of searchPrefixes) {
+      
+      // Try playlist search first to avoid overlapping with generic search
+      for (const prefix of searchPlaylistPrefixes) {
         if (cmd.startsWith(prefix)) {
           const query = cmd.substring(prefix.length).trim();
           if (query) {
-            searchUG(query);
-            action = `Searching for "${query}"`;
+            searchPlaylistUG(query);
+            action = `Searching playlist for "${query}"`;
             isSearch = true;
             break;
+          }
+        }
+      }
+
+      // If not playlist search, try generic search
+      if (!isSearch) {
+        for (const prefix of searchPrefixes) {
+          if (cmd.startsWith(prefix)) {
+            const query = cmd.substring(prefix.length).trim();
+            if (query) {
+              searchUG(query);
+              action = `Searching for "${query}"`;
+              isSearch = true;
+              break;
+            }
           }
         }
       }
@@ -219,9 +247,10 @@ if (!SpeechRecognition) {
 
   function startScrolling(direction) {
     stopScrolling();
+    currentDirection = direction;
     scrollInterval = setInterval(() => {
-      window.scrollBy(0, direction * 2);
-    }, 20); // 50 fps, 2 pixels per frame
+      window.scrollBy(0, currentDirection * scrollSpeed);
+    }, 20); // 50 fps
   }
 
   function stopScrolling() {
@@ -233,6 +262,11 @@ if (!SpeechRecognition) {
 
   function searchUG(query) {
     const url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent(query)}`;
+    window.location.href = url;
+  }
+
+  function searchPlaylistUG(query) {
+    const url = `https://www.ultimate-guitar.com/user/mytabs?search=${encodeURIComponent(query)}`;
     window.location.href = url;
   }
 
