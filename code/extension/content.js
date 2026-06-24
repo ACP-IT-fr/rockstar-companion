@@ -311,100 +311,130 @@ if (!SpeechRecognition) {
   }
 
   function highlightBestResults() {
-    if (!window.location.href.includes('search.php')) return;
+    console.log("[Rockstar] Starting highlightBestResults...");
+    if (!window.location.href.includes('search.php')) {
+      console.log("[Rockstar] Not a search.php page.");
+      return;
+    }
 
-    const storeDiv = document.querySelector('.js-store');
-    if (!storeDiv) return;
-
-    try {
-      const state = JSON.parse(storeDiv.getAttribute('data-content'));
-      
-      // Extract results from UG's store
-      let results = [];
-      if (state && state.store && state.store.page && state.store.page.data) {
-        const data = state.store.page.data;
-        if (Array.isArray(data.results)) {
-          results = data.results;
-        } else {
-          // Fallback recursive search for tabs array
-          function findTabs(obj, depth = 0) {
-            if (depth > 5 || !obj) return [];
-            for (let key in obj) {
-              if (Array.isArray(obj[key]) && obj[key].length > 0 && (obj[key][0].tab_url || obj[key][0].url)) {
-                return obj[key];
-              } else if (obj[key] !== null && typeof obj[key] === 'object') {
-                const res = findTabs(obj[key], depth + 1);
-                if (res.length > 0) return res;
-              }
-            }
-            return [];
-          }
-          results = findTabs(data);
-        }
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (attempts > 20) {
+        console.log("[Rockstar] Timed out waiting for .js-store");
+        clearInterval(interval);
+        return;
       }
 
-      if (results.length === 0) return;
+      const storeDiv = document.querySelector('.js-store');
+      if (!storeDiv) return;
 
-      // Find the best 'Chords' tab
-      const chords = results.filter(r => (r.type === 'Chords' || r.type === 'chords' || r.type_name === 'Chords') && !r.is_pro);
-      if (chords.length === 0) return;
+      try {
+        console.log("[Rockstar] Found .js-store!");
+        const state = JSON.parse(storeDiv.getAttribute('data-content'));
+        
+        let results = [];
+        if (state && state.store && state.store.page && state.store.page.data) {
+          const data = state.store.page.data;
+          if (Array.isArray(data.results)) {
+            results = data.results;
+          } else {
+            function findTabs(obj, depth = 0) {
+              if (depth > 5 || !obj) return [];
+              for (let key in obj) {
+                if (Array.isArray(obj[key]) && obj[key].length > 0 && (obj[key][0].tab_url || obj[key][0].url)) {
+                  return obj[key];
+                } else if (obj[key] !== null && typeof obj[key] === 'object') {
+                  const res = findTabs(obj[key], depth + 1);
+                  if (res.length > 0) return res;
+                }
+              }
+              return [];
+            }
+            results = findTabs(data);
+          }
+        }
 
-      const bestChords = chords.sort((a, b) => (b.votes || b.rating || 0) - (a.votes || a.rating || 0))[0];
-      const bestUrl = bestChords.tab_url || bestChords.url;
+        if (results.length === 0) {
+           console.log("[Rockstar] No results array found yet.");
+           return; 
+        }
 
-      if (!bestUrl) return;
+        clearInterval(interval);
+        console.log("[Rockstar] Results extracted:", results.length);
 
-      // Wait for React to render the table
-      let attempts = 0;
-      const interval = setInterval(() => {
-        attempts++;
-        if (attempts > 20) {
-          clearInterval(interval);
+        const chords = results.filter(r => (r.type === 'Chords' || r.type === 'chords' || r.type_name === 'Chords') && !r.is_pro);
+        if (chords.length === 0) {
+          console.log("[Rockstar] No 'Chords' tabs found.");
           return;
         }
 
-        // Find the link to the best tab
-        const links = Array.from(document.querySelectorAll('a')).filter(a => a.href === bestUrl || a.href.includes(bestUrl));
-        
-        if (links.length > 0) {
-          clearInterval(interval);
-          const link = links[0];
-          
-          // Heuristic to find the row: go up until the parent has multiple children (the list)
-          let row = link;
-          while (row.parentElement && row.parentElement.children.length < 3 && row.tagName !== 'ARTICLE' && row.tagName !== 'SECTION') {
-            row = row.parentElement;
+        const bestChords = chords.sort((a, b) => (b.votes || b.rating || 0) - (a.votes || a.rating || 0))[0];
+        const bestUrl = bestChords.tab_url || bestChords.url;
+
+        console.log("[Rockstar] Best chords found:", bestChords);
+
+        if (!bestUrl) return;
+
+        let domAttempts = 0;
+        const domInterval = setInterval(() => {
+          domAttempts++;
+          if (domAttempts > 20) {
+            console.log("[Rockstar] Timed out waiting for DOM link:", bestUrl);
+            clearInterval(domInterval);
+            return;
           }
-          
-          // Highlight the row
-          row.classList.add('ug-voice-highlighted-row');
-          
-          // Clone and prepend
-          const container = row.parentElement;
-          const clone = row.cloneNode(true);
-          
-          // Add a label to the clone
-          const label = document.createElement('div');
-          label.innerText = '⭐ BEST CHORDS MATCH (Found by Rockstar)';
-          label.style.backgroundColor = '#ffc107';
-          label.style.color = '#111';
-          label.style.padding = '5px 10px';
-          label.style.fontWeight = 'bold';
-          label.style.borderRadius = '4px 4px 0 0';
-          label.style.marginBottom = '-2px';
-          
-          const wrapper = document.createElement('div');
-          wrapper.style.marginBottom = '20px';
-          wrapper.appendChild(label);
-          wrapper.appendChild(clone);
 
-          container.insertBefore(wrapper, container.firstChild);
-        }
-      }, 500);
+          const links = Array.from(document.querySelectorAll('a')).filter(a => a.href === bestUrl || a.href.includes(bestUrl));
+          
+          if (links.length > 0) {
+            console.log("[Rockstar] Found links in DOM:", links.length);
+            clearInterval(domInterval);
+            
+            links.forEach(link => {
+              if (link.parentElement) {
+                link.parentElement.classList.add('ug-voice-highlighted-row');
+              }
+            });
+            
+            const customRow = document.createElement('div');
+            customRow.style.padding = '15px';
+            customRow.style.margin = '20px 0';
+            customRow.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
+            customRow.style.border = '2px solid #ffc107';
+            customRow.style.borderRadius = '8px';
+            customRow.innerHTML = `
+              <div style="color: #ffc107; font-weight: bold; margin-bottom: 5px; font-size: 14px;">⭐ MEILLEUR RÉSULTAT (Trouvé par Rockstar)</div>
+              <a href="${bestUrl}" style="color: #fff; font-size: 18px; text-decoration: none; font-weight: bold;">
+                ${bestChords.artist_name || bestChords.artist || ''} - ${bestChords.song_name || bestChords.title || 'Tab'}
+              </a>
+              <div style="color: #aaa; margin-top: 5px; font-size: 14px;">
+                🎸 Chords • ⭐ ${(bestChords.rating || 0).toFixed(1)} (${bestChords.votes || 0} votes)
+              </div>
+            `;
+            
+            let listContainer = links[0];
+            while (listContainer.parentElement && listContainer.parentElement.tagName !== 'BODY' && listContainer.parentElement.tagName !== 'MAIN') {
+              if (listContainer.parentElement.children.length > 3) {
+                listContainer = listContainer.parentElement;
+                break;
+              }
+              listContainer = listContainer.parentElement;
+            }
+            
+            console.log("[Rockstar] Inserting before list container");
+            if (listContainer && listContainer.parentElement) {
+              listContainer.parentElement.insertBefore(customRow, listContainer);
+            } else {
+              document.body.insertBefore(customRow, document.body.firstChild);
+            }
+          }
+        }, 500);
 
-    } catch (e) {
-      console.error("Error highlighting best results:", e);
-    }
+      } catch (e) {
+        console.error("[Rockstar] Error highlighting best results:", e);
+      }
+    }, 500);
   }
 
   // Attempt to auto-start listening when the page loads
