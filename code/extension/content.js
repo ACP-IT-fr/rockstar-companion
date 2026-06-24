@@ -677,15 +677,32 @@ if (!SpeechRecognition) {
     showFeedback(`💤 ${wakeWord} is sleeping...`, true);
   }
 
+  function sendYouTubeCommand(func, args = []) {
+    const iframe = drawerContainer.querySelector('#drawer-youtube-iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(JSON.stringify({
+        event: 'command',
+        func: func,
+        args: args
+      }), '*');
+    }
+  }
+
   function handleCommand(command) {
     let action = '';
     let isSuccess = true;
     const cmd = command.toLowerCase().trim();
 
-    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'play', 'lecture', 'joue', 'lancer', 'démarrer', 'c\'est parti', 'c’est parti', 'commence', 'joue la chanson', 'resume', 'start music', 'play song'];
+    // Playback control variants
+    const playPlaybackVariants = ['play', 'lecture', 'joue', 'lancer', 'démarrer', 'commence', 'joue la chanson', 'resume', 'start music', 'play song', 'reprends', 'reprendre', 'jouer', 'unpause'];
+    const pausePlaybackVariants = ['pause', 'pose', 'stop scroll', 'arrête le scroll', 'arrete le scroll', 'fige', 'bloque', 'suspend', 'stop', 'arrête', 'arrete', 'arrêt', 'arret', 'stoppe', 'stopper', 'stopp', 'pause la musique', 'pause music'];
+    const rewindPlaybackVariants = ['recule', 'retour', 'rewind', 'go back', 'back', 'arrière', 'arriere', 'recule de dix secondes', 'recule de 10 secondes'];
+    const restartPlaybackVariants = ['recommence', 'restart', 'recommencer', 'remets au début', 'remets au debut', 'restart song'];
+
+    // Scroll control variants (cleaned from playback conflicts)
+    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas'];
     const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
-    const pauseVariants = ['pause', 'pose', 'stop scroll', 'arrête le scroll', 'arrete le scroll', 'fige', 'bloque', 'suspend'];
-    const sleepVariants = ['stop', 'arrête', 'arrete', 'arrêt', 'arret', 'stoppe', 'stopper', 'stopp', 'dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
+    const sleepVariants = ['dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
     const topVariants = ['début', 'debut', 'tout en haut', 'go to top', 'top', 'reviens', 'commencement'];
     const searchPlaylistPrefixes = [
       'playlist search ', 'search playlist ', 
@@ -698,21 +715,63 @@ if (!SpeechRecognition) {
     const openNumRegex = new RegExp("^(?:ouvre|open|go to|choisis|prends|lance)?\\s*(?:le\\s+|la\\s+|the\\s+)?(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "$", "i");
     const numMatch = cmd.match(openNumRegex);
 
-    if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
+    if (playPlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+      if (activeDrawerPlaybackLink) {
+        if (activeDrawerPlaybackLink.type === 'youtube') {
+          sendYouTubeCommand('playVideo');
+        } else if (activeDrawerPlaybackLink.type === 'spotify' && window.spotifyService) {
+          window.spotifyService.play().catch(e => console.log(e));
+        }
+      }
+      action = 'Playing playback';
+    } else if (pausePlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+      stopScrolling();
+      if (activeDrawerPlaybackLink) {
+        if (activeDrawerPlaybackLink.type === 'youtube') {
+          sendYouTubeCommand('pauseVideo');
+        } else if (activeDrawerPlaybackLink.type === 'spotify' && window.spotifyService) {
+          window.spotifyService.pause().catch(e => console.log(e));
+        }
+      }
+      action = 'Pausing playback and scroll';
+    } else if (rewindPlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+      if (activeDrawerPlaybackLink) {
+        if (activeDrawerPlaybackLink.type === 'youtube') {
+          sendYouTubeCommand('seekTo', [0, true]);
+        } else if (activeDrawerPlaybackLink.type === 'spotify' && window.spotifyService) {
+          window.spotifyService.rewind(10).catch(e => console.log(e));
+        }
+      }
+      action = 'Rewinding playback';
+    } else if (restartPlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+      if (activeDrawerPlaybackLink) {
+        if (activeDrawerPlaybackLink.type === 'youtube') {
+          sendYouTubeCommand('seekTo', [0, true]);
+          sendYouTubeCommand('playVideo');
+        } else if (activeDrawerPlaybackLink.type === 'spotify' && window.spotifyService) {
+          window.spotifyService.seek(0).then(() => window.spotifyService.play()).catch(e => console.log(e));
+        }
+      }
+      action = 'Restarting playback';
+    } else if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(1);
       action = 'Scrolling down';
     } else if (scrollUpVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(-1);
       action = 'Scrolling up';
-    } else if (pauseVariants.some(v => cmd === v || cmd.includes(v))) {
-      stopScrolling();
-      action = 'Pausing scroll';
     } else if (topVariants.some(v => cmd === v || cmd.includes(v))) {
       stopScrolling();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       action = 'Going to top';
     } else if (sleepVariants.some(v => cmd === v || cmd.includes(v))) {
       stopScrolling();
+      if (activeDrawerPlaybackLink) {
+        if (activeDrawerPlaybackLink.type === 'youtube') {
+          sendYouTubeCommand('pauseVideo');
+        } else if (activeDrawerPlaybackLink.type === 'spotify' && window.spotifyService) {
+          window.spotifyService.pause().catch(e => console.log(e));
+        }
+      }
       goToSleep();
       action = 'Going to sleep';
     } else if (numMatch) {
@@ -1283,6 +1342,17 @@ if (!SpeechRecognition) {
       linkType.value = 'youtube';
     });
 
+    linkUrl.addEventListener('input', () => {
+      const val = linkUrl.value.toLowerCase().trim();
+      if (val.includes('youtube.com') || val.includes('youtu.be')) {
+        linkType.value = 'youtube';
+      } else if (val.includes('spotify.com') || val.startsWith('spotify:')) {
+        linkType.value = 'spotify';
+      } else {
+        linkType.value = 'other';
+      }
+    });
+
     cancelLinkBtn.addEventListener('click', () => {
       linkForm.style.display = 'none';
     });
@@ -1454,7 +1524,8 @@ if (!SpeechRecognition) {
       if (videoId) {
         container.innerHTML = `
           <iframe 
-            src="https://www.youtube.com/embed/${videoId}" 
+            id="drawer-youtube-iframe"
+            src="https://www.youtube.com/embed/${videoId}?enablejsapi=1" 
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
             allowfullscreen>
           </iframe>`;
@@ -1478,9 +1549,33 @@ if (!SpeechRecognition) {
       if (embedUrl) {
         container.innerHTML = `
           <iframe 
+            id="drawer-spotify-iframe"
             src="${embedUrl}" 
-            allow="encrypted-media">
-          </iframe>`;
+            allow="encrypted-media"
+            style="width: 100%; height: 80px; border: none; border-radius: 8px;">
+          </iframe>
+          <div id="spotify-active-control-status" style="font-size: 10px; margin-top: 5px; text-align: center; display: none; font-weight: bold; font-family: sans-serif;"></div>`;
+
+        if (window.spotifyService) {
+          const spotifyUri = window.spotifyService.getSpotifyUri(url);
+          if (spotifyUri) {
+            const statusDiv = container.querySelector('#spotify-active-control-status');
+            window.spotifyService.play(spotifyUri).then(() => {
+              if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.innerText = '🟢 Lecture lancée sur votre appareil Spotify';
+                statusDiv.style.color = '#1ed760';
+              }
+            }).catch(err => {
+              console.log("Spotify active playback failed: " + err);
+              if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.innerText = 'ℹ️ Note: Lecture via l\'iframe (ouvrez Spotify pour le contrôle vocal)';
+                statusDiv.style.color = '#888';
+              }
+            });
+          }
+        }
       } else {
         container.innerHTML = '<div class="drawer-media-empty">Lien Spotify invalide</div>';
       }

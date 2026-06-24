@@ -6,7 +6,8 @@
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "identity"
   ],
   "host_permissions": [
     "http://*/*",
@@ -16,7 +17,7 @@
     {
       "matches": ["http://*/*", "https://*/*"],
       "css": ["content.css"],
-      "js": ["storageService.js", "content.js"]
+      "js": ["storageService.js", "spotifyService.js", "content.js"]
     }
   ],
   "action": {
