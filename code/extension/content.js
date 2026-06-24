@@ -194,7 +194,9 @@ if (!SpeechRecognition) {
 
     const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas'];
     const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
-    const stopVariants = ['stop', 'arrête', 'arrete', 'arrêt', 'arret', 'pause', 'halte', 'stoppe', 'stopper', 'stopp'];
+    const pauseVariants = ['pause', 'stop scroll', 'arrête le scroll', 'arrete le scroll', 'fige', 'bloque', 'suspend'];
+    const sleepVariants = ['stop', 'arrête', 'arrete', 'arrêt', 'arret', 'stoppe', 'stopper', 'stopp', 'dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
+    const topVariants = ['début', 'debut', 'tout en haut', 'go to top', 'top', 'reviens', 'commencement'];
     const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere', 'accélérer', 'accelerer', 'acceler', 'accélér', 'plus rapide'];
     const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis', 'ralenti', 'ralentir', 'doucement', 'plus doucement', 'moins rapide'];
     const searchPlaylistPrefixes = [
@@ -211,9 +213,17 @@ if (!SpeechRecognition) {
     } else if (scrollUpVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(-1);
       action = 'Scrolling up';
-    } else if (stopVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (pauseVariants.some(v => cmd === v || cmd.includes(v))) {
       stopScrolling();
-      action = 'Stopping';
+      action = 'Pausing scroll';
+    } else if (topVariants.some(v => cmd === v || cmd.includes(v))) {
+      stopScrolling();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      action = 'Going to top';
+    } else if (sleepVariants.some(v => cmd === v || cmd.includes(v))) {
+      stopScrolling();
+      goToSleep();
+      action = 'Going to sleep';
     } else if (speedUpVariants.some(v => cmd === v || cmd.includes(v))) {
       scrollSpeed = Math.min(scrollSpeed + 1, 10);
       updateSpeedUI();
