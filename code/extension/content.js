@@ -89,7 +89,7 @@ if (!SpeechRecognition) {
     clearTimeout(awakeTimeout);
     awakeTimeout = setTimeout(() => {
       goToSleep();
-    }, 10000); // 10 seconds awake
+    }, 15000); // 15 seconds awake
   }
 
   function goToSleep() {
@@ -116,6 +116,15 @@ if (!SpeechRecognition) {
     let interimTranscript = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       const transcript = event.results[i][0].transcript;
+      
+      // Wake up early on interim results for instant feedback
+      if (!isAwake) {
+        const lowerTrans = transcript.toLowerCase();
+        if (lowerTrans.includes('rockstar') || lowerTrans.includes('rock star') || lowerTrans.includes('roxstar')) {
+          wakeUp();
+        }
+      }
+      
       if (event.results[i].isFinal) {
         let finalTranscript = transcript.trim().toLowerCase();
         console.log("Voice Command Recognized:", finalTranscript);
@@ -126,7 +135,8 @@ if (!SpeechRecognition) {
         const foundWakeWord = wakeWords.find(ww => finalTranscript.includes(ww));
 
         if (foundWakeWord) {
-          wakeUp();
+          // In case interim didn't catch it
+          if (!isAwake) wakeUp();
           finalTranscript = finalTranscript.replace(foundWakeWord, '').trim();
           if (finalTranscript.length > 0) {
             handleCommand(finalTranscript);
@@ -134,7 +144,7 @@ if (!SpeechRecognition) {
         } else if (isAwake) {
           // Restart awake timeout since user spoke while awake
           clearTimeout(awakeTimeout);
-          awakeTimeout = setTimeout(() => goToSleep(), 10000);
+          awakeTimeout = setTimeout(() => goToSleep(), 15000);
           handleCommand(finalTranscript);
         } else {
           console.log("Ignored (sleeping):", finalTranscript);
@@ -191,12 +201,6 @@ if (!SpeechRecognition) {
     }
     
     showFeedback(`🎤 Heard: "${command}"\n${action}`, isSuccess);
-    
-    // Go to sleep after executing a command successfully
-    if (isSuccess && !command.includes('scroll')) {
-      goToSleep();
-    }
-
   }
 
   function startScrolling(direction) {
