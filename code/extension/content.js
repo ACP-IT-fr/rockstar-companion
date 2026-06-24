@@ -52,6 +52,7 @@ if (!SpeechRecognition) {
   let audioContext = null;
   let analyser = null;
   let tunerActive = false;
+  let pitchHistory = [];
 
   function initTuner() {
     if (audioContext) {
@@ -141,21 +142,27 @@ if (!SpeechRecognition) {
 
     if (ac == -1) {
       tunerContainer.style.opacity = '0.3'; // Dim when silent
+      pitchHistory = []; // Clear history on silence
       return;
     }
     
+    pitchHistory.push(ac);
+    if (pitchHistory.length > 5) pitchHistory.shift();
+    
+    const sortedPitches = [...pitchHistory].sort((a, b) => a - b);
+    const smoothedPitch = sortedPitches[Math.floor(sortedPitches.length / 2)];
+
     tunerContainer.style.opacity = '1';
-    const pitch = ac;
-    const noteNum = Math.round(12 * (Math.log(pitch / 440) / Math.log(2))) + 69;
+    const noteNum = Math.round(12 * (Math.log(smoothedPitch / 440) / Math.log(2))) + 69;
     const noteName = noteStrings[noteNum % 12];
     const octave = Math.floor(noteNum / 12) - 1;
     
     tunerNoteEl.innerText = `${noteName}${octave}`;
     
     const targetFreq = 440 * Math.pow(2, (noteNum - 69) / 12);
-    const cents = Math.floor(1200 * Math.log(pitch / targetFreq) / Math.log(2));
+    const cents = Math.floor(1200 * Math.log(smoothedPitch / targetFreq) / Math.log(2));
     
-    if (Math.abs(cents) < 10) {
+    if (Math.abs(cents) <= 15) {
       tunerCentsEl.className = 'tuner-cents tuner-perfect';
       tunerCentsEl.innerText = 'Juste';
     } else if (cents < 0) {
