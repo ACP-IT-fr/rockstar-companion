@@ -60,7 +60,11 @@ if (!SpeechRecognition) {
   }
 
   function adjustSpeed(delta) {
-    scrollSpeed = Math.max(1, Math.min(scrollSpeed + delta, 10));
+    setSpeed(scrollSpeed + delta);
+  }
+
+  function setSpeed(val) {
+    scrollSpeed = Math.max(1, Math.min(val, 10));
     updateSpeedUI();
     localStorage.setItem(storageKey, scrollSpeed);
   }
@@ -170,7 +174,14 @@ if (!SpeechRecognition) {
         const now = Date.now();
         if (now - lastSpeedChange > 500) {
           let changed = false;
-          if (speedUpVariants.some(v => normalized.includes(v))) {
+          
+          const speedSetMatch = normalized.match(/(?:vitesse|speed|niveau|level)\s*(10|[1-9])/i);
+          
+          if (speedSetMatch) {
+             const val = parseInt(speedSetMatch[1], 10);
+             setSpeed(val);
+             changed = true;
+          } else if (speedUpVariants.some(v => normalized.includes(v))) {
              adjustSpeed(1);
              changed = true;
           } else if (slowDownVariants.some(v => normalized.includes(v))) {
