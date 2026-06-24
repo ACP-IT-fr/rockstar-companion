@@ -523,6 +523,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    const redirectUriDisplay = document.getElementById('spotify-redirect-uri-display');
+    if (redirectUriDisplay) {
+      redirectUriDisplay.textContent = window.spotifyService.getRedirectUri();
+    }
+
     window.spotifyService.getToken().then((token) => {
       if (token) {
         if (spotifyUnauthDiv) spotifyUnauthDiv.style.display = 'none';

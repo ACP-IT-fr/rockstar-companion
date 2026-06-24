@@ -55,6 +55,10 @@
           <div id="spotify-unauthenticated">
             <input type="text" id="spotify-client-id-input" placeholder="Spotify Client ID">
             <button id="spotify-login-btn" class="btn spotify-auth-btn">🟢 Connexion Spotify</button>
+            <div class="spotify-redirect-info">
+              <span>Redirect URI à copier dans Spotify :</span>
+              <code id="spotify-redirect-uri-display">...</code>
+            </div>
           </div>
           <div id="spotify-authenticated" style="display: none;">
             <span class="spotify-status-badge">🟢 Spotify Connecté</span>

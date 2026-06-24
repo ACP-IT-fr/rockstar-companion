@@ -649,3 +649,28 @@ body {
   font-weight: bold;
   color: #1ed760;
 }
+
+.spotify-redirect-info {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  padding: 6px 8px;
+  border-radius: 4px;
+  word-break: break-all;
+  text-align: left;
+}
+
+.spotify-redirect-info span {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.spotify-redirect-info code {
+  display: block;
+  color: var(--accent-pink);
+  font-family: monospace;
+  font-size: 9px;
+  user-select: all;
+}
