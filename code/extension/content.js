@@ -9,6 +9,20 @@ if (!SpeechRecognition) {
   let awakeTimeout = null;
   let scrollInterval = null;
   
+  const textToNum = {
+    '10': 10, 'dix': 10, 'dis': 10, 'ten': 10,
+    '9': 9, 'neuf': 9, 'nine': 9,
+    '8': 8, 'huit': 8, 'oui': 8, 'eight': 8,
+    '7': 7, 'sept': 7, 'set': 7, 'seven': 7,
+    '6': 6, 'six': 6, 'sis': 6,
+    '5': 5, 'cinq': 5, 'sync': 5, 'five': 5,
+    '4': 4, 'quatre': 4, 'cat': 4, 'four': 4, 'for': 4,
+    '3': 3, 'trois': 3, 'toi': 3, 'three': 3, 'tree': 3,
+    '2': 2, 'deux': 2, 'de': 2, 'two': 2, 'to': 2,
+    '1': 1, 'un': 1, 'in': 1, 'one': 1
+  };
+  const numPattern = "(10|dix|dis|ten|9|neuf|nine|8|huit|oui|eight|7|sept|set|seven|6|six|sis|5|cinq|sync|five|4|quatre|cat|four|for|3|trois|toi|three|tree|2|deux|de|two|to|1|un|in|one)";
+
   let scrollSpeed = 1; // Default speed 1
   let lastSpeedChange = 0;
   const storageKey = 'ug_voice_speed_' + window.location.pathname;
@@ -175,12 +189,15 @@ if (!SpeechRecognition) {
         if (now - lastSpeedChange > 500) {
           let changed = false;
           
-          const speedSetMatch = normalized.match(/(?:vitesse|speed|niveau|level)\s*(10|[1-9])/i);
+          const speedSetRegex = new RegExp("(?:vitesse|speed|niveau|level)\\s*" + numPattern + "\\b", "i");
+          const speedSetMatch = normalized.match(speedSetRegex);
           
           if (speedSetMatch) {
-             const val = parseInt(speedSetMatch[1], 10);
-             setSpeed(val);
-             changed = true;
+             const val = textToNum[speedSetMatch[1].toLowerCase()];
+             if (val) {
+               setSpeed(val);
+               changed = true;
+             }
           } else if (speedUpVariants.some(v => normalized.includes(v))) {
              adjustSpeed(1);
              changed = true;
@@ -276,7 +293,7 @@ if (!SpeechRecognition) {
     ];
     const searchPrefixes = ['search for ', 'search ', 'cherche ', 'chercher ', 'trouve ', 'trouver ', 'find '];
 
-    const openNumRegex = /^(?:ouvre|open|go to|choisis|prends|lance)?\s*(?:le\s+|la\s+|the\s+)?(?:numéro|numero|number|num|n°|#)?\s*(\d+)$/i;
+    const openNumRegex = new RegExp("^(?:ouvre|open|go to|choisis|prends|lance)?\\s*(?:le\\s+|la\\s+|the\\s+)?(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "$", "i");
     const numMatch = cmd.match(openNumRegex);
 
     if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
@@ -297,13 +314,13 @@ if (!SpeechRecognition) {
       goToSleep();
       action = 'Going to sleep';
     } else if (numMatch) {
-      const num = parseInt(numMatch[1], 10);
-      if (window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
+      const num = textToNum[numMatch[1].toLowerCase()];
+      if (num && window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
         window.location.href = window.ugSearchResultLinks[num];
         action = `Opening result number ${num}`;
       } else {
         isSuccess = false;
-        action = `Result number ${num} not found on this page`;
+        action = `Result number ${num || numMatch[1]} not found on this page`;
       }
     } else {
       let isSearch = false;
