@@ -9,11 +9,12 @@
     "storage"
   ],
   "host_permissions": [
-    "*://*.ultimate-guitar.com/*"
+    "http://*/*",
+    "https://*/*"
   ],
   "content_scripts": [
     {
-      "matches": ["*://*.ultimate-guitar.com/*"],
+      "matches": ["http://*/*", "https://*/*"],
       "css": ["content.css"],
       "js": ["content.js"]
     }

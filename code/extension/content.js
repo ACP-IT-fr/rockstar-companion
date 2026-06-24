@@ -27,6 +27,10 @@ if (!SpeechRecognition) {
   let lastSpeedChange = 0;
   let wakeWord = 'Rockstar';
   let wakeWordLower = 'rockstar';
+  
+  const currentDomain = window.location.hostname;
+  const isUG = currentDomain.endsWith('ultimate-guitar.com');
+  
   const storageKey = 'ug_voice_speed_' + window.location.pathname;
   const savedSpeed = localStorage.getItem(storageKey);
   if (savedSpeed) {
@@ -36,31 +40,27 @@ if (!SpeechRecognition) {
 
   let currentDirection = 0;
   let accumulatedScroll = 0;
-  const recognition = new SpeechRecognition();
   
-  const tunerContainer = document.createElement('div');
-  tunerContainer.id = 'ug-tuner';
-  tunerContainer.innerHTML = `
-    <div class="tuner-label">Note</div>
-    <div class="tuner-note">-</div>
-    <div class="tuner-cents"></div>
-    <div class="tuner-string"></div>
-  `;
-  document.body.appendChild(tunerContainer);
+  // Outer scope references for elements
+  let tunerContainer = null;
+  let tunerNoteEl = null;
+  let tunerCentsEl = null;
+  let tunerStringEl = null;
   
-  const tunerNoteEl = tunerContainer.querySelector('.tuner-note');
-  const tunerCentsEl = tunerContainer.querySelector('.tuner-cents');
-  const tunerStringEl = tunerContainer.querySelector('.tuner-string');
+  let chordContainer = null;
+  let chordNameEl = null;
   
-  const chordContainer = document.createElement('div');
-  chordContainer.id = 'ug-chord';
-  chordContainer.innerHTML = `
-    <div class="tuner-label">Accord</div>
-    <div class="chord-name">-</div>
-  `;
-  document.body.appendChild(chordContainer);
+  let btn = null;
+  let iconSpan = null;
+  let statusSpan = null;
   
-  const chordNameEl = chordContainer.querySelector('.chord-name');
+  let feedbackContainer = null;
+  let liveTextContainer = null;
+  let speedContainer = null;
+  let bannerEl = null;
+  
+  let isInitialized = false;
+  let recognition = null;
 
   let audioContext = null;
   let analyser = null;
@@ -182,40 +182,14 @@ if (!SpeechRecognition) {
   }
 
   function updateUIForWakeWord() {
-    if (isListening && !isAwake) {
+    if (isListening && !isAwake && statusSpan && btn) {
       statusSpan.innerText = `Listening (Say ${wakeWord}...)`;
       btn.title = `Listening for "${wakeWord}"... Click to turn off`;
     }
   }
 
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
-    chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord'], (result) => {
-      buildChordTemplates(result.chord7th || false, result.chordSus || false);
-      if (result.wakeWord !== undefined) {
-        wakeWord = result.wakeWord.trim() || 'Rockstar';
-        wakeWordLower = wakeWord.toLowerCase();
-        updateUIForWakeWord();
-      }
-    });
-
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'sync') {
-        chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord'], (result) => {
-          buildChordTemplates(result.chord7th || false, result.chordSus || false);
-          const oldWakeWord = wakeWord;
-          wakeWord = (result.wakeWord !== undefined ? result.wakeWord.trim() : 'Rockstar') || 'Rockstar';
-          wakeWordLower = wakeWord.toLowerCase();
-          if (oldWakeWord !== wakeWord) {
-            updateUIForWakeWord();
-          }
-        });
-      }
-    });
-  } else {
-    buildChordTemplates(false, false);
-  }
-
   function detectChord() {
+    if (!analyser || !chordContainer || !chordNameEl) return;
     analyser.getFloatFrequencyData(freqBuf);
     const chromagram = new Array(12).fill(0);
     const binSize = audioContext.sampleRate / analyser.fftSize;
@@ -239,24 +213,21 @@ if (!SpeechRecognition) {
     }
 
     if (totalEnergy < 0.1) {
-       // Only fade out if timeout has passed
        if (!chordClearTimeout) {
          chordClearTimeout = setTimeout(() => {
            chordContainer.style.opacity = '0.3';
            chordHistory = [];
            chordClearTimeout = null;
-         }, 1500); // Wait 1.5 seconds before hiding
+         }, 1500);
        }
        return;
     }
     
-    // We have sound, clear the fade-out timeout
     if (chordClearTimeout) {
       clearTimeout(chordClearTimeout);
       chordClearTimeout = null;
     }
     
-    // Normalize chromagram
     let maxE = Math.max(...chromagram);
     if (maxE > 0) {
       for(let i=0; i<12; i++) chromagram[i] /= maxE;
@@ -266,25 +237,24 @@ if (!SpeechRecognition) {
     let bestScore = -1;
 
     for (const [chordName, template] of Object.entries(chordTemplates)) {
-       let dotProduct = 0, templateMag = 0, chromaMag = 0;
-       for (let i = 0; i < 12; i++) {
-         dotProduct += chromagram[i] * template[i];
-         templateMag += template[i] * template[i];
-         chromaMag += chromagram[i] * chromagram[i];
-       }
-       if (templateMag === 0 || chromaMag === 0) continue;
-       const score = dotProduct / (Math.sqrt(templateMag) * Math.sqrt(chromaMag));
-       if (score > bestScore) {
-         bestScore = score;
-         bestChord = chordName;
-       }
+        let dotProduct = 0, templateMag = 0, chromaMag = 0;
+        for (let i = 0; i < 12; i++) {
+          dotProduct += chromagram[i] * template[i];
+          templateMag += template[i] * template[i];
+          chromaMag += chromagram[i] * chromagram[i];
+        }
+        if (templateMag === 0 || chromaMag === 0) continue;
+        const score = dotProduct / (Math.sqrt(templateMag) * Math.sqrt(chromaMag));
+        if (score > bestScore) {
+          bestScore = score;
+          bestChord = chordName;
+        }
     }
 
     if (bestScore > 0.65) {
        chordHistory.push(bestChord);
-       if (chordHistory.length > 10) chordHistory.shift(); // keep last 10 frames
+       if (chordHistory.length > 10) chordHistory.shift();
        
-       // Mode filter (most stable chord)
        const counts = {};
        let maxCount = 0;
        let stableChord = bestChord;
@@ -302,21 +272,18 @@ if (!SpeechRecognition) {
   }
 
   function updateTuner() {
-    if (!tunerActive || !analyser) return;
+    if (!tunerActive || !analyser || !tunerContainer || !tunerNoteEl || !tunerCentsEl || !tunerStringEl) return;
 
     requestAnimationFrame(updateTuner);
-    
-    // Run chord detection
     detectChord();
 
-    // The time domain buffer can be small (2048) even if fftSize is large
     const buf = new Float32Array(2048);
     analyser.getFloatTimeDomainData(buf);
     const ac = autoCorrelate(buf, audioContext.sampleRate);
 
     if (ac == -1) {
-      tunerContainer.style.opacity = '0.3'; // Dim when silent
-      pitchHistory = []; // Clear history on silence
+      tunerContainer.style.opacity = '0.3';
+      pitchHistory = [];
       return;
     }
     
@@ -363,42 +330,221 @@ if (!SpeechRecognition) {
        tunerStringEl.innerText = '';
     }
   }
-  
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  // Use the browser's default language or default to en-US.
-  recognition.lang = navigator.language || 'en-US';
 
-  const btn = document.createElement('button');
-  btn.id = 'ug-voice-btn';
-  
-  const iconSpan = document.createElement('span');
-  iconSpan.innerText = '🎤';
-  
-  const statusSpan = document.createElement('span');
-  statusSpan.id = 'ug-voice-status';
-  statusSpan.innerText = 'Off';
-  
-  btn.appendChild(iconSpan);
-  btn.appendChild(statusSpan);
-  btn.title = 'Voice control OFF. Click to enable';
-  document.body.appendChild(btn);
+  function initializeRockstar() {
+    if (isInitialized) return;
+    isInitialized = true;
 
-  const feedbackContainer = document.createElement('div');
-  feedbackContainer.id = 'ug-voice-feedback';
-  document.body.appendChild(feedbackContainer);
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || 'en-US';
 
-  const liveTextContainer = document.createElement('div');
-  liveTextContainer.id = 'ug-voice-live-text';
-  document.body.appendChild(liveTextContainer);
+    // Create tuner UI elements
+    tunerContainer = document.createElement('div');
+    tunerContainer.id = 'ug-tuner';
+    tunerContainer.innerHTML = `
+      <div class="tuner-label">Note</div>
+      <div class="tuner-note">-</div>
+      <div class="tuner-cents"></div>
+      <div class="tuner-string"></div>
+    `;
+    document.body.appendChild(tunerContainer);
+    
+    tunerNoteEl = tunerContainer.querySelector('.tuner-note');
+    tunerCentsEl = tunerContainer.querySelector('.tuner-cents');
+    tunerStringEl = tunerContainer.querySelector('.tuner-string');
+    
+    chordContainer = document.createElement('div');
+    chordContainer.id = 'ug-chord';
+    chordContainer.innerHTML = `
+      <div class="tuner-label">Accord</div>
+      <div class="chord-name">-</div>
+    `;
+    document.body.appendChild(chordContainer);
+    
+    chordNameEl = chordContainer.querySelector('.chord-name');
 
-  const speedContainer = document.createElement('div');
-  speedContainer.id = 'ug-voice-speed';
-  speedContainer.innerText = 'Speed: ' + scrollSpeed;
-  document.body.appendChild(speedContainer);
+    // Create voice controls button
+    btn = document.createElement('button');
+    btn.id = 'ug-voice-btn';
+    
+    iconSpan = document.createElement('span');
+    iconSpan.innerText = '🎤';
+    
+    statusSpan = document.createElement('span');
+    statusSpan.id = 'ug-voice-status';
+    statusSpan.innerText = 'Off';
+    
+    btn.appendChild(iconSpan);
+    btn.appendChild(statusSpan);
+    btn.title = 'Voice control OFF. Click to enable';
+    document.body.appendChild(btn);
+
+    feedbackContainer = document.createElement('div');
+    feedbackContainer.id = 'ug-voice-feedback';
+    document.body.appendChild(feedbackContainer);
+
+    liveTextContainer = document.createElement('div');
+    liveTextContainer.id = 'ug-voice-live-text';
+    document.body.appendChild(liveTextContainer);
+
+    speedContainer = document.createElement('div');
+    speedContainer.id = 'ug-voice-speed';
+    speedContainer.innerText = 'Speed: ' + scrollSpeed;
+    document.body.appendChild(speedContainer);
+
+    btn.addEventListener('click', () => {
+      if (isListening) {
+        stopListening();
+      } else {
+        startListening(false);
+      }
+    });
+
+    const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere', 'accélérer', 'accelerer', 'acceler', 'accélér', 'plus rapide'];
+    const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis', 'ralenti', 'ralentir', 'doucement', 'plus doucement', 'moins rapide'];
+
+    recognition.onend = () => {
+      if (isListening) {
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {
+            console.error("Error restarting recognition", e);
+          }
+        }, 100);
+      }
+    };
+
+    recognition.onresult = (event) => {
+      let interimRaw = '';
+      
+      function normalize(text) {
+        let normalized = text.toLowerCase()
+                   .replace(/-/g, ' ')
+                   .trim();
+        
+        if (wakeWordLower === 'rockstar') {
+          normalized = normalized.replace(/rock\s*star/g, 'rockstar')
+                                 .replace(/roxstar/g, 'rockstar')
+                                 .replace(/rock's tar/g, 'rockstar');
+        } else {
+          const escaped = wakeWordLower.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const pattern = escaped.replace(/\s+/g, '\\s*');
+          const regex = new RegExp(pattern, 'g');
+          normalized = normalized.replace(regex, wakeWordLower);
+        }
+        return normalized;
+      }
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
+        const normalized = normalize(transcript);
+        
+        if (!isAwake) {
+          if (normalized.includes(wakeWordLower)) {
+            wakeUp();
+          }
+        }
+
+        if (isAwake || normalized.includes(wakeWordLower)) {
+          const now = Date.now();
+          if (now - lastSpeedChange > 500) {
+            let changed = false;
+            
+            const speedSetRegex = new RegExp("(?:vitesse|speed|niveau|level)\\s*(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "\\b", "i");
+            const speedSetMatch = normalized.match(speedSetRegex);
+            
+            if (speedSetMatch) {
+               const val = textToNum[speedSetMatch[1].toLowerCase()];
+               if (val) {
+                 setSpeed(val);
+                 changed = true;
+               }
+            } else if (speedUpVariants.some(v => normalized.includes(v))) {
+               adjustSpeed(1);
+               changed = true;
+            } else if (slowDownVariants.some(v => normalized.includes(v))) {
+               adjustSpeed(-1);
+               changed = true;
+            }
+            if (changed) {
+               lastSpeedChange = now;
+               showFeedback(`⚡ Speed Level ${scrollSpeed}`, true);
+               clearTimeout(awakeTimeout);
+               awakeTimeout = setTimeout(() => goToSleep(), 15000);
+               recognition.stop();
+               return;
+            }
+          }
+        }
+        
+        if (event.results[i].isFinal) {
+          let finalTranscript = normalized;
+          console.log("Voice Command Recognized:", finalTranscript);
+          liveTextContainer.innerText = '';
+          liveTextContainer.style.display = 'none';
+
+          if (finalTranscript.includes(wakeWordLower)) {
+            if (!isAwake) wakeUp();
+            finalTranscript = finalTranscript.replace(wakeWordLower, '').trim();
+            if (finalTranscript.length > 0) {
+              handleCommand(finalTranscript);
+            }
+          } else if (isAwake) {
+            clearTimeout(awakeTimeout);
+            awakeTimeout = setTimeout(() => goToSleep(), 15000);
+            handleCommand(finalTranscript);
+          } else {
+            console.log("Ignored (sleeping):", finalTranscript);
+          }
+        } else {
+          interimRaw += transcript + ' ';
+        }
+      }
+      
+      if (interimRaw.trim() !== '') {
+        const normalizedInterim = normalize(interimRaw);
+        const wordCount = normalizedInterim.trim().split(/\s+/).length;
+        if (wordCount > 10) {
+          liveTextContainer.style.display = 'none';
+          recognition.stop();
+          return;
+        }
+
+        if (!isAwake && !normalizedInterim.includes(wakeWordLower)) {
+          liveTextContainer.style.display = 'none';
+        } else {
+          liveTextContainer.innerText = normalizedInterim;
+          liveTextContainer.style.display = 'block';
+        }
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      if (event.error === 'not-allowed') {
+        stopListening();
+        if (!isAutoStart) {
+          alert("Microphone permission denied. Please allow microphone access to use voice commands.");
+        }
+      }
+    };
+
+    // Auto-start listening on load
+    startListening(true);
+    
+    if (isUG) {
+      highlightBestResults();
+      numberSearchResults();
+    }
+  }
 
   function updateSpeedUI() {
-    speedContainer.innerText = 'Speed: ' + scrollSpeed;
+    if (speedContainer) {
+      speedContainer.innerText = 'Speed: ' + scrollSpeed;
+    }
   }
 
   function adjustSpeed(delta) {
@@ -412,6 +558,7 @@ if (!SpeechRecognition) {
   }
 
   function showFeedback(text, isSuccess) {
+    if (!feedbackContainer) return;
     const toast = document.createElement('div');
     toast.className = 'ug-voice-toast ' + (isSuccess ? 'success' : 'error');
     toast.innerText = text;
@@ -423,14 +570,6 @@ if (!SpeechRecognition) {
     }, 3000);
   }
 
-  btn.addEventListener('click', () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening(false);
-    }
-  });
-
   function startListening(auto = false) {
     isAutoStart = auto;
     if (!isListening) {
@@ -438,9 +577,8 @@ if (!SpeechRecognition) {
       try {
         recognition.start();
         isListening = true;
-        btn.classList.add('listening');
-        statusSpan.innerText = `Listening (Say ${wakeWord}...)`;
-        btn.title = `Listening for "${wakeWord}"... Click to turn off`;
+        if (btn) btn.classList.add('listening');
+        updateUIForWakeWord();
       } catch (e) {
         console.error("Speech recognition could not start", e);
       }
@@ -453,8 +591,8 @@ if (!SpeechRecognition) {
     isListening = false;
     if (tunerActive) {
        tunerActive = false;
-       tunerContainer.classList.remove('visible');
-       chordContainer.classList.remove('visible');
+       if (tunerContainer) tunerContainer.classList.remove('visible');
+       if (chordContainer) chordContainer.classList.remove('visible');
        if (audioContext && audioContext.state === 'running') {
           audioContext.suspend();
        }
@@ -463,169 +601,31 @@ if (!SpeechRecognition) {
       recognition.stop();
     } catch (e) { }
     isAwake = false;
-    btn.classList.remove('listening', 'awake');
-    statusSpan.innerText = 'Off';
-    btn.title = 'Voice control OFF. Click to enable';
+    if (btn) {
+      btn.classList.remove('listening', 'awake');
+      statusSpan.innerText = 'Off';
+      btn.title = 'Voice control OFF. Click to enable';
+    }
     stopScrolling();
   }
 
   function wakeUp() {
     isAwake = true;
-    btn.classList.add('awake');
-    statusSpan.innerText = "À l'écoute";
+    if (btn) btn.classList.add('awake');
+    if (statusSpan) statusSpan.innerText = "À l'écoute";
     showFeedback(`🎸 ${wakeWord} is listening...`, true);
     clearTimeout(awakeTimeout);
     awakeTimeout = setTimeout(() => {
       goToSleep();
-    }, 15000); // 15 seconds awake
+    }, 15000);
   }
 
   function goToSleep() {
     isAwake = false;
-    btn.classList.remove('awake');
-    statusSpan.innerText = 'Veille';
+    if (btn) btn.classList.remove('awake');
+    if (statusSpan) statusSpan.innerText = 'Veille';
     showFeedback(`💤 ${wakeWord} is sleeping...`, true);
   }
-
-  recognition.onend = () => {
-    // Auto-restart if we are supposed to be listening
-    if (isListening) {
-      setTimeout(() => {
-        try {
-          recognition.start();
-        } catch (e) {
-          console.error("Error restarting recognition", e);
-        }
-      }, 100);
-    }
-  };
-
-  const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere', 'accélérer', 'accelerer', 'acceler', 'accélér', 'plus rapide'];
-  const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis', 'ralenti', 'ralentir', 'doucement', 'plus doucement', 'moins rapide'];
-
-  recognition.onresult = (event) => {
-    let interimRaw = '';
-    
-    function normalize(text) {
-      let normalized = text.toLowerCase()
-                 .replace(/-/g, ' ') // Remove hyphens that break commands
-                 .trim();
-      
-      if (wakeWordLower === 'rockstar') {
-        normalized = normalized.replace(/rock\s*star/g, 'rockstar') // Unify wake word
-                               .replace(/roxstar/g, 'rockstar')
-                               .replace(/rock's tar/g, 'rockstar');
-      } else {
-        const escaped = wakeWordLower.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const pattern = escaped.replace(/\s+/g, '\\s*');
-        const regex = new RegExp(pattern, 'g');
-        normalized = normalized.replace(regex, wakeWordLower);
-      }
-      return normalized;
-    }
-
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      const transcript = event.results[i][0].transcript;
-      const normalized = normalize(transcript);
-      
-      // Wake up early on interim results for instant feedback
-      if (!isAwake) {
-        if (normalized.includes(wakeWordLower)) {
-          wakeUp();
-        }
-      }
-
-      // Fast-track speed adjustments on interim results for instant response
-      if (isAwake || normalized.includes(wakeWordLower)) {
-        const now = Date.now();
-        if (now - lastSpeedChange > 500) {
-          let changed = false;
-          
-          const speedSetRegex = new RegExp("(?:vitesse|speed|niveau|level)\\s*(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "\\b", "i");
-          const speedSetMatch = normalized.match(speedSetRegex);
-          
-          if (speedSetMatch) {
-             const val = textToNum[speedSetMatch[1].toLowerCase()];
-             if (val) {
-               setSpeed(val);
-               changed = true;
-             }
-          } else if (speedUpVariants.some(v => normalized.includes(v))) {
-             adjustSpeed(1);
-             changed = true;
-          } else if (slowDownVariants.some(v => normalized.includes(v))) {
-             adjustSpeed(-1);
-             changed = true;
-          }
-          if (changed) {
-             lastSpeedChange = now;
-             showFeedback(`⚡ Speed Level ${scrollSpeed}`, true);
-             clearTimeout(awakeTimeout);
-             awakeTimeout = setTimeout(() => goToSleep(), 15000);
-             
-             // Stop recognition to clear the current transcript buffer. It will auto-restart via onend.
-             recognition.stop();
-             return;
-          }
-        }
-      }
-      
-      if (event.results[i].isFinal) {
-        let finalTranscript = normalized;
-        console.log("Voice Command Recognized:", finalTranscript);
-        liveTextContainer.innerText = '';
-        liveTextContainer.style.display = 'none';
-
-        if (finalTranscript.includes(wakeWordLower)) {
-          // In case interim didn't catch it
-          if (!isAwake) wakeUp();
-          finalTranscript = finalTranscript.replace(wakeWordLower, '').trim();
-          if (finalTranscript.length > 0) {
-            handleCommand(finalTranscript);
-          }
-        } else if (isAwake) {
-          // Restart awake timeout since user spoke while awake
-          clearTimeout(awakeTimeout);
-          awakeTimeout = setTimeout(() => goToSleep(), 15000);
-          handleCommand(finalTranscript);
-        } else {
-          console.log("Ignored (sleeping):", finalTranscript);
-        }
-      } else {
-        interimRaw += transcript + ' ';
-      }
-    }
-    
-    if (interimRaw.trim() !== '') {
-      const normalizedInterim = normalize(interimRaw);
-      
-      // Stop detection if the transcript exceeds 10 words (prevents screen clutter and false positives while singing)
-      const wordCount = normalizedInterim.trim().split(/\s+/).length;
-      if (wordCount > 10) {
-        liveTextContainer.style.display = 'none';
-        recognition.stop();
-        return;
-      }
-
-      if (!isAwake && !normalizedInterim.includes(wakeWordLower)) {
-        // Optionally don't show live text if not awake and not saying wake word
-        liveTextContainer.style.display = 'none';
-      } else {
-        liveTextContainer.innerText = normalizedInterim;
-        liveTextContainer.style.display = 'block';
-      }
-    }
-  };
-  
-  recognition.onerror = (event) => {
-    console.error("Speech recognition error", event.error);
-    if (event.error === 'not-allowed') {
-      stopListening();
-      if (!isAutoStart) {
-        alert("Microphone permission denied. Please allow microphone access to use voice commands.");
-      }
-    }
-  };
 
   function handleCommand(command) {
     let action = '';
@@ -666,46 +666,60 @@ if (!SpeechRecognition) {
       goToSleep();
       action = 'Going to sleep';
     } else if (numMatch) {
-      const num = textToNum[numMatch[1].toLowerCase()];
-      if (num && window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
-        window.location.href = window.ugSearchResultLinks[num];
-        action = `Opening result number ${num}`;
-      } else {
+      if (!isUG) {
         isSuccess = false;
-        action = `Result number ${num || numMatch[1]} not found on this page`;
+        action = 'Recherche non disponible sur ce site';
+      } else {
+        const num = textToNum[numMatch[1].toLowerCase()];
+        if (num && window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
+          window.location.href = window.ugSearchResultLinks[num];
+          action = `Opening result number ${num}`;
+        } else {
+          isSuccess = false;
+          action = `Result number ${num || numMatch[1]} not found on this page`;
+        }
       }
     } else {
-      let isSearch = false;
-      
-      // Try playlist search first to avoid overlapping with generic search
+      let isSearchCmd = false;
+      let targetQuery = '';
+      let isPlaylist = false;
+
       for (const prefix of searchPlaylistPrefixes) {
         if (cmd.startsWith(prefix)) {
-          const query = cmd.substring(prefix.length).trim();
-          if (query) {
-            searchPlaylistUG(query);
-            action = `Searching playlist for "${query}"`;
-            isSearch = true;
+          targetQuery = cmd.substring(prefix.length).trim();
+          isPlaylist = true;
+          isSearchCmd = true;
+          break;
+        }
+      }
+
+      if (!isSearchCmd) {
+        for (const prefix of searchPrefixes) {
+          if (cmd.startsWith(prefix)) {
+            targetQuery = cmd.substring(prefix.length).trim();
+            isSearchCmd = true;
             break;
           }
         }
       }
 
-      // If not playlist search, try generic search
-      if (!isSearch) {
-        for (const prefix of searchPrefixes) {
-          if (cmd.startsWith(prefix)) {
-            const query = cmd.substring(prefix.length).trim();
-            if (query) {
-              searchUG(query);
-              action = `Searching for "${query}"`;
-              isSearch = true;
-              break;
-            }
+      if (isSearchCmd) {
+        if (!isUG) {
+          isSuccess = false;
+          action = 'Recherche non disponible sur ce site';
+        } else if (targetQuery) {
+          if (isPlaylist) {
+            searchPlaylistUG(targetQuery);
+            action = `Searching playlist for "${targetQuery}"`;
+          } else {
+            searchUG(targetQuery);
+            action = `Searching for "${targetQuery}"`;
           }
+        } else {
+          isSuccess = false;
+          action = 'Recherche vide';
         }
-      }
-      
-      if (!isSearch) {
+      } else {
         isSuccess = false;
         action = 'Unrecognized command';
       }
@@ -719,11 +733,9 @@ if (!SpeechRecognition) {
     currentDirection = direction;
     accumulatedScroll = 0;
     
-    // Show the speed container when scrolling starts
-    speedContainer.classList.add('visible');
+    if (speedContainer) speedContainer.classList.add('visible');
     
     scrollInterval = setInterval(() => {
-      // Divide speed by 10 for much finer control (0.1 to 1.0 pixels per frame)
       accumulatedScroll += currentDirection * (scrollSpeed / 10);
       
       if (Math.abs(accumulatedScroll) >= 1) {
@@ -731,14 +743,14 @@ if (!SpeechRecognition) {
         window.scrollBy(0, pixels);
         accumulatedScroll -= pixels;
       }
-    }, 20); // 50 fps
+    }, 20);
   }
 
   function stopScrolling() {
     if (scrollInterval) {
       clearInterval(scrollInterval);
       scrollInterval = null;
-      speedContainer.classList.remove('visible');
+      if (speedContainer) speedContainer.classList.remove('visible');
     }
   }
 
@@ -903,7 +915,7 @@ if (!SpeechRecognition) {
       const processedUrls = new Set();
 
       tabLinks.forEach(link => {
-        const url = link.href.split('?')[0]; // Remove query params to ensure uniqueness
+        const url = link.href.split('?')[0];
         if (!processedUrls.has(url)) {
           processedUrls.add(url);
           window.ugSearchResultLinks[counter] = url;
@@ -927,12 +939,124 @@ if (!SpeechRecognition) {
     }, 500);
   }
 
-  // Attempt to auto-start listening when the page loads
-  startListening(true);
-  
-  // Highlight best results if we are on a search page
-  highlightBestResults();
+  // Activation Banner Controls
+  function showActivationBanner() {
+    if (document.getElementById('ug-voice-activation-banner') || bannerEl) return;
+    
+    bannerEl = document.createElement('div');
+    bannerEl.id = 'ug-voice-activation-banner';
+    bannerEl.innerHTML = `
+      <div class="activation-banner-title">🎸 Rockstar Companion</div>
+      <div style="font-size: 13px; line-height: 1.4; color: #eee; margin-top: 4px;">Activer le contrôle vocal et l'accordeur sur ce site ?</div>
+      <div class="activation-banner-actions" style="margin-top: 8px;">
+        <button class="activation-banner-btn secondary" id="banner-btn-refuse">Ne plus demander</button>
+        <button class="activation-banner-btn primary" id="banner-btn-accept">Activer</button>
+      </div>
+    `;
+    document.body.appendChild(bannerEl);
+    
+    document.getElementById('banner-btn-accept').addEventListener('click', () => {
+      chrome.storage.sync.get('allowedDomains', (res) => {
+        const allowedDomains = res.allowedDomains || {};
+        allowedDomains[currentDomain] = true;
+        chrome.storage.sync.set({ allowedDomains }, () => {
+          removeActivationBanner();
+          initializeRockstar();
+        });
+      });
+    });
+    
+    document.getElementById('banner-btn-refuse').addEventListener('click', () => {
+      chrome.storage.sync.get('allowedDomains', (res) => {
+        const allowedDomains = res.allowedDomains || {};
+        allowedDomains[currentDomain] = false;
+        chrome.storage.sync.set({ allowedDomains }, () => {
+          removeActivationBanner();
+        });
+      });
+    });
+  }
 
-  // Add numbering to search results
-  numberSearchResults();
+  function removeActivationBanner() {
+    if (bannerEl) {
+      bannerEl.remove();
+      bannerEl = null;
+    }
+    const existing = document.getElementById('ug-voice-activation-banner');
+    if (existing) existing.remove();
+  }
+
+  // Storage preference listeners and bootstrap check
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+    chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites'], (result) => {
+      buildChordTemplates(result.chord7th || false, result.chordSus || false);
+      if (result.wakeWord !== undefined) {
+        wakeWord = result.wakeWord.trim() || 'Rockstar';
+        wakeWordLower = wakeWord.toLowerCase();
+      }
+      
+      if (isUG) {
+        initializeRockstar();
+      } else {
+        const allowedDomains = result.allowedDomains || {};
+        const muteAllSites = result.muteAllSites || false;
+        const status = allowedDomains[currentDomain];
+        
+        if (status === true) {
+          initializeRockstar();
+        } else if (status === false || muteAllSites === true) {
+          // Explicitly blocked or global mute
+        } else {
+          showActivationBanner();
+        }
+      }
+    });
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'sync') {
+        chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites'], (result) => {
+          buildChordTemplates(result.chord7th || false, result.chordSus || false);
+          const oldWakeWord = wakeWord;
+          wakeWord = (result.wakeWord !== undefined ? result.wakeWord.trim() : 'Rockstar') || 'Rockstar';
+          wakeWordLower = wakeWord.toLowerCase();
+          
+          if (isInitialized && oldWakeWord !== wakeWord) {
+            updateUIForWakeWord();
+          }
+
+          if (!isUG) {
+            const allowedDomains = result.allowedDomains || {};
+            const muteAllSites = result.muteAllSites || false;
+            const status = allowedDomains[currentDomain];
+            
+            if (status === true) {
+              removeActivationBanner();
+              if (!isInitialized) {
+                initializeRockstar();
+              } else if (btn) {
+                btn.style.display = 'flex';
+              }
+            } else {
+              if (status === false || muteAllSites === true) {
+                removeActivationBanner();
+                if (isInitialized && btn) {
+                  stopListening();
+                  btn.style.display = 'none';
+                }
+              } else {
+                if (!isInitialized) {
+                  showActivationBanner();
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+  } else {
+    buildChordTemplates(false, false);
+    if (isUG) {
+      initializeRockstar();
+    }
+  }
 }

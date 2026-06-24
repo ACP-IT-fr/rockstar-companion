@@ -3,6 +3,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const cbSus = document.getElementById('chord-sus');
   const wakeWordInput = document.getElementById('wake-word-input');
   const wakeWordDisplays = document.querySelectorAll('.wake-word-display');
+  
+  const domainActivationGroup = document.getElementById('domain-activation-group');
+  const domainActivationCb = document.getElementById('domain-activation-cb');
+  const domainActivationLabel = document.getElementById('domain-activation-label');
+  const muteAllSitesCb = document.getElementById('mute-all-sites-cb');
+
+  let currentDomain = '';
 
   // Accordion Toggle Logic
   const headers = document.querySelectorAll('.accordion-header');
@@ -21,10 +28,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Identify active tab and handle domain specific checkbox
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs && tabs[0] && tabs[0].url) {
+      try {
+        const urlObj = new URL(tabs[0].url);
+        currentDomain = urlObj.hostname;
+        
+        const isUG = currentDomain.endsWith('ultimate-guitar.com');
+        if (!isUG && currentDomain && urlObj.protocol.startsWith('http')) {
+          domainActivationLabel.textContent = `Activer sur ${currentDomain}`;
+          domainActivationGroup.style.display = 'flex';
+          
+          chrome.storage.sync.get('allowedDomains', (result) => {
+            const allowedDomains = result.allowedDomains || {};
+            domainActivationCb.checked = allowedDomains[currentDomain] === true;
+          });
+        }
+      } catch (e) {
+        console.error("Error parsing tab URL", e);
+      }
+    }
+  });
+
   // Load settings
-  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord'], (result) => {
+  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'muteAllSites'], (result) => {
     cb7th.checked = result.chord7th || false;
     cbSus.checked = result.chordSus || false;
+    muteAllSitesCb.checked = result.muteAllSites || false;
     
     const word = result.wakeWord !== undefined ? result.wakeWord : 'Rockstar';
     wakeWordInput.value = word;
@@ -45,5 +76,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = wakeWordInput.value;
     chrome.storage.sync.set({ wakeWord: val });
     updateWakeWordDisplay(val);
+  });
+
+  // Save domain activation setting
+  domainActivationCb.addEventListener('change', () => {
+    if (!currentDomain) return;
+    chrome.storage.sync.get('allowedDomains', (result) => {
+      const allowedDomains = result.allowedDomains || {};
+      allowedDomains[currentDomain] = domainActivationCb.checked;
+      chrome.storage.sync.set({ allowedDomains });
+    });
+  });
+
+  // Save mute settings
+  muteAllSitesCb.addEventListener('change', () => {
+    chrome.storage.sync.set({ muteAllSites: muteAllSitesCb.checked });
   });
 });
