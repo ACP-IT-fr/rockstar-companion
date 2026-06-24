@@ -17,8 +17,17 @@ if (!SpeechRecognition) {
 
   const btn = document.createElement('button');
   btn.id = 'ug-voice-btn';
-  btn.innerHTML = '🎤';
-  btn.title = 'Click to enable voice control';
+  
+  const iconSpan = document.createElement('span');
+  iconSpan.innerText = '🎤';
+  
+  const statusSpan = document.createElement('span');
+  statusSpan.id = 'ug-voice-status';
+  statusSpan.innerText = 'Off';
+  
+  btn.appendChild(iconSpan);
+  btn.appendChild(statusSpan);
+  btn.title = 'Voice control OFF. Click to enable';
   document.body.appendChild(btn);
 
   const feedbackContainer = document.createElement('div');
@@ -55,6 +64,7 @@ if (!SpeechRecognition) {
       recognition.start();
       isListening = true;
       btn.classList.add('listening');
+      statusSpan.innerText = 'Veille';
       btn.title = 'Listening for "Rockstar"... Click to turn off';
     } catch (e) {
       console.error("Speech recognition error:", e);
@@ -66,6 +76,7 @@ if (!SpeechRecognition) {
     isListening = false;
     isAwake = false;
     btn.classList.remove('listening', 'awake');
+    statusSpan.innerText = 'Off';
     btn.title = 'Voice control OFF. Click to enable';
     stopScrolling();
   }
@@ -73,6 +84,7 @@ if (!SpeechRecognition) {
   function wakeUp() {
     isAwake = true;
     btn.classList.add('awake');
+    statusSpan.innerText = "À l'écoute";
     showFeedback("🎸 Rockstar is listening...", true);
     clearTimeout(awakeTimeout);
     awakeTimeout = setTimeout(() => {
@@ -83,6 +95,7 @@ if (!SpeechRecognition) {
   function goToSleep() {
     isAwake = false;
     btn.classList.remove('awake');
+    statusSpan.innerText = 'Veille';
     showFeedback("💤 Rockstar is sleeping...", true);
   }
 
