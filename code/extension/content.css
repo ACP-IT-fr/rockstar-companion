@@ -225,3 +225,11 @@
 .tuner-flat { color: #2196F3; }
 .tuner-sharp { color: #F44336; }
 .tuner-perfect { color: #4CAF50; }
+
+.tuner-label {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}

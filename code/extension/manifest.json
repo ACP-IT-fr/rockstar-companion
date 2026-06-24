@@ -5,7 +5,8 @@
   "description": "Voice control for Ultimate Guitar: search songs and scroll tabs using your voice.",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "host_permissions": [
     "*://*.ultimate-guitar.com/*"

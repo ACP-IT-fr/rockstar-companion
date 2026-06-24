@@ -39,6 +39,7 @@ if (!SpeechRecognition) {
   const tunerContainer = document.createElement('div');
   tunerContainer.id = 'ug-tuner';
   tunerContainer.innerHTML = `
+    <div class="tuner-label">Note</div>
     <div class="tuner-note">-</div>
     <div class="tuner-cents"></div>
     <div class="tuner-string"></div>
@@ -52,6 +53,7 @@ if (!SpeechRecognition) {
   const chordContainer = document.createElement('div');
   chordContainer.id = 'ug-chord';
   chordContainer.innerHTML = `
+    <div class="tuner-label">Accord</div>
     <div class="chord-name">-</div>
   `;
   document.body.appendChild(chordContainer);
@@ -145,26 +147,52 @@ if (!SpeechRecognition) {
     { note: "E4", midi: 64, string: "1st string (e)" }
   ];
 
-  const chordTemplates = {};
-  const chordIntervals = {
-    "": [0, 4, 7],           // Major
-    "m": [0, 3, 7],          // Minor
-    "7": [0, 4, 7, 10],      // Dominant 7th
-    "maj7": [0, 4, 7, 11],   // Major 7th
-    "m7": [0, 3, 7, 10],     // Minor 7th
-    "sus2": [0, 2, 7],       // Suspended 2nd
-    "sus4": [0, 5, 7]        // Suspended 4th
-  };
+  let chordTemplates = {};
 
-  for (let i = 0; i < 12; i++) {
-    const rootName = noteStrings[i];
-    for (const [suffix, intervals] of Object.entries(chordIntervals)) {
-      const template = new Array(12).fill(0);
-      for (const inv of intervals) {
-        template[(i + inv) % 12] = 1;
-      }
-      chordTemplates[rootName + suffix] = template;
+  function buildChordTemplates(enable7th, enableSus) {
+    chordTemplates = {};
+    const chordIntervals = {
+      "": [0, 4, 7],           // Major
+      "m": [0, 3, 7]           // Minor
+    };
+    
+    if (enable7th) {
+      chordIntervals["7"] = [0, 4, 7, 10];
+      chordIntervals["maj7"] = [0, 4, 7, 11];
+      chordIntervals["m7"] = [0, 3, 7, 10];
     }
+    
+    if (enableSus) {
+      chordIntervals["sus2"] = [0, 2, 7];
+      chordIntervals["sus4"] = [0, 5, 7];
+    }
+
+    for (let i = 0; i < 12; i++) {
+      const rootName = noteStrings[i];
+      for (const [suffix, intervals] of Object.entries(chordIntervals)) {
+        const template = new Array(12).fill(0);
+        for (const inv of intervals) {
+          template[(i + inv) % 12] = 1;
+        }
+        chordTemplates[rootName + suffix] = template;
+      }
+    }
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+    chrome.storage.sync.get(['chord7th', 'chordSus'], (result) => {
+      buildChordTemplates(result.chord7th || false, result.chordSus || false);
+    });
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'sync') {
+        chrome.storage.sync.get(['chord7th', 'chordSus'], (result) => {
+          buildChordTemplates(result.chord7th || false, result.chordSus || false);
+        });
+      }
+    });
+  } else {
+    buildChordTemplates(false, false);
   }
 
   function detectChord() {

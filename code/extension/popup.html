@@ -32,6 +32,27 @@
       color: #ffc107;
       font-weight: bold;
     }
+    .settings-section {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #444;
+    }
+    .settings-section h3 {
+      color: #ffc107;
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    .setting-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .setting-item input {
+      margin-right: 10px;
+      accent-color: #e91e63;
+    }
   </style>
 </head>
 <body>
@@ -50,5 +71,23 @@
     <li><span class="highlight">"Rockstar slower"</span> / <span class="highlight">"Rockstar moins vite"</span></li>
     <li><span class="highlight">"Rockstar stop"</span> / <span class="highlight">"Rockstar dors"</span> (to put it to sleep)</li>
   </ul>
+
+  <div class="settings-section">
+    <h3>Paramètres de Détection</h3>
+    <div class="setting-item">
+      <input type="checkbox" id="chord-maj-min" checked disabled>
+      <label for="chord-maj-min">Accords Majeurs / Mineurs (Base)</label>
+    </div>
+    <div class="setting-item">
+      <input type="checkbox" id="chord-7th">
+      <label for="chord-7th">Accords 7ème (7, maj7, m7)</label>
+    </div>
+    <div class="setting-item">
+      <input type="checkbox" id="chord-sus">
+      <label for="chord-sus">Accords Suspendus (sus2, sus4)</label>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
