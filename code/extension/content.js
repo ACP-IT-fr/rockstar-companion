@@ -345,8 +345,8 @@ if (!SpeechRecognition) {
     if (isInitialized) return;
     isInitialized = true;
 
-    // Create Drawer UI elements
-    createDrawerUI();
+    // Ensure Drawer is initialized first
+    initializeDrawer();
 
     recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -1127,6 +1127,8 @@ if (!SpeechRecognition) {
   }
 
   function createDrawerUI() {
+    if (document.getElementById('rockstar-drawer') || document.getElementById('ug-drawer-btn')) return;
+
     // 1. Create Floating Button
     drawerBtn = document.createElement('button');
     drawerBtn.id = 'ug-drawer-btn';
@@ -1392,12 +1394,14 @@ if (!SpeechRecognition) {
 
   function openDrawer() {
     drawerContainer.classList.add('open');
+    document.documentElement.classList.add('rockstar-drawer-open');
     document.body.classList.add('rockstar-drawer-open');
     loadSongForDrawer();
   }
 
   function closeDrawer() {
     drawerContainer.classList.remove('open');
+    document.documentElement.classList.remove('rockstar-drawer-open');
     document.body.classList.remove('rockstar-drawer-open');
     activeDrawerPlaybackLink = null;
     const mediaContainer = drawerContainer.querySelector('#drawer-media-container');
