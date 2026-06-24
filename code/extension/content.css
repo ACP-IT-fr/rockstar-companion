@@ -381,14 +381,22 @@
   text-overflow: ellipsis;
 }
 
-#rockstar-drawer .drawer-header-title p {
+#rockstar-drawer .drawer-artist-input {
   font-size: 13px;
   color: #ff007f;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed rgba(255, 0, 127, 0.3);
   margin: 0;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: 100%;
+  padding: 2px 0;
+  outline: none;
+  transition: border-bottom-color 0.2s, color 0.2s;
+}
+#rockstar-drawer .drawer-artist-input:focus {
+  border-bottom: 1px solid #ff007f;
+  color: #fff;
 }
 
 #rockstar-drawer #drawer-close-btn {

@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const noSongSelected = document.getElementById('no-song-selected');
   const songDetailContainer = document.getElementById('song-detail-container');
   
-  const detailTitle = document.getElementById('detail-title');
-  const detailArtist = document.getElementById('detail-artist');
+  const detailTitleInput = document.getElementById('detail-title-input');
+  const detailArtistInput = document.getElementById('detail-artist-input');
   const detailOriginalUrl = document.getElementById('detail-original-url');
   const detailDeleteBtn = document.getElementById('detail-delete-btn');
   
@@ -193,8 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
     songDetailContainer.style.display = 'block';
 
     // Remplir les informations
-    detailTitle.textContent = song.title;
-    detailArtist.textContent = song.artist;
+    detailTitleInput.value = song.title || '';
+    detailArtistInput.value = song.artist || '';
     detailOriginalUrl.href = song.url;
     
     // Formulaires d'édition
@@ -218,6 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const original = songs[currentSongUrl];
     const updated = {
       ...original,
+      title: detailTitleInput.value.trim() || original.title,
+      artist: detailArtistInput.value.trim() || original.artist,
       key: editKey.value.trim(),
       capo: parseInt(editCapo.value, 10) || 0,
       transpose: parseInt(editTranspose.value, 10) || 0,
@@ -229,12 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
     window.storageService.saveSong(updated).then(() => {
       // Mettre à jour l'objet local
       songs[currentSongUrl] = updated;
-      // Rafraîchir la barre latérale pour mettre à jour les badges
+      // Rafraîchir la barre latérale pour mettre à jour les badges et le titre de la chanson
       renderSongList();
     });
   }
 
   // Event Listeners for editing fields (Debounced or Auto-save on blur/change)
+  detailTitleInput.addEventListener('blur', saveCurrentSongState);
+  detailArtistInput.addEventListener('blur', saveCurrentSongState);
   editKey.addEventListener('blur', saveCurrentSongState);
   editCapo.addEventListener('change', saveCurrentSongState);
   editTranspose.addEventListener('change', saveCurrentSongState);

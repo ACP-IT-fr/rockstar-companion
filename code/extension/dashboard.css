@@ -234,16 +234,37 @@ body {
   align-items: center;
 }
 
-.header-titles h2 {
+.detail-title-input {
   font-size: 24px;
   font-weight: 700;
+  color: white;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
   margin-bottom: 6px;
+  width: 100%;
+  outline: none;
+  padding: 4px 0;
+  transition: border-bottom-color 0.2s;
+}
+.detail-title-input:focus {
+  border-bottom: 1px solid white;
 }
 
-.artist-name {
+.detail-artist-input {
   color: var(--accent-pink);
   font-weight: 600;
   font-size: 15px;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed rgba(236, 72, 153, 0.3);
+  width: 100%;
+  outline: none;
+  padding: 4px 0;
+  transition: border-bottom-color 0.2s;
+}
+.detail-artist-input:focus {
+  border-bottom: 1px solid var(--accent-pink);
 }
 
 .header-actions {
