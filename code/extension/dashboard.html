@@ -50,23 +50,7 @@
           <button id="export-btn" class="btn secondary-btn">📥 Exporter</button>
           <button id="import-btn" class="btn secondary-btn">📤 Importer</button>
         </div>
-        
-        <div class="spotify-auth-section">
-          <div class="spotify-section-title">Contrôle Vocal Spotify (Optionnel)</div>
-          <p class="spotify-section-desc">Requis uniquement pour piloter Spotify Premium à la voix. Les embeds standards fonctionnent sans configuration.</p>
-          <div id="spotify-unauthenticated">
-            <input type="text" id="spotify-client-id-input" placeholder="Spotify Client ID">
-            <button id="spotify-login-btn" class="btn spotify-auth-btn">🟢 Connexion Spotify</button>
-            <div class="spotify-redirect-info">
-              <span>Redirect URI à copier dans Spotify :</span>
-              <code id="spotify-redirect-uri-display">...</code>
-            </div>
-          </div>
-          <div id="spotify-authenticated" style="display: none;">
-            <span class="spotify-status-badge">🟢 Spotify Connecté</span>
-            <button id="spotify-logout-btn" class="btn danger-btn text-xs" style="padding: 4px 8px; font-size: 10px; font-weight: bold; margin-left: 10px;">Déconnexion</button>
-          </div>
-        </div>
+
         
         <input type="file" id="import-file-input" style="display: none;" accept=".json">
       </div>
@@ -176,7 +160,6 @@
   <!-- Services et logique -->
   <script src="storageService.js"></script>
   <script src="exportService.js"></script>
-  <script src="spotifyService.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

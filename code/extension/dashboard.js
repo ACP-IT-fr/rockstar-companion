@@ -38,11 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const importBtn = document.getElementById('import-btn');
   const importFileInput = document.getElementById('import-file-input');
 
-  const spotifyClientIdInput = document.getElementById('spotify-client-id-input');
-  const spotifyLoginBtn = document.getElementById('spotify-login-btn');
-  const spotifyLogoutBtn = document.getElementById('spotify-logout-btn');
-  const spotifyUnauthDiv = document.getElementById('spotify-unauthenticated');
-  const spotifyAuthDiv = document.getElementById('spotify-authenticated');
 
   // Load and Render Songs List
   function loadSongs(selectFirst = false) {
@@ -513,76 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Spotify Authentication Handlers
-  function updateSpotifyUI() {
-    if (!window.spotifyService) return;
-    
-    window.spotifyService.getClientId().then((clientId) => {
-      if (spotifyClientIdInput) {
-        spotifyClientIdInput.value = clientId || '';
-      }
-    });
-
-    const redirectUriDisplay = document.getElementById('spotify-redirect-uri-display');
-    if (redirectUriDisplay) {
-      redirectUriDisplay.textContent = window.spotifyService.getRedirectUri();
-    }
-
-    window.spotifyService.getToken().then((token) => {
-      if (token) {
-        if (spotifyUnauthDiv) spotifyUnauthDiv.style.display = 'none';
-        if (spotifyAuthDiv) spotifyAuthDiv.style.display = 'flex';
-      } else {
-        if (spotifyUnauthDiv) spotifyUnauthDiv.style.display = 'block';
-        if (spotifyAuthDiv) spotifyAuthDiv.style.display = 'none';
-      }
-    });
-  }
-
-  if (spotifyClientIdInput) {
-    spotifyClientIdInput.addEventListener('change', () => {
-      if (window.spotifyService) {
-        window.spotifyService.saveClientId(spotifyClientIdInput.value.trim());
-      }
-    });
-  }
-
-  if (spotifyLoginBtn) {
-    spotifyLoginBtn.addEventListener('click', () => {
-      if (window.spotifyService) {
-        window.spotifyService.login().then((token) => {
-          if (token) {
-            updateSpotifyUI();
-          }
-        }).catch(err => {
-          alert("Erreur de connexion Spotify : " + err);
-        });
-      }
-    });
-  }
-
-  if (spotifyLogoutBtn) {
-    spotifyLogoutBtn.addEventListener('click', () => {
-      if (window.spotifyService) {
-        window.spotifyService.logout().then(() => {
-          updateSpotifyUI();
-        });
-      }
-    });
-  }
-
-  // Capturer le token Spotify si redirection (fallback web)
-  const hash = window.location.hash.substring(1);
-  const hashParams = new URLSearchParams(hash);
-  const accessToken = hashParams.get('access_token');
-  if (accessToken && window.spotifyService) {
-    window.spotifyService.saveToken(accessToken).then(() => {
-      window.location.hash = ''; // Clear hash
-      updateSpotifyUI();
-    });
-  }
-
   // Init
   loadSongs(true);
-  updateSpotifyUI();
 });
