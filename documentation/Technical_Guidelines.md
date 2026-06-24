@@ -2,13 +2,12 @@
 
 Ce document regroupe les directives techniques à suivre pour le développement de l'application Compagnon Musical.
 
-## 1. Découplage et Modularité
+## 1. Découplage et Modularité (Vue.js & TypeScript)
 * Garder les différentes parties de l'application les plus **découplées possible**.
-* Séparer clairement :
-  * Les **Éléments d'Interface (UI)** : Gestion du DOM, affichage des états, animations.
-  * Les **Services** : Stockage (IndexedDB), traitement Audio (Web Audio API), reconnaissance Vocale (Web Speech API).
-  * Les **Données et États** : Gestion de l'état global et transition de chansons.
-* Chaque module TypeScript (ex: `audio.ts`, `speech.ts`, `app.ts`) doit exposer une API propre, typée et isolée sans polluer le scope global.
+* Utiliser **Vue 3** (Composition API) avec TypeScript :
+  * **Composants d'Interface (SFC - Single File Components)** : Fichiers `.vue` pour la structure, le style Tailwind et la réactivité locale.
+  * **Composables / Services (TypeScript)** : Fonctions réutilisables typées (ex: `useAudio.ts` pour la Web Audio API, `useSpeech.ts` pour la reconnaissance vocale) pour isoler complètement la logique métier de l'affichage.
+  * **Gestion d'État (Store réactif)** : Utiliser un état global réactif simple (via `reactive` ou Pinia si nécessaire, mais un simple store réactif Vue suffit pour la simplicité) pour gérer les morceaux et playlists.
 
 ## 2. Simplicité du Code
 * Écrire le code le plus **simple et lisible possible** (KISS - Keep It Simple, Stupid).
