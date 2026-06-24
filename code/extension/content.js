@@ -309,7 +309,7 @@ if (!SpeechRecognition) {
   }
 
   function searchUG(query) {
-    const url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent(query)}`;
+    const url = `https://www.ultimate-guitar.com/search.php?title=${encodeURIComponent(query)}&page=1&type[0]=300&rating[0]=4&rating[1]=5&order=myweight`;
     window.location.href = url;
   }
 
