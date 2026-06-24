@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: transform 0.2s, background-color 0.2s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #ug-voice-status {
@@ -65,6 +65,7 @@
   gap: 10px;
   z-index: 999999;
   pointer-events: none;
+  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ug-voice-toast {
@@ -95,7 +96,7 @@
   z-index: 999999;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s, transform 0.3s;
+  transition: opacity 0.3s, transform 0.3s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   transform: translateY(10px);
 }
 
@@ -135,6 +136,7 @@
   z-index: 999999;
   display: none;
   pointer-events: none;
+  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,7 +164,7 @@
   box-shadow: 0 4px 6px rgba(0,0,0,0.3);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #ug-chord.visible {
@@ -197,7 +199,7 @@
   box-shadow: 0 4px 6px rgba(0,0,0,0.3);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #ug-tuner.visible {
@@ -321,7 +323,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, opacity 0.2s;
+  transition: transform 0.2s, opacity 0.2s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
 
@@ -717,5 +719,51 @@
   0% { transform: scale(1); }
   50% { transform: scale(1.2); }
   100% { transform: scale(1); }
+}
+
+/* Body shift transition when Drawer is open */
+body {
+  transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+body.rockstar-drawer-open {
+  margin-right: 380px !important;
+  width: calc(100% - 380px) !important;
+}
+
+body.rockstar-drawer-open #ug-voice-btn {
+  right: 400px;
+}
+
+body.rockstar-drawer-open #ug-drawer-btn {
+  right: 520px;
+}
+
+body.rockstar-drawer-open #ug-drawer-btn.banner-active {
+  right: 670px;
+}
+
+body.rockstar-drawer-open #ug-voice-feedback {
+  right: 400px;
+}
+
+body.rockstar-drawer-open #ug-voice-speed {
+  right: 400px;
+}
+
+body.rockstar-drawer-open #ug-voice-live-text {
+  right: 470px;
+}
+
+body.rockstar-drawer-open #ug-chord {
+  right: 400px;
+}
+
+body.rockstar-drawer-open #ug-tuner {
+  right: 400px;
+}
+
+#ug-drawer-btn.banner-active {
+  right: 290px;
 }
 

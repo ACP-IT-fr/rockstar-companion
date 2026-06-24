@@ -1043,6 +1043,9 @@ if (!SpeechRecognition) {
       </div>
     `;
     document.body.appendChild(bannerEl);
+    if (drawerBtn) {
+      drawerBtn.classList.add('banner-active');
+    }
     
     document.getElementById('banner-btn-accept').addEventListener('click', () => {
       chrome.storage.sync.get('allowedDomains', (res) => {
@@ -1076,6 +1079,9 @@ if (!SpeechRecognition) {
     }
     const existing = document.getElementById('ug-voice-activation-banner');
     if (existing) existing.remove();
+    if (drawerBtn) {
+      drawerBtn.classList.remove('banner-active');
+    }
   }
 
   function extractUGMetadata() {
@@ -1127,6 +1133,9 @@ if (!SpeechRecognition) {
     drawerBtn.innerHTML = '🎸';
     drawerBtn.title = 'Ouvrir Rockstar Companion (Notes & Playbacks)';
     document.body.appendChild(drawerBtn);
+    if (document.getElementById('ug-voice-activation-banner')) {
+      drawerBtn.classList.add('banner-active');
+    }
 
     // 2. Create Drawer Container
     drawerContainer = document.createElement('div');
@@ -1383,11 +1392,13 @@ if (!SpeechRecognition) {
 
   function openDrawer() {
     drawerContainer.classList.add('open');
+    document.body.classList.add('rockstar-drawer-open');
     loadSongForDrawer();
   }
 
   function closeDrawer() {
     drawerContainer.classList.remove('open');
+    document.body.classList.remove('rockstar-drawer-open');
     activeDrawerPlaybackLink = null;
     const mediaContainer = drawerContainer.querySelector('#drawer-media-container');
     if (mediaContainer) {
@@ -1788,8 +1799,8 @@ if (!SpeechRecognition) {
       const muteAllSites = result.muteAllSites || false;
       const status = allowedDomains[currentDomain];
 
-      // Toujours initialiser le Drawer si sur Ultimate Guitar ou si le site est autorisé
-      if (isUG || status === true) {
+      // Toujours initialiser le Drawer si sur Ultimate Guitar, si le site est autorisé, ou si la bannière d'activation est affichée (status === undefined)
+      if (isUG || status === true || status === undefined) {
         initializeDrawer();
       }
 
@@ -1827,7 +1838,7 @@ if (!SpeechRecognition) {
           const muteAllSites = result.muteAllSites || false;
           const status = allowedDomains[currentDomain];
 
-          if (isUG || status === true) {
+          if (isUG || status === true || status === undefined) {
             initializeDrawer();
           }
 
