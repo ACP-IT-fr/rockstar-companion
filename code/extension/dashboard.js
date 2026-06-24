@@ -382,13 +382,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Convert Spotify URL/URI into embed URL
   function getSpotifyEmbedUrl(url) {
+    if (!url) return null;
+
+    // Support URI format: spotify:track:ID
+    if (url.startsWith('spotify:')) {
+      const parts = url.split(':');
+      if (parts.length >= 3) {
+        const type = parts[1];
+        const id = parts[2];
+        const validTypes = ['track', 'playlist', 'album', 'artist', 'show', 'episode'];
+        if (validTypes.includes(type) && id) {
+          return `https://open.spotify.com/embed/${type}/${id}`;
+        }
+      }
+    }
+
     try {
       const urlObj = new URL(url);
       if (urlObj.hostname.includes('spotify.com')) {
-        const paths = urlObj.pathname.split('/'); // ["", "track", "ID"]
-        const type = paths[1];
-        const trackId = paths[2];
-        if (trackId && type) {
+        const paths = urlObj.pathname.split('/').filter(Boolean);
+        const validTypes = ['track', 'playlist', 'album', 'artist', 'show', 'episode'];
+        const typeIndex = paths.findIndex(segment => validTypes.includes(segment));
+        if (typeIndex !== -1 && typeIndex + 1 < paths.length) {
+          const type = paths[typeIndex];
+          const trackId = paths[typeIndex + 1];
           return `https://open.spotify.com/embed/${type}/${trackId}`;
         }
       }

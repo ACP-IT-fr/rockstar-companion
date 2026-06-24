@@ -1527,17 +1527,31 @@ if (!SpeechRecognition) {
       }
     } else if (type === 'spotify') {
       let embedUrl = '';
-      try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname.includes('spotify.com')) {
-          const paths = urlObj.pathname.split('/');
-          const t = paths[1];
-          const id = paths[2];
-          if (id && t) {
+      if (url.startsWith('spotify:')) {
+        const parts = url.split(':');
+        if (parts.length >= 3) {
+          const t = parts[1];
+          const id = parts[2];
+          const validTypes = ['track', 'playlist', 'album', 'artist', 'show', 'episode'];
+          if (validTypes.includes(t) && id) {
             embedUrl = `https://open.spotify.com/embed/${t}/${id}`;
           }
         }
-      } catch(e) {}
+      } else {
+        try {
+          const urlObj = new URL(url);
+          if (urlObj.hostname.includes('spotify.com')) {
+            const paths = urlObj.pathname.split('/').filter(Boolean);
+            const validTypes = ['track', 'playlist', 'album', 'artist', 'show', 'episode'];
+            const typeIndex = paths.findIndex(segment => validTypes.includes(segment));
+            if (typeIndex !== -1 && typeIndex + 1 < paths.length) {
+              const t = paths[typeIndex];
+              const id = paths[typeIndex + 1];
+              embedUrl = `https://open.spotify.com/embed/${t}/${id}`;
+            }
+          }
+        } catch(e) {}
+      }
 
       if (embedUrl) {
         container.innerHTML = `
