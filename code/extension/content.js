@@ -8,8 +8,9 @@ if (!SpeechRecognition) {
   let isAutoStart = false;
   let awakeTimeout = null;
   let scrollInterval = null;
-  let scrollSpeed = 2;
+  let scrollSpeed = 5; // Default speed 5
   let currentDirection = 0;
+  let accumulatedScroll = 0;
   const recognition = new SpeechRecognition();
   
   recognition.continuous = true;
@@ -39,6 +40,15 @@ if (!SpeechRecognition) {
   const liveTextContainer = document.createElement('div');
   liveTextContainer.id = 'ug-voice-live-text';
   document.body.appendChild(liveTextContainer);
+
+  const speedContainer = document.createElement('div');
+  speedContainer.id = 'ug-voice-speed';
+  speedContainer.innerText = 'Speed: ' + scrollSpeed;
+  document.body.appendChild(speedContainer);
+
+  function updateSpeedUI() {
+    speedContainer.innerText = 'Speed: ' + scrollSpeed;
+  }
 
   function showFeedback(text, isSuccess) {
     const toast = document.createElement('div');
@@ -201,9 +211,11 @@ if (!SpeechRecognition) {
       action = 'Stopping';
     } else if (speedUpVariants.some(v => cmd === v || cmd.includes(v))) {
       scrollSpeed = Math.min(scrollSpeed + 1, 10);
+      updateSpeedUI();
       action = `Speeding up (Level ${scrollSpeed})`;
     } else if (slowDownVariants.some(v => cmd === v || cmd.includes(v))) {
       scrollSpeed = Math.max(scrollSpeed - 1, 1);
+      updateSpeedUI();
       action = `Slowing down (Level ${scrollSpeed})`;
     } else {
       let isSearch = false;
@@ -248,8 +260,20 @@ if (!SpeechRecognition) {
   function startScrolling(direction) {
     stopScrolling();
     currentDirection = direction;
+    accumulatedScroll = 0;
+    
+    // Show the speed container when scrolling starts
+    speedContainer.classList.add('visible');
+    
     scrollInterval = setInterval(() => {
-      window.scrollBy(0, currentDirection * scrollSpeed);
+      // Divide speed by 10 for much finer control (0.1 to 1.0 pixels per frame)
+      accumulatedScroll += currentDirection * (scrollSpeed / 10);
+      
+      if (Math.abs(accumulatedScroll) >= 1) {
+        let pixels = Math.trunc(accumulatedScroll);
+        window.scrollBy(0, pixels);
+        accumulatedScroll -= pixels;
+      }
     }, 20); // 50 fps
   }
 
@@ -257,6 +281,7 @@ if (!SpeechRecognition) {
     if (scrollInterval) {
       clearInterval(scrollInterval);
       scrollInterval = null;
+      speedContainer.classList.remove('visible');
     }
   }
 
