@@ -58,7 +58,7 @@
 
 #ug-voice-feedback {
   position: fixed;
-  bottom: 190px;
+  bottom: 310px;
   right: 20px;
   display: flex;
   flex-direction: column;
@@ -82,7 +82,7 @@
 
 #ug-voice-speed {
   position: fixed;
-  bottom: 150px;
+  bottom: 270px;
   right: 20px;
   background-color: rgba(0, 0, 0, 0.8);
   color: #fff;
@@ -139,6 +139,41 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 60vw;
+}
+
+#ug-chord {
+  position: fixed;
+  bottom: 175px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 12px;
+  padding: 10px 15px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  height: 85px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#ug-chord.visible {
+  opacity: 1;
+}
+
+#ug-chord .chord-name {
+  font-size: 32px;
+  font-weight: bold;
+  color: #E91E63;
+  margin-bottom: 2px;
 }
 
 #ug-tuner {

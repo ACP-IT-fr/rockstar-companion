@@ -49,15 +49,28 @@ if (!SpeechRecognition) {
   const tunerCentsEl = tunerContainer.querySelector('.tuner-cents');
   const tunerStringEl = tunerContainer.querySelector('.tuner-string');
   
+  const chordContainer = document.createElement('div');
+  chordContainer.id = 'ug-chord';
+  chordContainer.innerHTML = `
+    <div class="chord-name">-</div>
+  `;
+  document.body.appendChild(chordContainer);
+  
+  const chordNameEl = chordContainer.querySelector('.chord-name');
+
   let audioContext = null;
   let analyser = null;
   let tunerActive = false;
   let pitchHistory = [];
+  let chordHistory = [];
+  let chordClearTimeout = null;
+  const freqBuf = new Float32Array(8192);
 
   function initTuner() {
     if (audioContext) {
       if (audioContext.state === 'suspended') audioContext.resume();
       tunerContainer.classList.add('visible');
+      chordContainer.classList.add('visible');
       tunerActive = true;
       updateTuner();
       return;
@@ -65,13 +78,14 @@ if (!SpeechRecognition) {
     
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
+    analyser.fftSize = 16384;
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
       tunerActive = true;
       tunerContainer.classList.add('visible');
+      chordContainer.classList.add('visible');
       updateTuner();
     }).catch(err => {
       console.error("[Rockstar] Microphone access denied for tuner", err);
@@ -131,11 +145,118 @@ if (!SpeechRecognition) {
     { note: "E4", midi: 64, string: "1st string (e)" }
   ];
 
+  const chordTemplates = {
+    // 12 Major (Root, Major 3rd, Perfect 5th)
+    "C":  [1,0,0,0,1,0,0,1,0,0,0,0], "C#": [0,1,0,0,0,1,0,0,1,0,0,0],
+    "D":  [0,0,1,0,0,0,1,0,0,1,0,0], "D#": [0,0,0,1,0,0,0,1,0,0,1,0],
+    "E":  [0,0,0,0,1,0,0,0,1,0,0,1], "F":  [1,0,0,0,0,1,0,0,0,1,0,0],
+    "F#": [0,1,0,0,0,0,1,0,0,0,1,0], "G":  [0,0,1,0,0,0,0,1,0,0,0,1],
+    "G#": [1,0,0,1,0,0,0,0,1,0,0,0], "A":  [0,1,0,0,1,0,0,0,0,1,0,0],
+    "A#": [0,0,1,0,0,1,0,0,0,0,1,0], "B":  [0,0,0,1,0,0,1,0,0,0,0,1],
+    // 12 Minor (Root, Minor 3rd, Perfect 5th)
+    "Cm":  [1,0,0,1,0,0,0,1,0,0,0,0], "C#m": [0,1,0,0,1,0,0,0,1,0,0,0],
+    "Dm":  [0,0,1,0,0,1,0,0,0,1,0,0], "D#m": [0,0,0,1,0,0,1,0,0,0,1,0],
+    "Em":  [0,0,0,0,1,0,0,1,0,0,0,1], "Fm":  [1,0,0,0,0,1,0,0,1,0,0,0],
+    "F#m": [0,1,0,0,0,0,1,0,0,1,0,0], "Gm":  [0,0,1,0,0,0,0,1,0,0,1,0],
+    "G#m": [0,0,0,1,0,0,0,0,1,0,0,1], "Am":  [1,0,0,0,1,0,0,0,0,1,0,0],
+    "A#m": [0,1,0,0,0,1,0,0,0,0,1,0], "Bm":  [0,0,1,0,0,0,1,0,0,0,0,1]
+  };
+
+  function detectChord() {
+    analyser.getFloatFrequencyData(freqBuf);
+    const chromagram = new Array(12).fill(0);
+    const binSize = audioContext.sampleRate / analyser.fftSize;
+
+    // Frequencies from ~65Hz (C2) to ~2000Hz
+    const minBin = Math.floor(65 / binSize);
+    const maxBin = Math.floor(2000 / binSize);
+
+    let totalEnergy = 0;
+    for (let i = minBin; i < maxBin; i++) {
+      const db = freqBuf[i];
+      if (db < -70) continue; // Noise floor
+      
+      const freq = i * binSize;
+      const noteNum = Math.round(12 * Math.log2(freq / 440)) + 69;
+      const pitchClass = noteNum % 12;
+      
+      const energy = Math.pow(10, db / 20); // Linear magnitude
+      chromagram[pitchClass] += energy;
+      totalEnergy += energy;
+    }
+
+    if (totalEnergy < 0.1) {
+       // Only fade out if timeout has passed
+       if (!chordClearTimeout) {
+         chordClearTimeout = setTimeout(() => {
+           chordContainer.style.opacity = '0.3';
+           chordHistory = [];
+           chordClearTimeout = null;
+         }, 1500); // Wait 1.5 seconds before hiding
+       }
+       return;
+    }
+    
+    // We have sound, clear the fade-out timeout
+    if (chordClearTimeout) {
+      clearTimeout(chordClearTimeout);
+      chordClearTimeout = null;
+    }
+    
+    // Normalize chromagram
+    let maxE = Math.max(...chromagram);
+    if (maxE > 0) {
+      for(let i=0; i<12; i++) chromagram[i] /= maxE;
+    }
+
+    let bestChord = "-";
+    let bestScore = -1;
+
+    for (const [chordName, template] of Object.entries(chordTemplates)) {
+       let dotProduct = 0, templateMag = 0, chromaMag = 0;
+       for (let i = 0; i < 12; i++) {
+         dotProduct += chromagram[i] * template[i];
+         templateMag += template[i] * template[i];
+         chromaMag += chromagram[i] * chromagram[i];
+       }
+       if (templateMag === 0 || chromaMag === 0) continue;
+       const score = dotProduct / (Math.sqrt(templateMag) * Math.sqrt(chromaMag));
+       if (score > bestScore) {
+         bestScore = score;
+         bestChord = chordName;
+       }
+    }
+
+    if (bestScore > 0.65) {
+       chordHistory.push(bestChord);
+       if (chordHistory.length > 10) chordHistory.shift(); // keep last 10 frames
+       
+       // Mode filter (most stable chord)
+       const counts = {};
+       let maxCount = 0;
+       let stableChord = bestChord;
+       for (const c of chordHistory) {
+         counts[c] = (counts[c] || 0) + 1;
+         if (counts[c] > maxCount) {
+           maxCount = counts[c];
+           stableChord = c;
+         }
+       }
+
+       chordContainer.style.opacity = '1';
+       chordNameEl.innerText = stableChord;
+    }
+  }
+
   function updateTuner() {
     if (!tunerActive || !analyser) return;
 
     requestAnimationFrame(updateTuner);
+    
+    // Run chord detection
+    detectChord();
 
+    // The time domain buffer can be small (2048) even if fftSize is large
     const buf = new Float32Array(2048);
     analyser.getFloatTimeDomainData(buf);
     const ac = autoCorrelate(buf, audioContext.sampleRate);
@@ -280,6 +401,7 @@ if (!SpeechRecognition) {
     if (tunerActive) {
        tunerActive = false;
        tunerContainer.classList.remove('visible');
+       chordContainer.classList.remove('visible');
        if (audioContext && audioContext.state === 'running') {
           audioContext.suspend();
        }
