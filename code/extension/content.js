@@ -218,6 +218,15 @@ if (!SpeechRecognition) {
     
     if (interimRaw.trim() !== '') {
       const normalizedInterim = normalize(interimRaw);
+      
+      // Stop detection if the transcript exceeds 10 words (prevents screen clutter and false positives while singing)
+      const wordCount = normalizedInterim.trim().split(/\s+/).length;
+      if (wordCount > 10) {
+        liveTextContainer.style.display = 'none';
+        recognition.stop();
+        return;
+      }
+
       if (!isAwake && !normalizedInterim.includes('rockstar')) {
         // Optionally don't show live text if not awake and not saying wake word
         liveTextContainer.style.display = 'none';
