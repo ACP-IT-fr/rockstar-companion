@@ -189,7 +189,7 @@ if (!SpeechRecognition) {
         if (now - lastSpeedChange > 500) {
           let changed = false;
           
-          const speedSetRegex = new RegExp("(?:vitesse|speed|niveau|level)\\s*" + numPattern + "\\b", "i");
+          const speedSetRegex = new RegExp("(?:vitesse|speed|niveau|level)\\s*(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "\\b", "i");
           const speedSetMatch = normalized.match(speedSetRegex);
           
           if (speedSetMatch) {
