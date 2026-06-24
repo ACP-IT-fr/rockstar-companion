@@ -178,26 +178,40 @@ if (!SpeechRecognition) {
   function handleCommand(command) {
     let action = '';
     let isSuccess = true;
-    if (command.includes('scroll down') || command.includes('descend') || command.includes('descends')) {
+    const cmd = command.toLowerCase().trim();
+
+    const scrollDownVariants = ['scroll down', 'descend', 'descends', 'dessin', 'descent', 'descente', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'descendre'];
+    const scrollUpVariants = ['scroll up', 'monte', 'monter', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte', 'remonter'];
+    const stopVariants = ['stop', 'arrête', 'arrete', 'arrêter', 'arreter', 'pause', 'halte', 'stoppe', 'stopper'];
+    const searchPrefixes = ['search for ', 'search ', 'cherche ', 'chercher ', 'trouve ', 'trouver ', 'find '];
+
+    if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(1);
       action = 'Scrolling down';
-    } else if (command.includes('scroll up') || command.includes('monte')) {
+    } else if (scrollUpVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(-1);
       action = 'Scrolling up';
-    } else if (command.includes('stop') || command.includes('arrête')) {
+    } else if (stopVariants.some(v => cmd === v || cmd.includes(v))) {
       stopScrolling();
       action = 'Stopping';
-    } else if (command.startsWith('search for ') || command.startsWith('search ')) {
-      const query = command.replace('search for ', '').replace('search ', '');
-      searchUG(query);
-      action = `Searching for "${query}"`;
-    } else if (command.startsWith('cherche ')) {
-      const query = command.replace('cherche ', '');
-      searchUG(query);
-      action = `Searching for "${query}"`;
     } else {
-      isSuccess = false;
-      action = 'Unrecognized command';
+      let isSearch = false;
+      for (const prefix of searchPrefixes) {
+        if (cmd.startsWith(prefix)) {
+          const query = cmd.substring(prefix.length).trim();
+          if (query) {
+            searchUG(query);
+            action = `Searching for "${query}"`;
+            isSearch = true;
+            break;
+          }
+        }
+      }
+      
+      if (!isSearch) {
+        isSuccess = false;
+        action = 'Unrecognized command';
+      }
     }
     
     showFeedback(`🎤 Heard: "${command}"\n${action}`, isSuccess);
