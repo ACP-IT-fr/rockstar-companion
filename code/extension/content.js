@@ -60,6 +60,7 @@ if (!SpeechRecognition) {
   let bannerEl = null;
   
   let isInitialized = false;
+  let isSuspendedByVisibility = false;
   let recognition = null;
 
   let audioContext = null;
@@ -406,7 +407,7 @@ if (!SpeechRecognition) {
     const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis', 'ralenti', 'ralentir', 'doucement', 'plus doucement', 'moins rapide'];
 
     recognition.onend = () => {
-      if (isListening) {
+      if (isListening && !isSuspendedByVisibility) {
         setTimeout(() => {
           try {
             recognition.start();
@@ -532,6 +533,40 @@ if (!SpeechRecognition) {
       }
     };
 
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (isListening && !isSuspendedByVisibility) {
+          isSuspendedByVisibility = true;
+          try {
+            recognition.stop();
+          } catch (e) {}
+          if (tunerActive && audioContext && audioContext.state === 'running') {
+            audioContext.suspend();
+          }
+          if (statusSpan) {
+            statusSpan.innerText = 'Tab Inactif';
+          }
+        }
+      } else {
+        if (isSuspendedByVisibility) {
+          isSuspendedByVisibility = false;
+          if (isListening) {
+            try {
+              recognition.start();
+              if (statusSpan) {
+                statusSpan.innerText = isAwake ? "À l'écoute" : `Listening (Say ${wakeWord}...)`;
+              }
+            } catch (e) {
+              console.error("Error restarting recognition on visibility change", e);
+            }
+            if (tunerActive && audioContext && audioContext.state === 'suspended') {
+              audioContext.resume();
+            }
+          }
+        }
+      }
+    });
+
     // Auto-start listening on load
     startListening(true);
     
@@ -572,6 +607,7 @@ if (!SpeechRecognition) {
 
   function startListening(auto = false) {
     isAutoStart = auto;
+    isSuspendedByVisibility = false;
     if (!isListening) {
       initTuner();
       try {
@@ -589,6 +625,7 @@ if (!SpeechRecognition) {
 
   function stopListening() {
     isListening = false;
+    isSuspendedByVisibility = false;
     if (tunerActive) {
        tunerActive = false;
        if (tunerContainer) tunerContainer.classList.remove('visible');
