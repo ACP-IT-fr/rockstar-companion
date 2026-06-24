@@ -125,31 +125,38 @@ if (!SpeechRecognition) {
   };
 
   recognition.onresult = (event) => {
-    let interimTranscript = '';
+    let interimRaw = '';
+    
+    function normalize(text) {
+      return text.toLowerCase()
+                 .replace(/-/g, ' ') // Remove hyphens that break commands
+                 .replace(/rock\s*star/g, 'rockstar') // Unify wake word
+                 .replace(/roxstar/g, 'rockstar')
+                 .replace(/rock's tar/g, 'rockstar')
+                 .trim();
+    }
+
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       const transcript = event.results[i][0].transcript;
+      const normalized = normalize(transcript);
       
       // Wake up early on interim results for instant feedback
       if (!isAwake) {
-        const lowerTrans = transcript.toLowerCase();
-        if (lowerTrans.includes('rockstar') || lowerTrans.includes('rock star') || lowerTrans.includes('roxstar')) {
+        if (normalized.includes('rockstar')) {
           wakeUp();
         }
       }
       
       if (event.results[i].isFinal) {
-        let finalTranscript = transcript.trim().toLowerCase();
+        let finalTranscript = normalized;
         console.log("Voice Command Recognized:", finalTranscript);
         liveTextContainer.innerText = '';
         liveTextContainer.style.display = 'none';
-        
-        const wakeWords = ['rockstar', 'rock star', 'roxstar'];
-        const foundWakeWord = wakeWords.find(ww => finalTranscript.includes(ww));
 
-        if (foundWakeWord) {
+        if (finalTranscript.includes('rockstar')) {
           // In case interim didn't catch it
           if (!isAwake) wakeUp();
-          finalTranscript = finalTranscript.replace(foundWakeWord, '').trim();
+          finalTranscript = finalTranscript.replace('rockstar', '').trim();
           if (finalTranscript.length > 0) {
             handleCommand(finalTranscript);
           }
@@ -162,16 +169,17 @@ if (!SpeechRecognition) {
           console.log("Ignored (sleeping):", finalTranscript);
         }
       } else {
-        interimTranscript += transcript;
+        interimRaw += transcript + ' ';
       }
     }
     
-    if (interimTranscript.trim() !== '') {
-      if (!isAwake && !interimTranscript.toLowerCase().includes('rockstar') && !interimTranscript.toLowerCase().includes('rock star')) {
+    if (interimRaw.trim() !== '') {
+      const normalizedInterim = normalize(interimRaw);
+      if (!isAwake && !normalizedInterim.includes('rockstar')) {
         // Optionally don't show live text if not awake and not saying wake word
         liveTextContainer.style.display = 'none';
       } else {
-        liveTextContainer.innerText = interimTranscript;
+        liveTextContainer.innerText = normalizedInterim;
         liveTextContainer.style.display = 'block';
       }
     }
