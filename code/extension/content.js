@@ -240,7 +240,7 @@ if (!SpeechRecognition) {
         if (cmd.startsWith(prefix)) {
           const query = cmd.substring(prefix.length).trim();
           if (query) {
-            performAdvancedSearch(query);
+            searchPlaylistUG(query);
             action = `Searching playlist for "${query}"`;
             isSearch = true;
             break;
@@ -254,7 +254,7 @@ if (!SpeechRecognition) {
           if (cmd.startsWith(prefix)) {
             const query = cmd.substring(prefix.length).trim();
             if (query) {
-              performAdvancedSearch(query);
+              searchUG(query);
               action = `Searching for "${query}"`;
               isSearch = true;
               break;
@@ -300,142 +300,116 @@ if (!SpeechRecognition) {
     }
   }
 
-  async function fetchUGState(url) {
-    try {
-      const res = await fetch(url);
-      const html = await res.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const storeDiv = doc.querySelector('.js-store');
-      if (storeDiv) {
-        return JSON.parse(storeDiv.getAttribute('data-content'));
-      }
-    } catch (e) {
-      console.error("Fetch UG state error:", e);
-    }
-    return null;
+  function searchUG(query) {
+    const url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent(query)}`;
+    window.location.href = url;
   }
 
-  function extractResults(state) {
-    if (!state || !state.store || !state.store.page || !state.store.page.data) return [];
-    const data = state.store.page.data;
-    if (Array.isArray(data.results)) return data.results;
-    if (Array.isArray(data.tabs)) return data.tabs;
-    
-    // Robust recursive fallback to find the tabs array
-    function findArrayWithTabUrl(obj, depth = 0) {
-      if (depth > 5 || !obj) return [];
-      for (let key in obj) {
-        if (Array.isArray(obj[key]) && obj[key].length > 0 && (obj[key][0].tab_url || obj[key][0].url)) {
-          return obj[key];
-        } else if (obj[key] !== null && typeof obj[key] === 'object') {
-          const res = findArrayWithTabUrl(obj[key], depth + 1);
-          if (res.length > 0) return res;
+  function searchPlaylistUG(query) {
+    const url = `https://www.ultimate-guitar.com/user/mytabs?search=${encodeURIComponent(query)}`;
+    window.location.href = url;
+  }
+
+  function highlightBestResults() {
+    if (!window.location.href.includes('search.php')) return;
+
+    const storeDiv = document.querySelector('.js-store');
+    if (!storeDiv) return;
+
+    try {
+      const state = JSON.parse(storeDiv.getAttribute('data-content'));
+      
+      // Extract results from UG's store
+      let results = [];
+      if (state && state.store && state.store.page && state.store.page.data) {
+        const data = state.store.page.data;
+        if (Array.isArray(data.results)) {
+          results = data.results;
+        } else {
+          // Fallback recursive search for tabs array
+          function findTabs(obj, depth = 0) {
+            if (depth > 5 || !obj) return [];
+            for (let key in obj) {
+              if (Array.isArray(obj[key]) && obj[key].length > 0 && (obj[key][0].tab_url || obj[key][0].url)) {
+                return obj[key];
+              } else if (obj[key] !== null && typeof obj[key] === 'object') {
+                const res = findTabs(obj[key], depth + 1);
+                if (res.length > 0) return res;
+              }
+            }
+            return [];
+          }
+          results = findTabs(data);
         }
       }
-      return [];
-    }
-    return findArrayWithTabUrl(data);
-  }
 
-  async function performAdvancedSearch(query) {
-    createAndShowModal(query);
+      if (results.length === 0) return;
 
-    const [statePlaylist, stateGlobal] = await Promise.all([
-      fetchUGState(`https://www.ultimate-guitar.com/user/mytabs?search=${encodeURIComponent(query)}`),
-      fetchUGState(`https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent(query)}`)
-    ]);
+      // Find the best 'Chords' tab
+      const chords = results.filter(r => (r.type === 'Chords' || r.type === 'chords' || r.type_name === 'Chords') && !r.is_pro);
+      if (chords.length === 0) return;
 
-    const resultsPlaylist = extractResults(statePlaylist);
-    const resultsGlobal = extractResults(stateGlobal);
+      const bestChords = chords.sort((a, b) => (b.votes || b.rating || 0) - (a.votes || a.rating || 0))[0];
+      const bestUrl = bestChords.tab_url || bestChords.url;
 
-    const playlistMatch = resultsPlaylist.length > 0 ? resultsPlaylist[0] : null;
-    
-    // Find best chords
-    const bestChords = resultsGlobal
-      .filter(r => (r.type === 'Chords' || r.type === 'chords' || r.type_name === 'Chords') && !r.is_pro)
-      .sort((a, b) => (b.votes || b.rating || 0) - (a.votes || a.rating || 0))[0];
+      if (!bestUrl) return;
 
-    populateModal(query, playlistMatch, bestChords);
-  }
+      // Wait for React to render the table
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (attempts > 20) {
+          clearInterval(interval);
+          return;
+        }
 
-  // Modal UI Logic
-  let modalOverlay = null;
+        // Find the link to the best tab
+        const links = Array.from(document.querySelectorAll('a')).filter(a => a.href === bestUrl || a.href.includes(bestUrl));
+        
+        if (links.length > 0) {
+          clearInterval(interval);
+          const link = links[0];
+          
+          // Heuristic to find the row: go up until the parent has multiple children (the list)
+          let row = link;
+          while (row.parentElement && row.parentElement.children.length < 3 && row.tagName !== 'ARTICLE' && row.tagName !== 'SECTION') {
+            row = row.parentElement;
+          }
+          
+          // Highlight the row
+          row.classList.add('ug-voice-highlighted-row');
+          
+          // Clone and prepend
+          const container = row.parentElement;
+          const clone = row.cloneNode(true);
+          
+          // Add a label to the clone
+          const label = document.createElement('div');
+          label.innerText = '⭐ BEST CHORDS MATCH (Found by Rockstar)';
+          label.style.backgroundColor = '#ffc107';
+          label.style.color = '#111';
+          label.style.padding = '5px 10px';
+          label.style.fontWeight = 'bold';
+          label.style.borderRadius = '4px 4px 0 0';
+          label.style.marginBottom = '-2px';
+          
+          const wrapper = document.createElement('div');
+          wrapper.style.marginBottom = '20px';
+          wrapper.appendChild(label);
+          wrapper.appendChild(clone);
 
-  function createAndShowModal(query) {
-    if (modalOverlay) modalOverlay.remove();
+          container.insertBefore(wrapper, container.firstChild);
+        }
+      }, 500);
 
-    modalOverlay = document.createElement('div');
-    modalOverlay.id = 'ug-voice-modal-overlay';
-    
-    modalOverlay.innerHTML = `
-      <div id="ug-voice-modal">
-        <h2><span>🎸 Searching: ${query}</span> <span class="ug-modal-close">&times;</span></h2>
-        <div id="ug-voice-modal-content">
-          <div class="ug-modal-loading">Searching your playlists and global catalog...</div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modalOverlay);
-    
-    // Trigger transition
-    setTimeout(() => modalOverlay.classList.add('visible'), 10);
-
-    modalOverlay.querySelector('.ug-modal-close').addEventListener('click', () => {
-      modalOverlay.classList.remove('visible');
-    });
-    modalOverlay.addEventListener('click', (e) => {
-      if (e.target === modalOverlay) modalOverlay.classList.remove('visible');
-    });
-  }
-
-  function populateModal(query, playlistMatch, bestChords) {
-    const content = modalOverlay.querySelector('#ug-voice-modal-content');
-    content.innerHTML = '';
-
-    if (!playlistMatch && !bestChords) {
-      content.innerHTML = '<div class="ug-modal-empty">No results found on Ultimate Guitar.</div>';
-      return;
-    }
-
-    if (playlistMatch) {
-      const url = playlistMatch.tab_url || playlistMatch.url;
-      const title = playlistMatch.song_name || playlistMatch.title || query;
-      const artist = playlistMatch.artist_name || playlistMatch.artist || '';
-      const listName = playlistMatch.list_name || playlistMatch.collection_name || 'My Playlist';
-      
-      content.innerHTML += `
-        <a href="${url}" class="ug-modal-result">
-          <div class="ug-modal-result-title">${title}</div>
-          <div class="ug-modal-result-artist">${artist}</div>
-          <div class="ug-modal-result-meta">
-            <span class="ug-badge playlist">📖 ${listName}</span>
-          </div>
-        </a>
-      `;
-    }
-
-    if (bestChords) {
-      const url = bestChords.tab_url || bestChords.url;
-      const title = bestChords.song_name || bestChords.title || query;
-      const artist = bestChords.artist_name || bestChords.artist || '';
-      const votes = bestChords.votes || 0;
-      const rating = (bestChords.rating || 0).toFixed(1);
-
-      content.innerHTML += `
-        <a href="${url}" class="ug-modal-result">
-          <div class="ug-modal-result-title">${title}</div>
-          <div class="ug-modal-result-artist">${artist}</div>
-          <div class="ug-modal-result-meta">
-            <span class="ug-badge chords">🎸 Chords</span>
-            <span>⭐ ${rating} (${votes} votes)</span>
-          </div>
-        </a>
-      `;
+    } catch (e) {
+      console.error("Error highlighting best results:", e);
     }
   }
 
   // Attempt to auto-start listening when the page loads
   startListening(true);
+  
+  // Highlight best results if we are on a search page
+  highlightBestResults();
 }
