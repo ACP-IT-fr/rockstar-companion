@@ -5,6 +5,7 @@ if (!SpeechRecognition) {
 } else {
   let isListening = false;
   let isAwake = false;
+  let isAutoStart = false;
   let awakeTimeout = null;
   let scrollInterval = null;
   const recognition = new SpeechRecognition();
@@ -44,16 +45,17 @@ if (!SpeechRecognition) {
     if (isListening) {
       stopListening();
     } else {
-      startListening();
+      startListening(false);
     }
   });
 
-  function startListening() {
+  function startListening(auto = false) {
+    isAutoStart = auto;
     try {
       recognition.start();
       isListening = true;
       btn.classList.add('listening');
-      btn.title = 'Listening... Click to stop';
+      btn.title = 'Listening for "Rockstar"... Click to turn off';
     } catch (e) {
       console.error("Speech recognition error:", e);
     }
@@ -64,7 +66,7 @@ if (!SpeechRecognition) {
     isListening = false;
     isAwake = false;
     btn.classList.remove('listening', 'awake');
-    btn.title = 'Click to enable voice control';
+    btn.title = 'Voice control OFF. Click to enable';
     stopScrolling();
   }
 
@@ -144,7 +146,9 @@ if (!SpeechRecognition) {
     console.error("Speech recognition error", event.error);
     if (event.error === 'not-allowed') {
       stopListening();
-      alert("Microphone permission denied. Please allow microphone access to use voice commands.");
+      if (!isAutoStart) {
+        alert("Microphone permission denied. Please allow microphone access to use voice commands.");
+      }
     }
   };
 
@@ -200,4 +204,7 @@ if (!SpeechRecognition) {
     const url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodeURIComponent(query)}`;
     window.location.href = url;
   }
+
+  // Attempt to auto-start listening when the page loads
+  startListening(true);
 }
