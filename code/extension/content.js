@@ -8,7 +8,16 @@ if (!SpeechRecognition) {
   let isAutoStart = false;
   let awakeTimeout = null;
   let scrollInterval = null;
-  let scrollSpeed = 5; // Default speed 5
+  
+  let scrollSpeed = 1; // Default speed 1
+  let lastSpeedChange = 0;
+  const storageKey = 'ug_voice_speed_' + window.location.pathname;
+  const savedSpeed = localStorage.getItem(storageKey);
+  if (savedSpeed) {
+    const parsed = parseInt(savedSpeed, 10);
+    if (!isNaN(parsed)) scrollSpeed = Math.max(1, Math.min(parsed, 10));
+  }
+
   let currentDirection = 0;
   let accumulatedScroll = 0;
   const recognition = new SpeechRecognition();
@@ -48,6 +57,12 @@ if (!SpeechRecognition) {
 
   function updateSpeedUI() {
     speedContainer.innerText = 'Speed: ' + scrollSpeed;
+  }
+
+  function adjustSpeed(delta) {
+    scrollSpeed = Math.max(1, Math.min(scrollSpeed + delta, 10));
+    updateSpeedUI();
+    localStorage.setItem(storageKey, scrollSpeed);
   }
 
   function showFeedback(text, isSuccess) {
@@ -124,6 +139,9 @@ if (!SpeechRecognition) {
     }
   };
 
+  const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere', 'accélérer', 'accelerer', 'acceler', 'accélér', 'plus rapide'];
+  const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis', 'ralenti', 'ralentir', 'doucement', 'plus doucement', 'moins rapide'];
+
   recognition.onresult = (event) => {
     let interimRaw = '';
     
@@ -144,6 +162,31 @@ if (!SpeechRecognition) {
       if (!isAwake) {
         if (normalized.includes('rockstar')) {
           wakeUp();
+        }
+      }
+
+      // Fast-track speed adjustments on interim results for instant response
+      if (isAwake || normalized.includes('rockstar')) {
+        const now = Date.now();
+        if (now - lastSpeedChange > 500) {
+          let changed = false;
+          if (speedUpVariants.some(v => normalized.includes(v))) {
+             adjustSpeed(1);
+             changed = true;
+          } else if (slowDownVariants.some(v => normalized.includes(v))) {
+             adjustSpeed(-1);
+             changed = true;
+          }
+          if (changed) {
+             lastSpeedChange = now;
+             showFeedback(`⚡ Speed Level ${scrollSpeed}`, true);
+             clearTimeout(awakeTimeout);
+             awakeTimeout = setTimeout(() => goToSleep(), 15000);
+             
+             // Stop recognition to clear the current transcript buffer. It will auto-restart via onend.
+             recognition.stop();
+             return;
+          }
         }
       }
       
@@ -205,8 +248,6 @@ if (!SpeechRecognition) {
     const pauseVariants = ['pause', 'stop scroll', 'arrête le scroll', 'arrete le scroll', 'fige', 'bloque', 'suspend'];
     const sleepVariants = ['stop', 'arrête', 'arrete', 'arrêt', 'arret', 'stoppe', 'stopper', 'stopp', 'dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
     const topVariants = ['début', 'debut', 'tout en haut', 'go to top', 'top', 'reviens', 'commencement'];
-    const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere', 'accélérer', 'accelerer', 'acceler', 'accélér', 'plus rapide'];
-    const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis', 'ralenti', 'ralentir', 'doucement', 'plus doucement', 'moins rapide'];
     const searchPlaylistPrefixes = [
       'playlist search ', 'search playlist ', 
       'cherche dans ma playlist ', 'chercher dans ma playlist ', 'cherche dans mes playlists ', 'chercher dans mes playlists ',
@@ -235,14 +276,6 @@ if (!SpeechRecognition) {
       stopScrolling();
       goToSleep();
       action = 'Going to sleep';
-    } else if (speedUpVariants.some(v => cmd === v || cmd.includes(v))) {
-      scrollSpeed = Math.min(scrollSpeed + 1, 10);
-      updateSpeedUI();
-      action = `Speeding up (Level ${scrollSpeed})`;
-    } else if (slowDownVariants.some(v => cmd === v || cmd.includes(v))) {
-      scrollSpeed = Math.max(scrollSpeed - 1, 1);
-      updateSpeedUI();
-      action = `Slowing down (Level ${scrollSpeed})`;
     } else if (numMatch) {
       const num = parseInt(numMatch[1], 10);
       if (window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
