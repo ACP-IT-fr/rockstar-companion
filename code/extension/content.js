@@ -1394,15 +1394,11 @@ if (!SpeechRecognition) {
 
   function openDrawer() {
     drawerContainer.classList.add('open');
-    document.documentElement.classList.add('rockstar-drawer-open');
-    document.body.classList.add('rockstar-drawer-open');
     loadSongForDrawer();
   }
 
   function closeDrawer() {
     drawerContainer.classList.remove('open');
-    document.documentElement.classList.remove('rockstar-drawer-open');
-    document.body.classList.remove('rockstar-drawer-open');
     activeDrawerPlaybackLink = null;
     const mediaContainer = drawerContainer.querySelector('#drawer-media-container');
     if (mediaContainer) {

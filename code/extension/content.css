@@ -339,7 +339,7 @@
 #rockstar-drawer {
   position: fixed;
   top: 0;
-  right: -380px;
+  right: 0;
   width: 380px;
   height: 100vh;
   background-color: rgba(18, 17, 24, 0.95);
@@ -719,50 +719,6 @@
   0% { transform: scale(1); }
   50% { transform: scale(1.2); }
   100% { transform: scale(1); }
-}
-
-/* Body shift transition when Drawer is open */
-html, body {
-  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-html.rockstar-drawer-open, body.rockstar-drawer-open {
-  width: calc(100% - 380px) !important;
-  max-width: calc(100% - 380px) !important;
-  margin-right: 380px !important;
-  overflow-x: hidden !important;
-}
-
-body.rockstar-drawer-open #ug-voice-btn {
-  right: 470px !important;
-}
-
-body.rockstar-drawer-open #ug-drawer-btn {
-  right: 400px !important;
-}
-
-body.rockstar-drawer-open #ug-drawer-btn.banner-active {
-  right: 670px !important;
-}
-
-body.rockstar-drawer-open #ug-voice-feedback {
-  right: 400px !important;
-}
-
-body.rockstar-drawer-open #ug-voice-speed {
-  right: 400px !important;
-}
-
-body.rockstar-drawer-open #ug-voice-live-text {
-  right: 610px !important;
-}
-
-body.rockstar-drawer-open #ug-chord {
-  right: 400px !important;
-}
-
-body.rockstar-drawer-open #ug-tuner {
-  right: 400px !important;
 }
 
 #ug-drawer-btn.banner-active {
