@@ -145,22 +145,27 @@ if (!SpeechRecognition) {
     { note: "E4", midi: 64, string: "1st string (e)" }
   ];
 
-  const chordTemplates = {
-    // 12 Major (Root, Major 3rd, Perfect 5th)
-    "C":  [1,0,0,0,1,0,0,1,0,0,0,0], "C#": [0,1,0,0,0,1,0,0,1,0,0,0],
-    "D":  [0,0,1,0,0,0,1,0,0,1,0,0], "D#": [0,0,0,1,0,0,0,1,0,0,1,0],
-    "E":  [0,0,0,0,1,0,0,0,1,0,0,1], "F":  [1,0,0,0,0,1,0,0,0,1,0,0],
-    "F#": [0,1,0,0,0,0,1,0,0,0,1,0], "G":  [0,0,1,0,0,0,0,1,0,0,0,1],
-    "G#": [1,0,0,1,0,0,0,0,1,0,0,0], "A":  [0,1,0,0,1,0,0,0,0,1,0,0],
-    "A#": [0,0,1,0,0,1,0,0,0,0,1,0], "B":  [0,0,0,1,0,0,1,0,0,0,0,1],
-    // 12 Minor (Root, Minor 3rd, Perfect 5th)
-    "Cm":  [1,0,0,1,0,0,0,1,0,0,0,0], "C#m": [0,1,0,0,1,0,0,0,1,0,0,0],
-    "Dm":  [0,0,1,0,0,1,0,0,0,1,0,0], "D#m": [0,0,0,1,0,0,1,0,0,0,1,0],
-    "Em":  [0,0,0,0,1,0,0,1,0,0,0,1], "Fm":  [1,0,0,0,0,1,0,0,1,0,0,0],
-    "F#m": [0,1,0,0,0,0,1,0,0,1,0,0], "Gm":  [0,0,1,0,0,0,0,1,0,0,1,0],
-    "G#m": [0,0,0,1,0,0,0,0,1,0,0,1], "Am":  [1,0,0,0,1,0,0,0,0,1,0,0],
-    "A#m": [0,1,0,0,0,1,0,0,0,0,1,0], "Bm":  [0,0,1,0,0,0,1,0,0,0,0,1]
+  const chordTemplates = {};
+  const chordIntervals = {
+    "": [0, 4, 7],           // Major
+    "m": [0, 3, 7],          // Minor
+    "7": [0, 4, 7, 10],      // Dominant 7th
+    "maj7": [0, 4, 7, 11],   // Major 7th
+    "m7": [0, 3, 7, 10],     // Minor 7th
+    "sus2": [0, 2, 7],       // Suspended 2nd
+    "sus4": [0, 5, 7]        // Suspended 4th
   };
+
+  for (let i = 0; i < 12; i++) {
+    const rootName = noteStrings[i];
+    for (const [suffix, intervals] of Object.entries(chordIntervals)) {
+      const template = new Array(12).fill(0);
+      for (const inv of intervals) {
+        template[(i + inv) % 12] = 1;
+      }
+      chordTemplates[rootName + suffix] = template;
+    }
+  }
 
   function detectChord() {
     analyser.getFloatFrequencyData(freqBuf);
