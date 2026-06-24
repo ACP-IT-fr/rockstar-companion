@@ -4,6 +4,8 @@ if (!SpeechRecognition) {
   console.warn("Web Speech API not supported in this browser.");
 } else {
   let isListening = false;
+  let isAwake = false;
+  let awakeTimeout = null;
   let scrollInterval = null;
   const recognition = new SpeechRecognition();
   
@@ -60,9 +62,26 @@ if (!SpeechRecognition) {
   function stopListening() {
     recognition.stop();
     isListening = false;
-    btn.classList.remove('listening');
+    isAwake = false;
+    btn.classList.remove('listening', 'awake');
     btn.title = 'Click to enable voice control';
     stopScrolling();
+  }
+
+  function wakeUp() {
+    isAwake = true;
+    btn.classList.add('awake');
+    showFeedback("🎸 Rockstar is listening...", true);
+    clearTimeout(awakeTimeout);
+    awakeTimeout = setTimeout(() => {
+      goToSleep();
+    }, 10000); // 10 seconds awake
+  }
+
+  function goToSleep() {
+    isAwake = false;
+    btn.classList.remove('awake');
+    showFeedback("💤 Rockstar is sleeping...", true);
   }
 
   recognition.onend = () => {
@@ -83,19 +102,41 @@ if (!SpeechRecognition) {
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        const finalTranscript = transcript.trim().toLowerCase();
+        let finalTranscript = transcript.trim().toLowerCase();
         console.log("Voice Command Recognized:", finalTranscript);
         liveTextContainer.innerText = '';
         liveTextContainer.style.display = 'none';
-        handleCommand(finalTranscript);
+        
+        const wakeWords = ['rockstar', 'rock star', 'roxstar'];
+        const foundWakeWord = wakeWords.find(ww => finalTranscript.includes(ww));
+
+        if (foundWakeWord) {
+          wakeUp();
+          finalTranscript = finalTranscript.replace(foundWakeWord, '').trim();
+          if (finalTranscript.length > 0) {
+            handleCommand(finalTranscript);
+          }
+        } else if (isAwake) {
+          // Restart awake timeout since user spoke while awake
+          clearTimeout(awakeTimeout);
+          awakeTimeout = setTimeout(() => goToSleep(), 10000);
+          handleCommand(finalTranscript);
+        } else {
+          console.log("Ignored (sleeping):", finalTranscript);
+        }
       } else {
         interimTranscript += transcript;
       }
     }
     
     if (interimTranscript.trim() !== '') {
-      liveTextContainer.innerText = interimTranscript;
-      liveTextContainer.style.display = 'block';
+      if (!isAwake && !interimTranscript.toLowerCase().includes('rockstar') && !interimTranscript.toLowerCase().includes('rock star')) {
+        // Optionally don't show live text if not awake and not saying wake word
+        liveTextContainer.style.display = 'none';
+      } else {
+        liveTextContainer.innerText = interimTranscript;
+        liveTextContainer.style.display = 'block';
+      }
     }
   };
   
@@ -133,6 +174,12 @@ if (!SpeechRecognition) {
     }
     
     showFeedback(`🎤 Heard: "${command}"\n${action}`, isSuccess);
+    
+    // Go to sleep after executing a command successfully
+    if (isSuccess && !command.includes('scroll')) {
+      goToSleep();
+    }
+
   }
 
   function startScrolling(direction) {
