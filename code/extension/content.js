@@ -215,6 +215,9 @@ if (!SpeechRecognition) {
     ];
     const searchPrefixes = ['search for ', 'search ', 'cherche ', 'chercher ', 'trouve ', 'trouver ', 'find '];
 
+    const openNumRegex = /^(?:ouvre|open|go to|choisis|prends|lance)?\s*(?:le\s+|la\s+|the\s+)?(?:numéro|numero|number|num|n°|#)?\s*(\d+)$/i;
+    const numMatch = cmd.match(openNumRegex);
+
     if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(1);
       action = 'Scrolling down';
@@ -240,6 +243,15 @@ if (!SpeechRecognition) {
       scrollSpeed = Math.max(scrollSpeed - 1, 1);
       updateSpeedUI();
       action = `Slowing down (Level ${scrollSpeed})`;
+    } else if (numMatch) {
+      const num = parseInt(numMatch[1], 10);
+      if (window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
+        window.location.href = window.ugSearchResultLinks[num];
+        action = `Opening result number ${num}`;
+      } else {
+        isSuccess = false;
+        action = `Result number ${num} not found on this page`;
+      }
     } else {
       let isSearch = false;
       
@@ -445,9 +457,60 @@ if (!SpeechRecognition) {
     }, 500);
   }
 
+  function numberSearchResults() {
+    if (!window.location.href.includes('search.php') && !window.location.href.includes('search')) return;
+
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (attempts > 20) {
+        clearInterval(interval);
+        return;
+      }
+
+      const allLinks = Array.from(document.querySelectorAll('a'));
+      const tabLinks = allLinks.filter(a => a.href.includes('tabs.ultimate-guitar.com/tab/') && !a.href.includes('#'));
+
+      if (tabLinks.length === 0) return;
+
+      clearInterval(interval);
+      console.log("[Rockstar] Found tab links for numbering:", tabLinks.length);
+
+      window.ugSearchResultLinks = {};
+      let counter = 1;
+      const processedUrls = new Set();
+
+      tabLinks.forEach(link => {
+        const url = link.href.split('?')[0]; // Remove query params to ensure uniqueness
+        if (!processedUrls.has(url)) {
+          processedUrls.add(url);
+          window.ugSearchResultLinks[counter] = url;
+
+          const badge = document.createElement('span');
+          badge.innerText = `[${counter}] `;
+          badge.style.backgroundColor = '#e91e63';
+          badge.style.color = '#fff';
+          badge.style.fontWeight = 'bold';
+          badge.style.padding = '2px 6px';
+          badge.style.borderRadius = '4px';
+          badge.style.marginRight = '8px';
+          badge.style.fontSize = '14px';
+          badge.style.display = 'inline-block';
+          
+          link.insertBefore(badge, link.firstChild);
+
+          counter++;
+        }
+      });
+    }, 500);
+  }
+
   // Attempt to auto-start listening when the page loads
   startListening(true);
   
   // Highlight best results if we are on a search page
   highlightBestResults();
+
+  // Add numbering to search results
+  numberSearchResults();
 }
