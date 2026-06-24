@@ -1452,8 +1452,15 @@ if (!SpeechRecognition) {
     list.innerHTML = '';
     
     const links = currentSong.links || [];
+    
+    // Automatically select the first link if none is active and links exist
+    if (!activeDrawerPlaybackLink && links.length > 0) {
+      activeDrawerPlaybackLink = links[0];
+    }
+
     if (links.length === 0) {
       list.innerHTML = '<li style="padding: 6px; font-size:11px; color:#888; text-align:center;">Aucun lien</li>';
+      playDrawerPlayback();
       return;
     }
 
@@ -1479,7 +1486,6 @@ if (!SpeechRecognition) {
       li.querySelector('.drawer-link-info').addEventListener('click', () => {
         activeDrawerPlaybackLink = link;
         renderDrawerLinks();
-        playDrawerPlayback();
       });
 
       li.querySelector('.drawer-link-delete').addEventListener('click', (e) => {
@@ -1490,12 +1496,14 @@ if (!SpeechRecognition) {
             activeDrawerPlaybackLink = null;
           }
           renderDrawerLinks();
-          playDrawerPlayback();
         });
       });
 
       list.appendChild(li);
     });
+
+    // Always update playback preview based on the active link
+    playDrawerPlayback();
   }
 
   function playDrawerPlayback() {

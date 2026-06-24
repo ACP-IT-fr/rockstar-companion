@@ -1,7 +1,7 @@
 #ug-voice-btn {
   position: fixed;
   bottom: 20px;
-  right: 20px;
+  right: 90px;
   width: auto;
   min-width: 100px;
   height: 50px;
@@ -126,7 +126,7 @@
 #ug-voice-live-text {
   position: fixed;
   bottom: 25px;
-  right: 90px;
+  right: 230px;
   background-color: rgba(0, 0, 0, 0.7);
   color: #ffc107;
   padding: 8px 12px;
@@ -308,7 +308,7 @@
 #ug-drawer-btn {
   position: fixed;
   bottom: 20px;
-  right: 140px;
+  right: 20px;
   width: 50px;
   height: 50px;
   border-radius: 25px;
@@ -339,7 +339,7 @@
 #rockstar-drawer {
   position: fixed;
   top: 0;
-  right: 0;
+  right: -380px;
   width: 380px;
   height: 100vh;
   background-color: rgba(18, 17, 24, 0.95);
@@ -723,44 +723,11 @@
 
 /* Body shift transition when Drawer is open */
 body {
-  transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 body.rockstar-drawer-open {
-  margin-right: 380px !important;
-  width: calc(100% - 380px) !important;
-}
-
-body.rockstar-drawer-open #ug-voice-btn {
-  right: 400px;
-}
-
-body.rockstar-drawer-open #ug-drawer-btn {
-  right: 520px;
-}
-
-body.rockstar-drawer-open #ug-drawer-btn.banner-active {
-  right: 670px;
-}
-
-body.rockstar-drawer-open #ug-voice-feedback {
-  right: 400px;
-}
-
-body.rockstar-drawer-open #ug-voice-speed {
-  right: 400px;
-}
-
-body.rockstar-drawer-open #ug-voice-live-text {
-  right: 470px;
-}
-
-body.rockstar-drawer-open #ug-chord {
-  right: 400px;
-}
-
-body.rockstar-drawer-open #ug-tuner {
-  right: 400px;
+  transform: translateX(-380px) !important;
 }
 
 #ug-drawer-btn.banner-active {
