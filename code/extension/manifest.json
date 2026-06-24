@@ -16,7 +16,7 @@
     {
       "matches": ["http://*/*", "https://*/*"],
       "css": ["content.css"],
-      "js": ["content.js"]
+      "js": ["storageService.js", "content.js"]
     }
   ],
   "action": {

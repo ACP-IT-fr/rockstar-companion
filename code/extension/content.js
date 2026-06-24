@@ -63,6 +63,15 @@ if (!SpeechRecognition) {
   let isSuspendedByVisibility = false;
   let recognition = null;
 
+  let drawerBtn = null;
+  let drawerContainer = null;
+  let currentSong = null;
+  let activeDrawerPlaybackLink = null;
+  let dictationRecognition = null;
+  let activeDictationTarget = null;
+  let activeDictationBtn = null;
+  let isDrawerInitialized = false;
+
   let audioContext = null;
   let analyser = null;
   let tunerActive = false;
@@ -335,6 +344,9 @@ if (!SpeechRecognition) {
   function initializeRockstar() {
     if (isInitialized) return;
     isInitialized = true;
+
+    // Create Drawer UI elements
+    createDrawerUI();
 
     recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -999,7 +1011,10 @@ if (!SpeechRecognition) {
         allowedDomains[currentDomain] = true;
         chrome.storage.sync.set({ allowedDomains }, () => {
           removeActivationBanner();
-          initializeRockstar();
+          initializeDrawer();
+          if (SpeechRecognition) {
+            initializeRockstar();
+          }
         });
       });
     });
@@ -1024,27 +1039,653 @@ if (!SpeechRecognition) {
     if (existing) existing.remove();
   }
 
+  function extractUGMetadata() {
+    let title = '';
+    let artist = '';
+    let capo = 0;
+    
+    // 1. Try og:title
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle && ogTitle.content) {
+      const content = ogTitle.content;
+      const parts = content.split(' Chords by ');
+      if (parts.length === 2) {
+        title = parts[0].trim();
+        artist = parts[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
+      } else {
+        const parts2 = content.split(' Tab by ');
+        if (parts2.length === 2) {
+          title = parts2[0].trim();
+          artist = parts2[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
+        }
+      }
+    }
+    
+    // 2. DOM Fallbacks
+    if (!title) {
+      const h1 = document.querySelector('h1');
+      if (h1) title = h1.innerText.trim();
+    }
+    
+    // 3. Extract capo
+    const allText = document.body.innerText;
+    const capoMatch = allText.match(/capo:\s*(\d+)/i) || allText.match(/capodastre:\s*(\d+)/i) || allText.match(/capo\s+(\d+)\w*\s+fret/i);
+    if (capoMatch) {
+      capo = parseInt(capoMatch[1], 10);
+    }
+    
+    return {
+      title: title || document.title.replace(/ Chords.*/, '').replace(/ Tab.*/, '').trim(),
+      artist: artist || "Artiste inconnu",
+      capo: capo
+    };
+  }
+
+  function createDrawerUI() {
+    // 1. Create Floating Button
+    drawerBtn = document.createElement('button');
+    drawerBtn.id = 'ug-drawer-btn';
+    drawerBtn.innerHTML = '🎸';
+    drawerBtn.title = 'Ouvrir Rockstar Companion (Notes & Playbacks)';
+    document.body.appendChild(drawerBtn);
+
+    // 2. Create Drawer Container
+    drawerContainer = document.createElement('div');
+    drawerContainer.id = 'rockstar-drawer';
+    drawerContainer.innerHTML = `
+      <div class="drawer-header">
+        <div class="drawer-header-title">
+          <h3 id="drawer-title">Chargement...</h3>
+          <p id="drawer-artist">-</p>
+        </div>
+        <div class="drawer-header-actions">
+          <button id="drawer-magic-btn" title="Extraire automatiquement les clés et transpositions depuis la page">🪄</button>
+          <button id="drawer-close-btn">&times;</button>
+        </div>
+      </div>
+
+      <div class="drawer-body">
+        <div class="drawer-section">
+          <div class="drawer-grid">
+            <div class="drawer-input-group">
+              <label>Clé / Tonalité</label>
+              <input type="text" id="drawer-key" placeholder="Ex: Gm">
+            </div>
+            <div class="drawer-input-group">
+              <label>Capo</label>
+              <input type="number" id="drawer-capo" min="0" max="24" value="0">
+            </div>
+            <div class="drawer-input-group">
+              <label>Trans</label>
+              <input type="number" id="drawer-transpose" min="-12" max="12" value="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-label-row">
+            <label>Notes d'interprétation</label>
+            <button class="drawer-dictate-btn" data-target="drawer-notes" title="Dicter les notes">🎤</button>
+          </div>
+          <textarea id="drawer-notes" placeholder="Notes de structure, ressentis..."></textarea>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-label-row">
+            <label>Astuces de jeu</label>
+            <button class="drawer-dictate-btn" data-target="drawer-tips" title="Dicter les astuces">🎤</button>
+          </div>
+          <textarea id="drawer-tips" placeholder="Rythmique, strumming..."></textarea>
+        </div>
+
+        <div class="drawer-section flex-col">
+          <div class="drawer-section-header">
+            <label>Liens de Playback</label>
+            <button id="drawer-add-link-btn">+ Ajouter</button>
+          </div>
+
+          <div id="drawer-link-form" class="drawer-link-form" style="display: none;">
+            <div class="drawer-form-group">
+              <label>Nom du lien :</label>
+              <input type="text" id="drawer-new-link-title" placeholder="Nom du lien">
+            </div>
+            <div class="drawer-form-group">
+              <label>URL (YouTube / Spotify) :</label>
+              <input type="text" id="drawer-new-link-url" placeholder="URL YouTube ou Spotify">
+            </div>
+            <div class="drawer-form-group">
+              <label>Type :</label>
+              <select id="drawer-new-link-type">
+                <option value="youtube">YouTube</option>
+                <option value="spotify">Spotify</option>
+                <option value="other">Autre</option>
+              </select>
+            </div>
+            <div class="drawer-form-buttons">
+              <button id="drawer-save-link-btn" class="drawer-btn-ok">Enregistrer</button>
+              <button id="drawer-cancel-link-btn" class="drawer-btn-cancel">Annuler</button>
+            </div>
+          </div>
+
+          <ul id="drawer-links-list"></ul>
+          
+          <div id="drawer-media-container" class="drawer-media-container">
+            <div class="drawer-media-empty">Aucun playback en lecture</div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(drawerContainer);
+
+    // 3. Events
+    drawerBtn.addEventListener('click', toggleDrawer);
+    drawerContainer.querySelector('#drawer-close-btn').addEventListener('click', closeDrawer);
+
+    // Fields events
+    const keyInput = drawerContainer.querySelector('#drawer-key');
+    const capoInput = drawerContainer.querySelector('#drawer-capo');
+    const transInput = drawerContainer.querySelector('#drawer-transpose');
+    const notesText = drawerContainer.querySelector('#drawer-notes');
+    const tipsText = drawerContainer.querySelector('#drawer-tips');
+
+    function saveDrawerData() {
+      if (!currentSong) return;
+      currentSong.key = keyInput.value.trim();
+      currentSong.capo = parseInt(capoInput.value, 10) || 0;
+      currentSong.transpose = parseInt(transInput.value, 10) || 0;
+      currentSong.notes = notesText.value;
+      currentSong.interpretationNotes = notesText.value;
+      currentSong.playingTips = tipsText.value;
+
+      if (window.storageService) {
+        window.storageService.saveSong(currentSong);
+      }
+    }
+
+    keyInput.addEventListener('blur', saveDrawerData);
+    capoInput.addEventListener('change', saveDrawerData);
+    transInput.addEventListener('change', saveDrawerData);
+
+    let debounceSave = null;
+    function debouncedSave() {
+      clearTimeout(debounceSave);
+      debounceSave = setTimeout(saveDrawerData, 1000);
+    }
+    notesText.addEventListener('input', debouncedSave);
+    tipsText.addEventListener('input', debouncedSave);
+
+    // Magic Wand Event
+    const magicBtn = drawerContainer.querySelector('#drawer-magic-btn');
+    if (magicBtn) {
+      magicBtn.addEventListener('click', () => {
+        const extracted = autoExtractMetadata();
+        let updated = false;
+
+        if (extracted.key) {
+          keyInput.value = extracted.key;
+          currentSong.key = extracted.key;
+          updated = true;
+        }
+        if (extracted.capo !== undefined && extracted.capo > 0) {
+          capoInput.value = extracted.capo;
+          currentSong.capo = extracted.capo;
+          updated = true;
+        }
+        if (extracted.transpose !== undefined && extracted.transpose !== 0) {
+          transInput.value = extracted.transpose;
+          currentSong.transpose = extracted.transpose;
+          updated = true;
+        }
+
+        if (updated) {
+          [keyInput, capoInput, transInput].forEach(input => {
+            input.style.transition = 'background-color 0.3s';
+            input.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+            setTimeout(() => {
+              input.style.backgroundColor = 'transparent';
+            }, 800);
+          });
+          saveDrawerData();
+          showFeedback("Mises à jour appliquées par la baguette magique !", true);
+        } else {
+          showFeedback("Aucune clé/capo/transposition trouvée à extraire.", false);
+        }
+      });
+    }
+
+    // Dictation Events
+    const dictationButtons = drawerContainer.querySelectorAll('.drawer-dictate-btn');
+    const DictationSpeechClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!DictationSpeechClass) {
+      dictationButtons.forEach(btn => btn.style.display = 'none');
+    } else {
+      dictationButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.getAttribute('data-target');
+          toggleDictation(targetId, btn);
+        });
+      });
+    }
+
+    // Playback Link Events
+    const addLinkBtn = drawerContainer.querySelector('#drawer-add-link-btn');
+    const linkForm = drawerContainer.querySelector('#drawer-link-form');
+    const linkTitle = drawerContainer.querySelector('#drawer-new-link-title');
+    const linkUrl = drawerContainer.querySelector('#drawer-new-link-url');
+    const linkType = drawerContainer.querySelector('#drawer-new-link-type');
+    const saveLinkBtn = drawerContainer.querySelector('#drawer-save-link-btn');
+    const cancelLinkBtn = drawerContainer.querySelector('#drawer-cancel-link-btn');
+
+    addLinkBtn.addEventListener('click', () => {
+      linkForm.style.display = linkForm.style.display === 'none' ? 'block' : 'none';
+      linkTitle.value = '';
+      linkUrl.value = '';
+      linkType.value = 'youtube';
+    });
+
+    cancelLinkBtn.addEventListener('click', () => {
+      linkForm.style.display = 'none';
+    });
+
+    saveLinkBtn.addEventListener('click', () => {
+      const url = linkUrl.value.trim();
+      const title = linkTitle.value.trim();
+      const type = linkType.value;
+
+      if (!url) return;
+      if (!currentSong.links) currentSong.links = [];
+
+      currentSong.links.push({
+        title: title || (type === 'youtube' ? 'Vidéo YouTube' : 'Audio Spotify'),
+        url: url,
+        type: type
+      });
+
+      if (window.storageService) {
+        window.storageService.saveSong(currentSong).then(() => {
+          linkForm.style.display = 'none';
+          renderDrawerLinks();
+        });
+      }
+    });
+  }
+
+  function toggleDrawer() {
+    if (drawerContainer.classList.contains('open')) {
+      closeDrawer();
+    } else {
+      openDrawer();
+    }
+  }
+
+  function openDrawer() {
+    drawerContainer.classList.add('open');
+    loadSongForDrawer();
+  }
+
+  function closeDrawer() {
+    drawerContainer.classList.remove('open');
+    activeDrawerPlaybackLink = null;
+    const mediaContainer = drawerContainer.querySelector('#drawer-media-container');
+    if (mediaContainer) {
+      mediaContainer.innerHTML = '<div class="drawer-media-empty">Aucun playback en lecture</div>';
+    }
+  }
+
+  function loadSongForDrawer() {
+    const url = window.location.href;
+    if (!window.storageService) return;
+
+    window.storageService.getSong(url).then(song => {
+      if (song) {
+        currentSong = song;
+        populateDrawerFields();
+      } else {
+        const metadata = extractUGMetadata();
+        currentSong = {
+          url: url,
+          title: metadata.title,
+          artist: metadata.artist,
+          key: "",
+          capo: metadata.capo,
+          transpose: 0,
+          notes: "",
+          interpretationNotes: "",
+          playingTips: "",
+          links: []
+        };
+        window.storageService.saveSong(currentSong).then(() => {
+          populateDrawerFields();
+        });
+      }
+    });
+  }
+
+  function populateDrawerFields() {
+    drawerContainer.querySelector('#drawer-title').innerText = currentSong.title;
+    drawerContainer.querySelector('#drawer-artist').innerText = currentSong.artist;
+    drawerContainer.querySelector('#drawer-key').value = currentSong.key || '';
+    drawerContainer.querySelector('#drawer-capo').value = currentSong.capo || 0;
+    drawerContainer.querySelector('#drawer-transpose').value = currentSong.transpose || 0;
+    drawerContainer.querySelector('#drawer-notes').value = currentSong.notes || currentSong.interpretationNotes || '';
+    drawerContainer.querySelector('#drawer-tips').value = currentSong.playingTips || '';
+    
+    renderDrawerLinks();
+  }
+
+  function renderDrawerLinks() {
+    const list = drawerContainer.querySelector('#drawer-links-list');
+    list.innerHTML = '';
+    
+    const links = currentSong.links || [];
+    if (links.length === 0) {
+      list.innerHTML = '<li style="padding: 6px; font-size:11px; color:#888; text-align:center;">Aucun lien</li>';
+      return;
+    }
+
+    links.forEach((link, idx) => {
+      const li = document.createElement('li');
+      li.className = 'drawer-link-item';
+      if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.url === link.url) {
+        li.classList.add('active');
+      }
+
+      let icon = '🔗';
+      if (link.type === 'youtube') icon = '📺';
+      if (link.type === 'spotify') icon = '🎵';
+
+      li.innerHTML = `
+        <span class="drawer-link-info">
+          <span>${icon}</span>
+          <span class="drawer-link-title">${link.title}</span>
+        </span>
+        <button class="drawer-link-delete" data-index="${idx}">&times;</button>
+      `;
+
+      li.querySelector('.drawer-link-info').addEventListener('click', () => {
+        activeDrawerPlaybackLink = link;
+        renderDrawerLinks();
+        playDrawerPlayback();
+      });
+
+      li.querySelector('.drawer-link-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentSong.links.splice(idx, 1);
+        window.storageService.saveSong(currentSong).then(() => {
+          if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.url === link.url) {
+            activeDrawerPlaybackLink = null;
+          }
+          renderDrawerLinks();
+          playDrawerPlayback();
+        });
+      });
+
+      list.appendChild(li);
+    });
+  }
+
+  function playDrawerPlayback() {
+    const container = drawerContainer.querySelector('#drawer-media-container');
+    container.innerHTML = '';
+
+    if (!activeDrawerPlaybackLink) {
+      container.innerHTML = '<div class="drawer-media-empty">Aucun playback en lecture</div>';
+      return;
+    }
+
+    const { url, type } = activeDrawerPlaybackLink;
+    if (type === 'youtube') {
+      let videoId = '';
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname.includes('youtube.com')) {
+          videoId = urlObj.searchParams.get('v');
+        } else if (urlObj.hostname.includes('youtu.be')) {
+          videoId = urlObj.pathname.slice(1);
+        }
+      } catch(e) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        if (match && match[2].length === 11) {
+          videoId = match[2];
+        }
+      }
+
+      if (videoId) {
+        container.innerHTML = `
+          <iframe 
+            src="https://www.youtube.com/embed/${videoId}" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen>
+          </iframe>`;
+      } else {
+        container.innerHTML = '<div class="drawer-media-empty">Lien YouTube invalide</div>';
+      }
+    } else if (type === 'spotify') {
+      let embedUrl = '';
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname.includes('spotify.com')) {
+          const paths = urlObj.pathname.split('/');
+          const t = paths[1];
+          const id = paths[2];
+          if (id && t) {
+            embedUrl = `https://open.spotify.com/embed/${t}/${id}`;
+          }
+        }
+      } catch(e) {}
+
+      if (embedUrl) {
+        container.innerHTML = `
+          <iframe 
+            src="${embedUrl}" 
+            allow="encrypted-media">
+          </iframe>`;
+      } else {
+        container.innerHTML = '<div class="drawer-media-empty">Lien Spotify invalide</div>';
+      }
+    } else {
+      container.innerHTML = `
+        <div class="drawer-media-empty">
+          <a href="${url}" target="_blank" style="color:#d880ff; text-decoration:underline;">Ouvrir le lien externe</a>
+        </div>`;
+    }
+  }
+
+  function autoExtractMetadata() {
+    let key = "";
+    let transpose = 0;
+    let capo = 0;
+
+    // 1. Essayer le JSON js-store
+    try {
+      const storeDiv = document.querySelector('.js-store');
+      if (storeDiv) {
+        const raw = storeDiv.getAttribute('data-content');
+        if (raw) {
+          const decoded = raw.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'");
+          const data = JSON.parse(decoded);
+          const tab = data?.store?.page?.data?.tab;
+          if (tab) {
+            if (tab.meta && tab.meta.tonality) {
+              key = tab.meta.tonality;
+            }
+            if (tab.meta && tab.meta.capo) {
+              capo = tab.meta.capo;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Erreur extraction js-store:", e);
+    }
+
+    // 2. Si non trouvé par js-store, scanner les éléments textuels pour la clé
+    if (!key) {
+      const elements = Array.from(document.querySelectorAll('span, div, td'));
+      for (const el of elements) {
+        const text = el.innerText.trim();
+        if (/^(key|tonalité|tonality)\s*:\s*([A-G][#b]?m?)/i.test(text)) {
+          const match = text.match(/^(key|tonalité|tonality)\s*:\s*([A-G][#b]?m?)/i);
+          key = match[2];
+          break;
+        }
+      }
+    }
+
+    // 3. Scanner la transposition
+    const transButtons = Array.from(document.querySelectorAll('button, span, div'));
+    for (const btn of transButtons) {
+      const text = btn.innerText.trim();
+      if (/...transpose\s*([+-]\d+)/i.test(text)) {
+        const match = text.match(/...transpose\s*([+-]\d+)/i);
+        transpose = parseInt(match[1], 10);
+        break;
+      }
+      if (btn.classList.contains('transpose-value') || text.includes('transpose')) {
+        const val = parseInt(text.replace(/[^0-9+-]/g, ''), 10);
+        if (!isNaN(val)) {
+          transpose = val;
+          break;
+        }
+      }
+    }
+
+    return { key, capo, transpose };
+  }
+
+  function toggleDictation(targetId, button) {
+    const textarea = drawerContainer.querySelector(`#${targetId}`);
+    if (!textarea) return;
+
+    if (activeDictationTarget === targetId) {
+      stopDictation();
+      return;
+    }
+
+    if (activeDictationTarget) {
+      stopDictation();
+    }
+
+    activeDictationTarget = targetId;
+    activeDictationBtn = button;
+    button.classList.add('recording');
+    button.title = "En écoute... Cliquez pour arrêter";
+
+    // Mettre en pause la reconnaissance Rockstar
+    let wasMainListening = isListening;
+    if (isListening) {
+      // Temporairement, on n'appelle pas stopListening() en entier (qui cache le tuner/chord), juste recognition.stop()
+      try {
+        recognition.stop();
+      } catch(e) {}
+      // Bloquer le redémarrage automatique temporairement
+      isListening = false; 
+    }
+
+    const DictationClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!DictationClass) {
+      alert("La dictée vocale n'est pas supportée.");
+      stopDictation();
+      return;
+    }
+
+    dictationRecognition = new DictationClass();
+    dictationRecognition.continuous = false;
+    dictationRecognition.interimResults = false;
+    dictationRecognition.lang = 'fr-FR'; // Langue de dictée par défaut
+
+    dictationRecognition.onresult = (event) => {
+      const resultText = event.results[0][0].transcript;
+      if (resultText) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const val = textarea.value;
+        textarea.value = val.substring(0, start) + (start > 0 && val[start-1] !== ' ' ? ' ' : '') + resultText + (end < val.length && val[end] !== ' ' ? ' ' : '') + val.substring(end);
+        textarea.dispatchEvent(new Event('input')); // Déclencher la sauvegarde
+      }
+    };
+
+    dictationRecognition.onend = () => {
+      stopDictation();
+      if (wasMainListening) {
+        isListening = true;
+        try {
+          recognition.start();
+        } catch(e) {}
+      }
+    };
+
+    dictationRecognition.onerror = (e) => {
+      console.error("Erreur dictée:", e);
+      stopDictation();
+      if (wasMainListening) {
+        isListening = true;
+        try {
+          recognition.start();
+        } catch(e) {}
+      }
+    };
+
+    dictationRecognition.start();
+  }
+
+  function stopDictation() {
+    if (dictationRecognition) {
+      try {
+        dictationRecognition.stop();
+      } catch(e) {}
+      dictationRecognition = null;
+    }
+    if (activeDictationBtn) {
+      activeDictationBtn.classList.remove('recording');
+      activeDictationBtn.title = "Dicter";
+    }
+    activeDictationTarget = null;
+    activeDictationBtn = null;
+  }
+
+  function initializeDrawer() {
+    if (isDrawerInitialized) return;
+    isDrawerInitialized = true;
+    createDrawerUI();
+    loadSongForDrawer();
+  }
+
   // Storage preference listeners and bootstrap check
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
     chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites'], (result) => {
-      buildChordTemplates(result.chord7th || false, result.chordSus || false);
-      if (result.wakeWord !== undefined) {
-        wakeWord = result.wakeWord.trim() || 'Rockstar';
-        wakeWordLower = wakeWord.toLowerCase();
+      const allowedDomains = result.allowedDomains || {};
+      const muteAllSites = result.muteAllSites || false;
+      const status = allowedDomains[currentDomain];
+
+      // Toujours initialiser le Drawer si sur Ultimate Guitar ou si le site est autorisé
+      if (isUG || status === true) {
+        initializeDrawer();
       }
-      
-      if (isUG) {
-        initializeRockstar();
-      } else {
-        const allowedDomains = result.allowedDomains || {};
-        const muteAllSites = result.muteAllSites || false;
-        const status = allowedDomains[currentDomain];
+
+      // Initialiser Rockstar (Reconnaissance Vocale & Accordeur) si supporté
+      if (SpeechRecognition) {
+        buildChordTemplates(result.chord7th || false, result.chordSus || false);
+        if (result.wakeWord !== undefined) {
+          wakeWord = result.wakeWord.trim() || 'Rockstar';
+          wakeWordLower = wakeWord.toLowerCase();
+        }
         
-        if (status === true) {
+        if (isUG) {
           initializeRockstar();
-        } else if (status === false || muteAllSites === true) {
-          // Explicitly blocked or global mute
         } else {
+          if (status === true) {
+            initializeRockstar();
+          } else if (status === false || muteAllSites === true) {
+            // Bloqué ou Mute
+          } else {
+            showActivationBanner();
+          }
+        }
+      } else {
+        // Fallback sans reconnaissance vocale
+        if (!isUG && status === undefined && !muteAllSites) {
           showActivationBanner();
         }
       }
@@ -1053,37 +1694,43 @@ if (!SpeechRecognition) {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'sync') {
         chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites'], (result) => {
-          buildChordTemplates(result.chord7th || false, result.chordSus || false);
-          const oldWakeWord = wakeWord;
-          wakeWord = (result.wakeWord !== undefined ? result.wakeWord.trim() : 'Rockstar') || 'Rockstar';
-          wakeWordLower = wakeWord.toLowerCase();
-          
-          if (isInitialized && oldWakeWord !== wakeWord) {
-            updateUIForWakeWord();
+          const allowedDomains = result.allowedDomains || {};
+          const muteAllSites = result.muteAllSites || false;
+          const status = allowedDomains[currentDomain];
+
+          if (isUG || status === true) {
+            initializeDrawer();
           }
 
-          if (!isUG) {
-            const allowedDomains = result.allowedDomains || {};
-            const muteAllSites = result.muteAllSites || false;
-            const status = allowedDomains[currentDomain];
+          if (SpeechRecognition) {
+            buildChordTemplates(result.chord7th || false, result.chordSus || false);
+            const oldWakeWord = wakeWord;
+            wakeWord = (result.wakeWord !== undefined ? result.wakeWord.trim() : 'Rockstar') || 'Rockstar';
+            wakeWordLower = wakeWord.toLowerCase();
             
-            if (status === true) {
-              removeActivationBanner();
-              if (!isInitialized) {
-                initializeRockstar();
-              } else if (btn) {
-                btn.style.display = 'flex';
-              }
-            } else {
-              if (status === false || muteAllSites === true) {
+            if (isInitialized && oldWakeWord !== wakeWord) {
+              updateUIForWakeWord();
+            }
+
+            if (!isUG) {
+              if (status === true) {
                 removeActivationBanner();
-                if (isInitialized && btn) {
-                  stopListening();
-                  btn.style.display = 'none';
+                if (!isInitialized) {
+                  initializeRockstar();
+                } else if (btn) {
+                  btn.style.display = 'flex';
                 }
               } else {
-                if (!isInitialized) {
-                  showActivationBanner();
+                if (status === false || muteAllSites === true) {
+                  removeActivationBanner();
+                  if (isInitialized && btn) {
+                    stopListening();
+                    btn.style.display = 'none';
+                  }
+                } else {
+                  if (!isInitialized) {
+                    showActivationBanner();
+                  }
                 }
               }
             }
@@ -1094,7 +1741,10 @@ if (!SpeechRecognition) {
   } else {
     buildChordTemplates(false, false);
     if (isUG) {
-      initializeRockstar();
+      initializeDrawer();
+      if (SpeechRecognition) {
+        initializeRockstar();
+      }
     }
   }
 }

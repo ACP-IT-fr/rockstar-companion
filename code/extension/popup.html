@@ -115,10 +115,34 @@
     .text-input-group input[type="text"]:focus {
       border-color: #ffc107;
     }
+    #open-dashboard-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #bc13fe 0%, #ff007f 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 10px rgba(188, 19, 254, 0.3);
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    #open-dashboard-btn:hover {
+      opacity: 0.9;
+    }
+    #open-dashboard-btn:active {
+      transform: scale(0.98);
+    }
   </style>
 </head>
 <body>
   <h2>UG Voice Control</h2>
+  
+  <button id="open-dashboard-btn">
+    Ouvrir mon répertoire (Dashboard)
+  </button>
   
   <!-- Accordion Section 1: Help & Commands -->
   <div class="accordion-item active">

@@ -92,4 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
   muteAllSitesCb.addEventListener('change', () => {
     chrome.storage.sync.set({ muteAllSites: muteAllSitesCb.checked });
   });
+
+  // Open Dashboard Page
+  const openDashboardBtn = document.getElementById('open-dashboard-btn');
+  if (openDashboardBtn) {
+    openDashboardBtn.addEventListener('click', () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+    });
+  }
 });

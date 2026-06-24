@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Répertoire Rockstar Companion</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar: Liste des Chansons -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>🎸 Répertoire Rockstar</h1>
+      </div>
+      
+      <!-- Recherche et Filtres -->
+      <div class="filter-box">
+        <input type="text" id="search-input" placeholder="Rechercher un titre, artiste...">
+        
+        <div class="filter-row">
+          <select id="filter-key">
+            <option value="">Toutes les clés</option>
+          </select>
+          
+          <select id="filter-capo">
+            <option value="">Tous capos</option>
+            <option value="0">Sans capo</option>
+            <option value="1">Capo 1</option>
+            <option value="2">Capo 2</option>
+            <option value="3">Capo 3</option>
+            <option value="4">Capo 4</option>
+            <option value="5">Capo 5</option>
+            <option value="6">Capo 6</option>
+            <option value="7">Capo 7</option>
+            <option value="8">Capo 8+</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Liste des chansons -->
+      <div class="song-list-container">
+        <ul id="song-list">
+          <!-- Rempli dynamiquement -->
+        </ul>
+      </div>
+      
+      <!-- Pied de page avec Import / Export -->
+      <div class="sidebar-footer">
+        <button id="export-btn" class="btn secondary-btn">📥 Exporter</button>
+        <button id="import-btn" class="btn secondary-btn">📤 Importer</button>
+        <input type="file" id="import-file-input" style="display: none;" accept=".json">
+      </div>
+    </aside>
+    
+    <!-- Zone Principale : Détail de la chanson -->
+    <main class="main-content" id="no-song-selected">
+      <div class="empty-state">
+        <div class="empty-icon">🎵</div>
+        <h2>Aucun morceau sélectionné</h2>
+        <p>Sélectionnez un morceau dans la liste pour voir et modifier vos notes, astuces de jeu et playbacks.</p>
+      </div>
+    </main>
+
+    <main class="main-content" id="song-detail-container" style="display: none;">
+      <!-- En-tête du détail -->
+      <header class="detail-header">
+        <div class="header-titles">
+          <h2 id="detail-title">Titre de la chanson</h2>
+          <p id="detail-artist" class="artist-name">Nom de l'artiste</p>
+        </div>
+        <div class="header-actions">
+          <a id="detail-original-url" href="#" target="_blank" rel="noopener noreferrer" class="btn primary-btn">
+            🔗 Ouvrir la tablature
+          </a>
+          <button id="detail-delete-btn" class="btn danger-btn">🗑️ Supprimer</button>
+        </div>
+      </header>
+      
+      <!-- Métadonnées en badges & Saisie rapide -->
+      <section class="metadata-section">
+        <div class="meta-card">
+          <label for="edit-key">Tonalité (Clé)</label>
+          <input type="text" id="edit-key" placeholder="Ex: Gm / Sol min">
+        </div>
+        <div class="meta-card">
+          <label for="edit-capo">Capodastre (Case)</label>
+          <input type="number" id="edit-capo" min="0" max="24" value="0">
+        </div>
+        <div class="meta-card">
+          <label for="edit-transpose">Transposition</label>
+          <input type="number" id="edit-transpose" min="-12" max="12" value="0">
+        </div>
+      </section>
+      
+      <!-- Corps : Notes, Astuces et Playbacks -->
+      <div class="detail-body-grid">
+        <!-- Colonne Gauche : Notes & Astuces -->
+        <div class="body-col">
+          <div class="card">
+            <h3>📝 Notes d'interprétation</h3>
+            <textarea id="edit-notes" placeholder="Notes de structure, intros, ressentis..."></textarea>
+          </div>
+          
+          <div class="card mt-20">
+            <h3>💡 Astuces de jeu</h3>
+            <textarea id="edit-tips" placeholder="Conseils de strumming, picking, rythmique..."></textarea>
+          </div>
+        </div>
+        
+        <!-- Colonne Droite : Liens & Lecteurs Playback -->
+        <div class="body-col">
+          <div class="card playlist-card">
+            <div class="card-header-row">
+              <h3>🎵 Liens de Playback / Backing Tracks</h3>
+              <button id="add-link-btn" class="btn plus-btn">+ Ajouter</button>
+            </div>
+            
+            <!-- Liste des liens avec formulaire d'ajout rapide -->
+            <div id="add-link-form" class="add-link-form" style="display: none;">
+              <div class="form-group">
+                <label for="new-link-title">Nom du lien :</label>
+                <input type="text" id="new-link-title" placeholder="ex: Backing Track en Sol mineur">
+              </div>
+              <div class="form-group">
+                <label for="new-link-url">URL (YouTube ou Spotify) :</label>
+                <input type="text" id="new-link-url" placeholder="https://www.youtube.com/watch?...">
+              </div>
+              <div class="form-group">
+                <label for="new-link-type">Type de lien :</label>
+                <select id="new-link-type">
+                  <option value="youtube">YouTube</option>
+                  <option value="spotify">Spotify</option>
+                  <option value="other">Autre</option>
+                </select>
+              </div>
+              <div class="form-btn-row">
+                <button id="save-link-btn" class="btn success-btn">Enregistrer</button>
+                <button id="cancel-link-btn" class="btn secondary-btn">Annuler</button>
+              </div>
+            </div>
+
+            <ul id="playback-links-list">
+              <!-- Rempli dynamiquement -->
+            </ul>
+            
+            <!-- Lecteurs embarqués -->
+            <div id="media-embed-container" class="media-embed-container">
+              <!-- Chargé dynamiquement -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Services et logique -->
+  <script src="storageService.js"></script>
+  <script src="exportService.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

@@ -302,3 +302,412 @@
   background-color: #555;
 }
 
+/* Floating Drawer Button */
+#ug-drawer-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 140px;
+  width: 50px;
+  height: 50px;
+  border-radius: 25px;
+  background: linear-gradient(135deg, #bc13fe 0%, #ff007f 100%);
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  font-size: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  cursor: pointer;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, opacity 0.2s;
+  outline: none;
+}
+
+#ug-drawer-btn:hover {
+  transform: scale(1.05);
+}
+
+#ug-drawer-btn:active {
+  transform: scale(0.95);
+}
+
+/* Sidebar Drawer container */
+#rockstar-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100vh;
+  background-color: rgba(18, 17, 24, 0.95);
+  backdrop-filter: blur(15px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+  z-index: 9999999;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  text-align: left;
+}
+
+#rockstar-drawer.open {
+  transform: translateX(0);
+}
+
+/* Header */
+#rockstar-drawer .drawer-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#rockstar-drawer .drawer-header-title {
+  max-width: 280px;
+}
+
+#rockstar-drawer .drawer-header-title h3 {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0 0 4px 0;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#rockstar-drawer .drawer-header-title p {
+  font-size: 13px;
+  color: #ff007f;
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#rockstar-drawer #drawer-close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 24px;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+#rockstar-drawer #drawer-close-btn:hover {
+  color: #fff;
+}
+
+/* Body and Sections */
+#rockstar-drawer .drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#rockstar-drawer .drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#rockstar-drawer .drawer-section.flex-col {
+  flex: 1;
+  min-height: 250px;
+}
+
+#rockstar-drawer .drawer-section label {
+  font-size: 11px;
+  color: #9ea0a5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin: 0;
+}
+
+#rockstar-drawer .drawer-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#rockstar-drawer #drawer-add-link-btn {
+  background-color: rgba(188, 19, 254, 0.15);
+  color: #d880ff;
+  border: 1px solid rgba(188, 19, 254, 0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#rockstar-drawer #drawer-add-link-btn:hover {
+  background-color: rgba(188, 19, 254, 0.25);
+}
+
+/* Inputs & Form */
+#rockstar-drawer .drawer-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 12px;
+}
+
+#rockstar-drawer .drawer-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+#rockstar-drawer .drawer-input-group label {
+  font-size: 9px;
+}
+
+#rockstar-drawer .drawer-input-group input {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  outline: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+#rockstar-drawer textarea {
+  width: 100%;
+  height: 90px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: white;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+
+#rockstar-drawer textarea:focus {
+  border-color: #bc13fe;
+}
+
+/* Link addition form in Drawer */
+#rockstar-drawer .drawer-link-form {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid #bc13fe;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+#rockstar-drawer .drawer-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#rockstar-drawer .drawer-form-group label {
+  font-size: 10px;
+  text-transform: none;
+}
+
+#rockstar-drawer .drawer-form-group input,
+#rockstar-drawer .drawer-form-group select {
+  padding: 6px 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  outline: none;
+}
+
+#rockstar-drawer .drawer-form-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#rockstar-drawer .drawer-form-buttons button {
+  flex: 1;
+  padding: 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+}
+
+#rockstar-drawer .drawer-btn-ok {
+  background-color: #34c759;
+  color: white;
+}
+
+#rockstar-drawer .drawer-btn-cancel {
+  background-color: #444;
+  color: white;
+}
+
+/* Links List in Drawer */
+#rockstar-drawer #drawer-links-list {
+  list-style: none;
+  margin: 0 0 15px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+#rockstar-drawer .drawer-link-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+#rockstar-drawer .drawer-link-item.active {
+  border-color: #ff007f;
+  background-color: rgba(255, 0, 127, 0.05);
+}
+
+#rockstar-drawer .drawer-link-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+#rockstar-drawer .drawer-link-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #d880ff;
+  font-weight: 500;
+}
+
+#rockstar-drawer .drawer-link-delete {
+  background: none;
+  border: none;
+  color: #ff3b30;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+#rockstar-drawer .drawer-link-delete:hover {
+  opacity: 1;
+}
+
+/* Media embed in Drawer */
+#rockstar-drawer .drawer-media-container {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: black;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: auto;
+}
+
+#rockstar-drawer .drawer-media-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+#rockstar-drawer .drawer-media-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  padding: 10px;
+}
+
+/* Magic Wand & Dictation Buttons */
+#rockstar-drawer #drawer-magic-btn {
+  background: none;
+  border: none;
+  color: #ffc107;
+  font-size: 18px;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.2s;
+  padding: 4px;
+}
+
+#rockstar-drawer #drawer-magic-btn:hover {
+  transform: scale(1.2) rotate(-15deg);
+}
+
+#rockstar-drawer #drawer-magic-btn:active {
+  transform: scale(0.95);
+}
+
+#rockstar-drawer .drawer-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drawer-dictate-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.1s;
+  outline: none;
+  padding: 2px;
+}
+
+.drawer-dictate-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.drawer-dictate-btn.recording {
+  opacity: 1;
+  color: #ff3b30;
+  animation: pulse-recording 1.2s infinite;
+}
+
+@keyframes pulse-recording {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
