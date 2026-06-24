@@ -192,12 +192,17 @@ if (!SpeechRecognition) {
     let isSuccess = true;
     const cmd = command.toLowerCase().trim();
 
-    const scrollDownVariants = ['scroll down', 'descend', 'descends', 'dessin', 'descent', 'descente', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'descendre'];
-    const scrollUpVariants = ['scroll up', 'monte', 'monter', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte', 'remonter'];
-    const stopVariants = ['stop', 'arrête', 'arrete', 'arrêter', 'arreter', 'pause', 'halte', 'stoppe', 'stopper'];
-    const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere'];
-    const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis'];
-    const searchPlaylistPrefixes = ['playlist search ', 'search playlist ', 'cherche dans ma playlist ', 'cherche playlist ', 'trouve dans ma playlist '];
+    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas'];
+    const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
+    const stopVariants = ['stop', 'arrête', 'arrete', 'arrêt', 'arret', 'pause', 'halte', 'stoppe', 'stopper', 'stopp'];
+    const speedUpVariants = ['faster', 'speed up', 'plus vite', 'accélère', 'accelere', 'accélérer', 'accelerer', 'acceler', 'accélér', 'plus rapide'];
+    const slowDownVariants = ['slower', 'slow down', 'moins vite', 'ralentis', 'ralenti', 'ralentir', 'doucement', 'plus doucement', 'moins rapide'];
+    const searchPlaylistPrefixes = [
+      'playlist search ', 'search playlist ', 
+      'cherche dans ma playlist ', 'chercher dans ma playlist ', 'cherche dans mes playlists ', 'chercher dans mes playlists ',
+      'cherche playlist ', 'chercher playlist ',
+      'trouve dans ma playlist ', 'trouver dans ma playlist ', 'trouve dans mes playlists ', 'trouver dans mes playlists '
+    ];
     const searchPrefixes = ['search for ', 'search ', 'cherche ', 'chercher ', 'trouve ', 'trouver ', 'find '];
 
     if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
