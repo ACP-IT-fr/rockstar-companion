@@ -157,11 +157,16 @@ export const repertoireStore = {
   },
 
   // --- Song Actions ---
-  async addSong(song: Song) {
-    await dbService.saveSong(song);
-    state.songs.unshift(song);
+  async addSong(song: Omit<Song, 'id' | 'createdAt'> & Partial<Pick<Song, 'id' | 'createdAt'>>) {
+    const newSong: Song = {
+      ...song,
+      id: song.id || 'song-' + Math.random().toString(36).substr(2, 9),
+      createdAt: song.createdAt || Date.now()
+    } as Song;
+    await dbService.saveSong(newSong);
+    state.songs.unshift(newSong);
     if (!state.currentSongId) {
-      state.currentSongId = song.id;
+      state.currentSongId = newSong.id;
     }
   },
 

@@ -13,6 +13,7 @@
 
       <!-- PDF Viewer -->
       <iframe 
+        ref="pdfFrame"
         v-if="currentSong.sourceType === 'pdf' && pdfUrl" 
         :src="pdfUrl" 
         class="w-full h-full border-none bg-white"
@@ -22,21 +23,35 @@
 
       <!-- Web Viewer -->
       <div v-else-if="currentSong.sourceType === 'url'" class="w-full h-full flex flex-col relative">
-        <iframe 
-          ref="webFrame"
-          :src="currentSong.url" 
-          class="w-full h-full border-none bg-white"
-          title="Partition Web"
-          @load="onFrameLoad"
-          @error="onFrameError"
-        ></iframe>
-        <!-- Fallback overlay for URL if it doesn't load well or as a handy link -->
-        <div class="absolute top-4 right-4 z-20">
-          <a :href="currentSong.url" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-md border border-white/20 text-white rounded-xl shadow-lg hover:bg-black/80 transition-all text-sm font-semibold">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            Ouvrir dans un nouvel onglet
+        <div v-if="isUltimateGuitar(currentSong.url)" class="flex-1 flex items-center justify-center bg-[#1E1E24] flex-col gap-6 p-8 text-center h-full">
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-neon-pink opacity-80"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <div>
+            <h3 class="text-2xl font-bold text-white mb-2">Protection Ultimate Guitar</h3>
+            <p class="text-gray-400 max-w-md mx-auto">Ultimate Guitar bloque l'affichage de ses partitions à l'intérieur d'autres applications. Vous devez l'ouvrir dans un nouvel onglet.</p>
+          </div>
+          <a :href="currentSong.url" target="_blank" rel="noopener noreferrer" class="px-8 py-4 bg-neon-purple text-white rounded-xl font-bold text-lg shadow-[0_0_20px_rgba(188,19,254,0.4)] hover:shadow-[0_0_30px_rgba(188,19,254,0.6)] hover:bg-purple-500 transition-all flex items-center gap-3 mt-4">
+            <span>Ouvrir la partition</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </a>
         </div>
+        <template v-else>
+          <iframe 
+            ref="webFrame"
+            :src="currentSong.url" 
+            class="w-full h-full border-none bg-white"
+            title="Partition Web"
+            allow="compute-pressure"
+            @load="onFrameLoad"
+            @error="onFrameError"
+          ></iframe>
+          <!-- Fallback overlay for URL if it doesn't load well or as a handy link -->
+          <div class="absolute top-4 right-4 z-20">
+            <a :href="currentSong.url" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-md border border-white/20 text-white rounded-xl shadow-lg hover:bg-black/80 transition-all text-sm font-semibold">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Ouvrir dans un nouvel onglet
+            </a>
+          </div>
+        </template>
       </div>
     </div>
     
@@ -66,14 +81,26 @@ const currentSong = repertoireStore.currentSong;
 const pdfUrl = ref<string | null>(null);
 const isLoading = ref(false);
 const webFrame = ref<HTMLIFrameElement | null>(null);
+const pdfFrame = ref<HTMLIFrameElement | null>(null);
+
+const isUltimateGuitar = (url?: string) => {
+  if (!url) return false;
+  return url.toLowerCase().includes('ultimate-guitar.com');
+};
+
+const getActiveFrame = () => {
+  if (currentSong.value?.sourceType === 'pdf') return pdfFrame.value;
+  return webFrame.value;
+};
 
 // Expose scroll methods for Voice Commands
 const scrollDown = () => {
   // Try to scroll iframe window if possible (CORS will block if cross-origin URL)
-  // For local PDF it might work depending on browser PDF viewer extension.
+  // For local PDF it works because blob URL is same-origin
   try {
-    if (webFrame.value && webFrame.value.contentWindow) {
-      webFrame.value.contentWindow.scrollBy({ top: 300, behavior: 'smooth' });
+    const frame = getActiveFrame();
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.scrollBy({ top: 300, behavior: 'smooth' });
     }
   } catch (e) {
     console.warn('Cannot scroll iframe due to cross-origin policies.', e);
@@ -82,8 +109,9 @@ const scrollDown = () => {
 
 const scrollUp = () => {
   try {
-    if (webFrame.value && webFrame.value.contentWindow) {
-      webFrame.value.contentWindow.scrollBy({ top: -300, behavior: 'smooth' });
+    const frame = getActiveFrame();
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.scrollBy({ top: -300, behavior: 'smooth' });
     }
   } catch (e) {
     console.warn('Cannot scroll iframe due to cross-origin policies.', e);
@@ -92,8 +120,9 @@ const scrollUp = () => {
 
 const scrollTop = () => {
   try {
-    if (webFrame.value && webFrame.value.contentWindow) {
-      webFrame.value.contentWindow.scrollTo({ top: 0, behavior: 'smooth' });
+    const frame = getActiveFrame();
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.scrollTo({ top: 0, behavior: 'smooth' });
     }
   } catch (e) {
     console.warn('Cannot scroll iframe due to cross-origin policies.', e);
@@ -114,7 +143,12 @@ watch(() => currentSong.value, (song) => {
   }
   
   if (song) {
-    isLoading.value = true;
+    if (song.sourceType === 'url' && isUltimateGuitar(song.url)) {
+      isLoading.value = false;
+    } else {
+      isLoading.value = true;
+    }
+    
     if (song.sourceType === 'pdf' && song.pdfBlob) {
       pdfUrl.value = URL.createObjectURL(song.pdfBlob) + '#toolbar=0&navpanes=0&scrollbar=0';
     }

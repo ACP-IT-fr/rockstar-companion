@@ -6,7 +6,7 @@
         ref="ytIframe"
         :src="`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&controls=0&disablekb=1&fs=0&rel=0`" 
         class="w-full h-full border-none"
-        allow="autoplay; encrypted-media"
+        allow="autoplay; encrypted-media; compute-pressure"
       ></iframe>
       <div class="absolute inset-0 bg-black/20 pointer-events-none"></div>
     </div>

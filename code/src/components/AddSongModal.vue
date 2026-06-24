@@ -122,7 +122,31 @@ const isValid = computed(() => {
 const handleFileUpload = (event: Event) => {
   const target = event.target as HTMLInputElement;
   if (target.files && target.files.length > 0) {
-    formData.value.pdfBlob = target.files[0];
+    const file = target.files[0];
+    formData.value.pdfBlob = file;
+    
+    if (!formData.value.title && !formData.value.artist) {
+      const name = file.name.replace(/\.pdf$/i, '');
+      const separators = [' - ', '-', '_'];
+      let artist = '';
+      let title = '';
+
+      for (const sep of separators) {
+        if (name.includes(sep)) {
+          const parts = name.split(sep);
+          artist = parts[0].trim();
+          title = parts.slice(1).join(sep).trim();
+          break;
+        }
+      }
+
+      if (!artist && !title) {
+        title = name.trim();
+      }
+
+      if (!formData.value.artist && artist) formData.value.artist = artist;
+      if (!formData.value.title && title) formData.value.title = title;
+    }
   }
 };
 
@@ -132,7 +156,7 @@ const save = async () => {
   formData.value.sourceType = sourceType.value;
   
   if (isEditing.value && props.editSong) {
-    await repertoireStore.updateSong(props.editSong.id, formData.value);
+    await repertoireStore.updateSong({ ...props.editSong, ...formData.value } as Song);
   } else {
     // Add default cover as a placeholder if needed, DB doesn't require it strictly
     await repertoireStore.addSong(formData.value as Omit<Song, 'id'>);
