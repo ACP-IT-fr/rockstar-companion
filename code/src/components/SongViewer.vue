@@ -94,24 +94,24 @@ const getActiveFrame = () => {
 };
 
 // Expose scroll methods for Voice Commands
-const scrollDown = () => {
+const scrollDown = (offset: number = 300) => {
   // Try to scroll iframe window if possible (CORS will block if cross-origin URL)
   // For local PDF it works because blob URL is same-origin
   try {
     const frame = getActiveFrame();
     if (frame && frame.contentWindow) {
-      frame.contentWindow.scrollBy({ top: 300, behavior: 'smooth' });
+      frame.contentWindow.scrollBy({ top: offset, behavior: 'smooth' });
     }
   } catch (e) {
     console.warn('Cannot scroll iframe due to cross-origin policies.', e);
   }
 };
 
-const scrollUp = () => {
+const scrollUp = (offset: number = 300) => {
   try {
     const frame = getActiveFrame();
     if (frame && frame.contentWindow) {
-      frame.contentWindow.scrollBy({ top: -300, behavior: 'smooth' });
+      frame.contentWindow.scrollBy({ top: -offset, behavior: 'smooth' });
     }
   } catch (e) {
     console.warn('Cannot scroll iframe due to cross-origin policies.', e);

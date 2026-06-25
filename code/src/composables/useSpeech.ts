@@ -11,7 +11,11 @@ export const COMMAND_DICTIONARY: Record<'fr-FR' | 'en-US', CommandDefinition[]> 
   'fr-FR': [
     { action: 'next', keywords: ['suivant', 'suivante', 'chanson suivante', 'morceau suivant'] },
     { action: 'prev', keywords: ['précédent', 'précédente', 'retour', 'chanson précédente', 'morceau précédent'] },
+    { action: 'scroll-down-small', keywords: ['descends un peu', 'descendre un peu', 'un peu plus bas', 'petite descente'] },
+    { action: 'scroll-down-large', keywords: ['descends beaucoup', 'descendre beaucoup', 'beaucoup plus bas', 'grande descente'] },
     { action: 'scroll-down', keywords: ['descends', 'descendre', 'plus bas', 'défile bas', 'play', 'lecture', 'joue', 'lancer', 'démarrer', 'c\'est parti', 'commence', 'joue la chanson'] },
+    { action: 'scroll-up-small', keywords: ['monte un peu', 'monter un peu', 'un peu plus haut', 'petite montée', 'petite montee'] },
+    { action: 'scroll-up-large', keywords: ['monte beaucoup', 'monter beaucoup', 'beaucoup plus haut', 'grande montée', 'grande montee'] },
     { action: 'scroll-up', keywords: ['monte', 'monter', 'plus haut', 'défile haut'] },
     { action: 'scroll-top', keywords: ['haut', 'début', 'tout en haut', 'revenir en haut'] },
     { action: 'pause', keywords: ['pause', 'pose', 'stop lecture', 'arrêter musique'] },
@@ -24,7 +28,11 @@ export const COMMAND_DICTIONARY: Record<'fr-FR' | 'en-US', CommandDefinition[]> 
   'en-US': [
     { action: 'next', keywords: ['next', 'next song', 'next track', 'forward'] },
     { action: 'prev', keywords: ['previous', 'prev', 'back', 'previous song', 'previous track'] },
+    { action: 'scroll-down-small', keywords: ['scroll down a bit', 'scroll down a little', 'down a little', 'down a bit'] },
+    { action: 'scroll-down-large', keywords: ['scroll down a lot', 'down a lot', 'scroll down page'] },
     { action: 'scroll-down', keywords: ['scroll down', 'down', 'page down', 'play', 'resume', 'start music', 'play song'] },
+    { action: 'scroll-up-small', keywords: ['scroll up a bit', 'scroll up a little', 'up a little', 'up a bit'] },
+    { action: 'scroll-up-large', keywords: ['scroll up a lot', 'up a lot', 'scroll up page'] },
     { action: 'scroll-up', keywords: ['scroll up', 'up', 'page up'] },
     { action: 'scroll-top', keywords: ['top', 'scroll to top', 'start of page'] },
     { action: 'pause', keywords: ['pause', 'stop', 'freeze', 'stop music'] },

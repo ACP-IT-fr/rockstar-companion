@@ -97,8 +97,20 @@ const handleCommand = (action: string, value?: any) => {
     case 'scroll-down':
       songViewer.value?.scrollDown();
       break;
+    case 'scroll-down-small':
+      songViewer.value?.scrollDown(150);
+      break;
+    case 'scroll-down-large':
+      songViewer.value?.scrollDown(300);
+      break;
     case 'scroll-up':
       songViewer.value?.scrollUp();
+      break;
+    case 'scroll-up-small':
+      songViewer.value?.scrollUp(150);
+      break;
+    case 'scroll-up-large':
+      songViewer.value?.scrollUp(300);
       break;
     case 'scroll-top':
       songViewer.value?.scrollTop();

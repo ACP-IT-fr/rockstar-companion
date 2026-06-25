@@ -772,6 +772,13 @@ if (!SpeechRecognition) {
     // Scroll control variants (cleaned from playback conflicts)
     const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti'];
     const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
+    
+    // Discrete scroll control variants
+    const scrollDownSmallVariants = ['descends un peu', 'descendre un peu', 'un peu plus bas', 'petite descente', 'scroll down a bit', 'scroll down a little', 'down a little', 'down a bit'];
+    const scrollDownLargeVariants = ['descends beaucoup', 'descendre beaucoup', 'beaucoup plus bas', 'grande descente', 'scroll down a lot', 'down a lot', 'scroll down page'];
+    const scrollUpSmallVariants = ['monte un peu', 'monter un peu', 'un peu plus haut', 'petite montée', 'petite montee', 'scroll up a bit', 'scroll up a little', 'up a little', 'up a bit'];
+    const scrollUpLargeVariants = ['monte beaucoup', 'monter beaucoup', 'beaucoup plus haut', 'grande montée', 'grande montee', 'scroll up a lot', 'up a lot', 'scroll up page'];
+
     const sleepVariants = ['dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
     const topVariants = ['début', 'debut', 'tout en haut', 'go to top', 'top', 'reviens', 'commencement'];
     const searchPlaylistPrefixes = [
@@ -807,9 +814,25 @@ if (!SpeechRecognition) {
         sendYouTubeCommand('playVideo');
       }
       action = 'Restarting playback';
+    } else if (scrollDownSmallVariants.some(v => cmd === v || cmd.includes(v))) {
+      stopScrolling();
+      window.scrollBy({ top: 150, behavior: 'smooth' });
+      action = 'Scrolling down a bit';
+    } else if (scrollDownLargeVariants.some(v => cmd === v || cmd.includes(v))) {
+      stopScrolling();
+      window.scrollBy({ top: 300, behavior: 'smooth' });
+      action = 'Scrolling down a lot';
     } else if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(1);
       action = 'Scrolling down';
+    } else if (scrollUpSmallVariants.some(v => cmd === v || cmd.includes(v))) {
+      stopScrolling();
+      window.scrollBy({ top: -150, behavior: 'smooth' });
+      action = 'Scrolling up a bit';
+    } else if (scrollUpLargeVariants.some(v => cmd === v || cmd.includes(v))) {
+      stopScrolling();
+      window.scrollBy({ top: -300, behavior: 'smooth' });
+      action = 'Scrolling up a lot';
     } else if (scrollUpVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(-1);
       action = 'Scrolling up';
