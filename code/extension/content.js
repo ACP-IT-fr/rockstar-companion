@@ -815,22 +815,18 @@ if (!SpeechRecognition) {
       }
       action = 'Restarting playback';
     } else if (scrollDownSmallVariants.some(v => cmd === v || cmd.includes(v))) {
-      stopScrolling();
       window.scrollBy({ top: 150, behavior: 'smooth' });
       action = 'Scrolling down a bit';
     } else if (scrollDownLargeVariants.some(v => cmd === v || cmd.includes(v))) {
-      stopScrolling();
       window.scrollBy({ top: 300, behavior: 'smooth' });
       action = 'Scrolling down a lot';
     } else if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
       startScrolling(1);
       action = 'Scrolling down';
     } else if (scrollUpSmallVariants.some(v => cmd === v || cmd.includes(v))) {
-      stopScrolling();
       window.scrollBy({ top: -150, behavior: 'smooth' });
       action = 'Scrolling up a bit';
     } else if (scrollUpLargeVariants.some(v => cmd === v || cmd.includes(v))) {
-      stopScrolling();
       window.scrollBy({ top: -300, behavior: 'smooth' });
       action = 'Scrolling up a lot';
     } else if (scrollUpVariants.some(v => cmd === v || cmd.includes(v))) {
