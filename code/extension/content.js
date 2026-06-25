@@ -770,7 +770,7 @@ if (!SpeechRecognition) {
     const restartPlaybackVariants = ['recommence', 'restart', 'recommencer', 'remets au début', 'remets au debut', 'restart song'];
 
     // Scroll control variants (cleaned from playback conflicts)
-    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti'];
+    const scrollDownVariants = ['scroll down', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti', 'défile', 'défiler', 'défilement', 'glisse', 'glisser'];
     const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
     
     // Discrete scroll control variants
