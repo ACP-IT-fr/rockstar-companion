@@ -5,14 +5,38 @@ const isUnlocked = ref(false);
 
 export function useAudio() {
   const initAudio = async () => {
-    if (audioContext.value) {
-      if (audioContext.value.state === 'suspended') {
+    const unlock = async () => {
+      if (audioContext.value && (audioContext.value.state as string) === 'suspended') {
         try {
           await audioContext.value.resume();
-          isUnlocked.value = true;
+        } catch (e) {
+          console.error('Failed to resume AudioContext on gesture', e);
+        }
+      }
+      if (audioContext.value && (audioContext.value.state as string) === 'running') {
+        isUnlocked.value = true;
+        window.removeEventListener('click', unlock);
+        window.removeEventListener('touchstart', unlock);
+      }
+    };
+
+    if (audioContext.value) {
+      if ((audioContext.value.state as string) === 'suspended') {
+        try {
+          await audioContext.value.resume();
+          if ((audioContext.value.state as string) === 'running') {
+            isUnlocked.value = true;
+          } else {
+            window.addEventListener('click', unlock);
+            window.addEventListener('touchstart', unlock);
+          }
         } catch (e) {
           console.error('Failed to resume AudioContext', e);
+          window.addEventListener('click', unlock);
+          window.addEventListener('touchstart', unlock);
         }
+      } else if ((audioContext.value.state as string) === 'running') {
+        isUnlocked.value = true;
       }
       return audioContext.value;
     }
@@ -23,19 +47,9 @@ export function useAudio() {
       const ctx = new AudioCtxClass();
       audioContext.value = ctx;
 
-      if (ctx.state === 'running') {
+      if ((ctx.state as string) === 'running') {
         isUnlocked.value = true;
       } else {
-        // Suspended state (typical on iOS/Chrome until user gesture)
-        const unlock = async () => {
-          if (ctx.state === 'suspended') {
-            await ctx.resume();
-          }
-          isUnlocked.value = true;
-          // Remove listener once unlocked
-          window.removeEventListener('click', unlock);
-          window.removeEventListener('touchstart', unlock);
-        };
         window.addEventListener('click', unlock);
         window.addEventListener('touchstart', unlock);
       }

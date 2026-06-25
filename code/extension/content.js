@@ -81,8 +81,40 @@ if (!SpeechRecognition) {
   const freqBuf = new Float32Array(8192);
 
   function initTuner() {
+    const unlockAudioContext = () => {
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          if (audioContext.state === 'running') {
+            console.log("[Rockstar] AudioContext resumed on user gesture");
+            window.removeEventListener('click', unlockAudioContext);
+            window.removeEventListener('keydown', unlockAudioContext);
+            window.removeEventListener('touchstart', unlockAudioContext);
+          }
+        }).catch(err => {
+          console.error("[Rockstar] Failed to resume AudioContext", err);
+        });
+      } else if (audioContext && audioContext.state === 'running') {
+        window.removeEventListener('click', unlockAudioContext);
+        window.removeEventListener('keydown', unlockAudioContext);
+        window.removeEventListener('touchstart', unlockAudioContext);
+      }
+    };
+
     if (audioContext) {
-      if (audioContext.state === 'suspended') audioContext.resume();
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          if (audioContext.state === 'suspended') {
+            window.addEventListener('click', unlockAudioContext);
+            window.addEventListener('keydown', unlockAudioContext);
+            window.addEventListener('touchstart', unlockAudioContext);
+          }
+        }).catch(err => {
+          console.error("[Rockstar] Failed to resume on initTuner", err);
+          window.addEventListener('click', unlockAudioContext);
+          window.addEventListener('keydown', unlockAudioContext);
+          window.addEventListener('touchstart', unlockAudioContext);
+        });
+      }
       tunerContainer.classList.add('visible');
       chordContainer.classList.add('visible');
       tunerActive = true;
@@ -93,6 +125,10 @@ if (!SpeechRecognition) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 16384;
+
+    window.addEventListener('click', unlockAudioContext);
+    window.addEventListener('keydown', unlockAudioContext);
+    window.addEventListener('touchstart', unlockAudioContext);
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       const source = audioContext.createMediaStreamSource(stream);
@@ -462,13 +498,19 @@ if (!SpeechRecognition) {
           }
         }
 
+        let activeText = normalized;
+        if (normalized.includes(wakeWordLower)) {
+          const wakeIndex = normalized.lastIndexOf(wakeWordLower);
+          activeText = normalized.substring(wakeIndex + wakeWordLower.length).trim();
+        }
+
         if (isAwake || normalized.includes(wakeWordLower)) {
           const now = Date.now();
           if (now - lastSpeedChange > 500) {
             let changed = false;
             
             const speedSetRegex = new RegExp("(?:vitesse|speed|niveau|level)\\s*(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "\\b", "i");
-            const speedSetMatch = normalized.match(speedSetRegex);
+            const speedSetMatch = activeText.match(speedSetRegex);
             
             if (speedSetMatch) {
                const val = textToNum[speedSetMatch[1].toLowerCase()];
@@ -476,18 +518,17 @@ if (!SpeechRecognition) {
                  setSpeed(val);
                  changed = true;
                }
-            } else if (speedUpVariants.some(v => normalized.includes(v))) {
+            } else if (speedUpVariants.some(v => activeText.includes(v))) {
                adjustSpeed(1);
                changed = true;
-            } else if (slowDownVariants.some(v => normalized.includes(v))) {
+            } else if (slowDownVariants.some(v => activeText.includes(v))) {
                adjustSpeed(-1);
                changed = true;
             }
             if (changed) {
                lastSpeedChange = now;
                showFeedback(`⚡ Speed Level ${scrollSpeed}`, true);
-               clearTimeout(awakeTimeout);
-               awakeTimeout = setTimeout(() => goToSleep(), 15000);
+               wakeUp(15000, false);
                recognition.stop();
                return;
             }
@@ -495,23 +536,21 @@ if (!SpeechRecognition) {
         }
         
         if (event.results[i].isFinal) {
-          let finalTranscript = normalized;
+          let finalTranscript = activeText;
           console.log("Voice Command Recognized:", finalTranscript);
           liveTextContainer.innerText = '';
           liveTextContainer.style.display = 'none';
 
-          if (finalTranscript.includes(wakeWordLower)) {
-            if (!isAwake) wakeUp();
-            finalTranscript = finalTranscript.replace(wakeWordLower, '').trim();
+          if (normalized.includes(wakeWordLower)) {
+            wakeUp(15000, !isAwake);
             if (finalTranscript.length > 0) {
               handleCommand(finalTranscript);
             }
           } else if (isAwake) {
-            clearTimeout(awakeTimeout);
-            awakeTimeout = setTimeout(() => goToSleep(), 15000);
+            wakeUp(15000, false);
             handleCommand(finalTranscript);
           } else {
-            console.log("Ignored (sleeping):", finalTranscript);
+            console.log("Ignored (sleeping):", normalized);
           }
         } else {
           interimRaw += transcript + ' ';
@@ -530,7 +569,12 @@ if (!SpeechRecognition) {
         if (!isAwake && !normalizedInterim.includes(wakeWordLower)) {
           liveTextContainer.style.display = 'none';
         } else {
-          liveTextContainer.innerText = normalizedInterim;
+          let displayInterim = normalizedInterim;
+          if (normalizedInterim.includes(wakeWordLower)) {
+            const wakeIndex = normalizedInterim.lastIndexOf(wakeWordLower);
+            displayInterim = normalizedInterim.substring(wakeIndex).trim();
+          }
+          liveTextContainer.innerText = displayInterim;
           liveTextContainer.style.display = 'block';
         }
       }
@@ -581,7 +625,13 @@ if (!SpeechRecognition) {
     });
 
     // Auto-start listening on load
-    startListening(true);
+    chrome.storage.local.get('rockstar_awake_until', (res) => {
+      const now = Date.now();
+      if (res.rockstar_awake_until && res.rockstar_awake_until > now) {
+        isAwake = true;
+      }
+      startListening(true);
+    });
     
     if (isUG) {
       highlightBestResults();
@@ -627,7 +677,19 @@ if (!SpeechRecognition) {
         recognition.start();
         isListening = true;
         if (btn) btn.classList.add('listening');
-        updateUIForWakeWord();
+        if (isAwake) {
+          chrome.storage.local.get('rockstar_awake_until', (res) => {
+            const now = Date.now();
+            const remaining = res.rockstar_awake_until ? (res.rockstar_awake_until - now) : 15000;
+            if (remaining > 0) {
+              wakeUp(remaining, false);
+            } else {
+              goToSleep();
+            }
+          });
+        } else {
+          updateUIForWakeWord();
+        }
       } catch (e) {
         console.error("Speech recognition could not start", e);
       }
@@ -651,6 +713,7 @@ if (!SpeechRecognition) {
       recognition.stop();
     } catch (e) { }
     isAwake = false;
+    chrome.storage.local.remove('rockstar_awake_until');
     if (btn) {
       btn.classList.remove('listening', 'awake');
       statusSpan.innerText = 'Off';
@@ -659,19 +722,26 @@ if (!SpeechRecognition) {
     stopScrolling();
   }
 
-  function wakeUp() {
+  function wakeUp(timeoutMs = 15000, showToast = true) {
     isAwake = true;
+    const awakeUntil = Date.now() + timeoutMs;
+    chrome.storage.local.set({ rockstar_awake_until: awakeUntil });
     if (btn) btn.classList.add('awake');
     if (statusSpan) statusSpan.innerText = "À l'écoute";
-    showFeedback(`🎸 ${wakeWord} is listening...`, true);
+    
+    if (showToast) {
+      showFeedback(`🎸 ${wakeWord} is listening...`, true);
+    }
+    
     clearTimeout(awakeTimeout);
     awakeTimeout = setTimeout(() => {
       goToSleep();
-    }, 15000);
+    }, timeoutMs);
   }
 
   function goToSleep() {
     isAwake = false;
+    chrome.storage.local.remove('rockstar_awake_until');
     if (btn) btn.classList.remove('awake');
     if (statusSpan) statusSpan.innerText = 'Veille';
     showFeedback(`💤 ${wakeWord} is sleeping...`, true);
@@ -700,7 +770,7 @@ if (!SpeechRecognition) {
     const restartPlaybackVariants = ['recommence', 'restart', 'recommencer', 'remets au début', 'remets au debut', 'restart song'];
 
     // Scroll control variants (cleaned from playback conflicts)
-    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas'];
+    const scrollDownVariants = ['scroll down', 'descend', 'dessin', 'descent', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti'];
     const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
     const sleepVariants = ['dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
     const topVariants = ['début', 'debut', 'tout en haut', 'go to top', 'top', 'reviens', 'commencement'];

@@ -130,7 +130,7 @@ export function useTuner() {
     if (!analyserNode || !audioBuffer) return;
 
     // Récupérer le signal temporel actuel dans le buffer
-    analyserNode.getFloatTimeDomainData(audioBuffer);
+    analyserNode.getFloatTimeDomainData(audioBuffer as any);
 
     // Détecter la fréquence fondamentale
     const result = detectPitch(audioBuffer, sampleRate);

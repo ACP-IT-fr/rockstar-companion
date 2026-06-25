@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useAudio } from './useAudio';
 
 export function useMetronome() {

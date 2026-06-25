@@ -107,7 +107,7 @@ watch(bpm, (newVal) => {
 });
 
 // Tuner Logic
-const { isActive, currentPitch, currentNote, currentCents, start: startTuner, stop: stopTuner } = useTuner();
+const { currentPitch, currentNote, currentCents, start: startTuner, stop: stopTuner } = useTuner();
 const isTunerActive = ref(false);
 
 const tunerNote = currentNote;

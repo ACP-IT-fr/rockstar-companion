@@ -43,7 +43,7 @@ class DbService {
         resolve(request.result);
       };
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = () => {
         const db = request.result;
         
         // Create store for songs
