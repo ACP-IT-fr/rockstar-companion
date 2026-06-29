@@ -25,7 +25,7 @@ L'écoute s'active uniquement lors des moments de pause (pas de détection penda
   * Français : *"Suivant"*, *"Précédent"*
   * Anglais : *"Next"*, *"Previous"* (ou *"Back"*)
 * **Contrôle de l'écran (défilement) :** 
-  * Français : *"Descends"*, *"Monte"*, *"Haut"* (retour au début)
+  * Français : *"Défile"* / *"Glisse"* (ou *"Descends un peu/beaucoup"*), *"Monte"*, *"Haut"* (retour au début)
   * Anglais : *"Down"*, *"Up"*, *"Top"*
 * **Contrôle du playback audio (YouTube/Spotify) :** 
   * Français : *"Play"*, *"Pause"*, *"Recule"* (retour de 10s), *"Recommence"*

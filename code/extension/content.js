@@ -3,6 +3,43 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 if (!SpeechRecognition) {
   console.warn("Web Speech API not supported in this browser.");
 } else {
+  function safeStorageGet(key, callback) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(key, callback);
+    } else {
+      const val = localStorage.getItem(key);
+      let parsed = null;
+      if (val !== null) {
+        try {
+          parsed = JSON.parse(val);
+        } catch (e) {
+          parsed = val;
+        }
+      }
+      callback({ [key]: parsed });
+    }
+  }
+
+  function safeStorageSet(obj, callback) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set(obj, callback);
+    } else {
+      for (const [k, v] of Object.entries(obj)) {
+        localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : v);
+      }
+      if (callback) callback();
+    }
+  }
+
+  function safeStorageRemove(key, callback) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.remove(key, callback);
+    } else {
+      localStorage.removeItem(key);
+      if (callback) callback();
+    }
+  }
+
   let isListening = false;
   let isAwake = false;
   let isAutoStart = false;
@@ -625,7 +662,7 @@ if (!SpeechRecognition) {
     });
 
     // Auto-start listening on load
-    chrome.storage.local.get('rockstar_awake_until', (res) => {
+    safeStorageGet('rockstar_awake_until', (res) => {
       const now = Date.now();
       if (res.rockstar_awake_until && res.rockstar_awake_until > now) {
         isAwake = true;
@@ -636,6 +673,45 @@ if (!SpeechRecognition) {
     if (isUG) {
       highlightBestResults();
       numberSearchResults();
+
+      // Mutation observer to handle SPA routing / dynamic DOM updates on search pages
+      let lastUrl = window.location.href;
+      const searchObserver = new MutationObserver(() => {
+        const currentUrl = window.location.href;
+        const isSearchPage = currentUrl.includes('search.php') || currentUrl.includes('search') || currentUrl.includes('explore');
+        
+        if (isSearchPage) {
+          if (currentUrl !== lastUrl) {
+            lastUrl = currentUrl;
+            // Clear old highlighted classes & custom best row
+            document.querySelectorAll('.ug-voice-highlighted-row').forEach(row => {
+              row.classList.remove('ug-voice-highlighted-row');
+            });
+            const customRow = document.getElementById('ug-voice-custom-best-row');
+            if (customRow) customRow.remove();
+            
+            highlightBestResults();
+            numberSearchResults();
+          } else {
+            // Check if there are unnumbered tab links in the DOM
+            const allLinks = Array.from(document.querySelectorAll('a'));
+            const tabLinks = allLinks.filter(a => 
+              (a.href.includes('/tab/') || a.href.includes('ultimate-guitar.com/tab/')) && 
+              !a.href.includes('#')
+            );
+            const hasUnnumbered = tabLinks.some(link => !link.querySelector('.ug-result-badge'));
+            if (hasUnnumbered && tabLinks.length > 0) {
+              numberSearchResults();
+            }
+          }
+        } else {
+          lastUrl = currentUrl;
+        }
+      });
+      searchObserver.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+      });
     }
   }
 
@@ -678,7 +754,7 @@ if (!SpeechRecognition) {
         isListening = true;
         if (btn) btn.classList.add('listening');
         if (isAwake) {
-          chrome.storage.local.get('rockstar_awake_until', (res) => {
+          safeStorageGet('rockstar_awake_until', (res) => {
             const now = Date.now();
             const remaining = res.rockstar_awake_until ? (res.rockstar_awake_until - now) : 15000;
             if (remaining > 0) {
@@ -713,7 +789,7 @@ if (!SpeechRecognition) {
       recognition.stop();
     } catch (e) { }
     isAwake = false;
-    chrome.storage.local.remove('rockstar_awake_until');
+    safeStorageRemove('rockstar_awake_until');
     if (btn) {
       btn.classList.remove('listening', 'awake');
       statusSpan.innerText = 'Off';
@@ -725,7 +801,7 @@ if (!SpeechRecognition) {
   function wakeUp(timeoutMs = 15000, showToast = true) {
     isAwake = true;
     const awakeUntil = Date.now() + timeoutMs;
-    chrome.storage.local.set({ rockstar_awake_until: awakeUntil });
+    safeStorageSet({ rockstar_awake_until: awakeUntil });
     if (btn) btn.classList.add('awake');
     if (statusSpan) statusSpan.innerText = "À l'écoute";
     
@@ -741,7 +817,7 @@ if (!SpeechRecognition) {
 
   function goToSleep() {
     isAwake = false;
-    chrome.storage.local.remove('rockstar_awake_until');
+    safeStorageRemove('rockstar_awake_until');
     if (btn) btn.classList.remove('awake');
     if (statusSpan) statusSpan.innerText = 'Veille';
     showFeedback(`💤 ${wakeWord} is sleeping...`, true);
@@ -770,7 +846,7 @@ if (!SpeechRecognition) {
     const restartPlaybackVariants = ['recommence', 'restart', 'recommencer', 'remets au début', 'remets au debut', 'restart song'];
 
     // Scroll control variants (cleaned from playback conflicts)
-    const scrollDownVariants = ['scroll down', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti', 'défile', 'défiler', 'défilement', 'glisse', 'glisser'];
+    const scrollDownVariants = ['scroll down', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti', 'défile', 'défiler', 'dé file', 'dé filer', 'des files', 'des file', 'dé fil', 'des fil', 'défilement', 'glisse', 'glisser'];
     const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
     
     // Discrete scroll control variants
@@ -942,10 +1018,19 @@ if (!SpeechRecognition) {
     window.location.href = url;
   }
 
+  function cleanUrlPath(urlStr) {
+    try {
+      const url = new URL(urlStr, window.location.origin);
+      return url.pathname.replace(/\/$/, '');
+    } catch (e) {
+      return urlStr;
+    }
+  }
+
   function highlightBestResults() {
     console.log("[Rockstar] Starting highlightBestResults...");
-    if (!window.location.href.includes('search.php')) {
-      console.log("[Rockstar] Not a search.php page.");
+    if (!window.location.href.includes('search.php') && !window.location.href.includes('search') && !window.location.href.includes('explore')) {
+      console.log("[Rockstar] Not a search, explore or search.php page.");
       return;
     }
 
@@ -1017,7 +1102,7 @@ if (!SpeechRecognition) {
             return;
           }
 
-          const links = Array.from(document.querySelectorAll('a')).filter(a => a.href === bestUrl || a.href.includes(bestUrl));
+          const links = Array.from(document.querySelectorAll('a')).filter(a => cleanUrlPath(a.href) === cleanUrlPath(bestUrl));
           
           if (links.length > 0) {
             console.log("[Rockstar] Found links in DOM:", links.length);
@@ -1030,6 +1115,7 @@ if (!SpeechRecognition) {
             });
             
             const customRow = document.createElement('div');
+            customRow.id = 'ug-voice-custom-best-row';
             customRow.style.padding = '15px';
             customRow.style.margin = '20px 0';
             customRow.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
@@ -1070,7 +1156,7 @@ if (!SpeechRecognition) {
   }
 
   function numberSearchResults() {
-    if (!window.location.href.includes('search.php') && !window.location.href.includes('search')) return;
+    if (!window.location.href.includes('search.php') && !window.location.href.includes('search') && !window.location.href.includes('explore')) return;
 
     let attempts = 0;
     const interval = setInterval(() => {
@@ -1081,24 +1167,32 @@ if (!SpeechRecognition) {
       }
 
       const allLinks = Array.from(document.querySelectorAll('a'));
-      const tabLinks = allLinks.filter(a => a.href.includes('tabs.ultimate-guitar.com/tab/') && !a.href.includes('#'));
+      const tabLinks = allLinks.filter(a => 
+        (a.href.includes('/tab/') || a.href.includes('ultimate-guitar.com/tab/')) && 
+        !a.href.includes('#')
+      );
 
       if (tabLinks.length === 0) return;
 
       clearInterval(interval);
       console.log("[Rockstar] Found tab links for numbering:", tabLinks.length);
 
+      // Remove existing badges to avoid duplicates on re-render
+      document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());
+
       window.ugSearchResultLinks = {};
       let counter = 1;
-      const processedUrls = new Set();
+      const processedPaths = new Set();
 
       tabLinks.forEach(link => {
         const url = link.href.split('?')[0];
-        if (!processedUrls.has(url)) {
-          processedUrls.add(url);
-          window.ugSearchResultLinks[counter] = url;
+        const path = cleanUrlPath(url);
+        if (!processedPaths.has(path)) {
+          processedPaths.add(path);
+          window.ugSearchResultLinks[counter] = link.href;
 
           const badge = document.createElement('span');
+          badge.className = 'ug-result-badge';
           badge.innerText = `[${counter}] `;
           badge.style.backgroundColor = '#e91e63';
           badge.style.color = '#fff';

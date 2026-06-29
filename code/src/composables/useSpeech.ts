@@ -13,7 +13,7 @@ export const COMMAND_DICTIONARY: Record<'fr-FR' | 'en-US', CommandDefinition[]> 
     { action: 'prev', keywords: ['précédent', 'précédente', 'retour', 'chanson précédente', 'morceau précédent'] },
     { action: 'scroll-down-small', keywords: ['descends un peu', 'descendre un peu', 'un peu plus bas', 'petite descente'] },
     { action: 'scroll-down-large', keywords: ['descends beaucoup', 'descendre beaucoup', 'beaucoup plus bas', 'grande descente'] },
-    { action: 'scroll-down', keywords: ['plus bas', 'défile bas', 'défile', 'défiler', 'glisse', 'glisser', 'play', 'lecture', 'joue', 'lancer', 'démarrer', 'c\'est parti', 'commence', 'joue la chanson'] },
+    { action: 'scroll-down', keywords: ['plus bas', 'défile bas', 'défile', 'défiler', 'dé file', 'dé filer', 'des files', 'des file', 'dé fil', 'des fil', 'glisse', 'glisser', 'play', 'lecture', 'joue', 'lancer', 'démarrer', 'c\'est parti', 'commence', 'joue la chanson'] },
     { action: 'scroll-up-small', keywords: ['monte un peu', 'monter un peu', 'un peu plus haut', 'petite montée', 'petite montee'] },
     { action: 'scroll-up-large', keywords: ['monte beaucoup', 'monter beaucoup', 'beaucoup plus haut', 'grande montée', 'grande montee'] },
     { action: 'scroll-up', keywords: ['monte', 'monter', 'plus haut', 'défile haut'] },
