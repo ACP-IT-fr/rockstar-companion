@@ -509,7 +509,7 @@ if (!SpeechRecognition) {
     initializeDrawer();
 
     recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = navigator.language || 'en-US';
 
@@ -753,12 +753,12 @@ if (!SpeechRecognition) {
           liveTextContainer.style.display = 'none';
 
           if (normalized.includes(wakeWordLower)) {
-            wakeUp(15000, !isAwake);
+            goToSleep();
             if (finalTranscript.length > 0) {
               handleCommand(finalTranscript);
             }
           } else if (isAwake) {
-            wakeUp(15000, false);
+            goToSleep();
             handleCommand(finalTranscript);
           } else {
             console.log("Ignored (sleeping):", normalized);
@@ -1192,9 +1192,9 @@ if (!SpeechRecognition) {
     const scrollDownVariants = ['scroll down', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti', 'défile', 'défiler', 'dé file', 'dé filer', 'des files', 'des file', 'dé fil', 'des fil', 'défilement', 'glisse', 'glisser'];
     
     // Discrete scroll control variants
-    const scrollDownSmallVariants = ['descends un peu', 'descendre un peu', 'un peu plus bas', 'petite descente', 'scroll down a bit', 'scroll down a little', 'down a little', 'down a bit'];
+    const scrollDownSmallVariants = ['descends', 'dessein', 'descends un peu', 'descendre un peu', 'un peu plus bas', 'petite descente', 'scroll down a bit', 'scroll down a little', 'down a little', 'down a bit'];
     const scrollDownLargeVariants = ['descends beaucoup', 'descendre beaucoup', 'beaucoup plus bas', 'grande descente', 'scroll down a lot', 'down a lot', 'scroll down page'];
-    const scrollUpSmallVariants = ['monte un peu', 'monter un peu', 'remonte un peu', 'remonter un peu', 'un peu plus haut', 'petite montée', 'petite montee', 'scroll up a bit', 'scroll up a little', 'up a little', 'up a bit'];
+    const scrollUpSmallVariants = ['remonte', 'monte un peu', 'monter un peu', 'remonte un peu', 'remonter un peu', 'un peu plus haut', 'petite montée', 'petite montee', 'scroll up a bit', 'scroll up a little', 'up a little', 'up a bit'];
     const scrollUpLargeVariants = ['monte beaucoup', 'monter beaucoup', 'remonte beaucoup', 'remonter beaucoup', 'beaucoup plus haut', 'grande montée', 'grande montee', 'scroll up a lot', 'up a lot', 'scroll up page'];
 
     const sleepVariants = ['dors', 'endors', 'sleep', 'merci', 'c\'est tout'];
