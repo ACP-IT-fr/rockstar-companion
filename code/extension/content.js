@@ -853,7 +853,6 @@ if (!SpeechRecognition) {
 
     // Scroll control variants (cleaned from playback conflicts)
     const scrollDownVariants = ['scroll down', 'en bas', 'plus bas', 'go down', 'down', 'bas', 'c\'est parti', 'c’est parti', 'défile', 'défiler', 'dé file', 'dé filer', 'des files', 'des file', 'dé fil', 'des fil', 'défilement', 'glisse', 'glisser'];
-    const scrollUpVariants = ['scroll up', 'monte', 'montre', 'en haut', 'plus haut', 'go up', 'up', 'haut', 'remonte'];
     
     // Discrete scroll control variants
     const scrollDownSmallVariants = ['descends un peu', 'descendre un peu', 'un peu plus bas', 'petite descente', 'scroll down a bit', 'scroll down a little', 'down a little', 'down a bit'];
@@ -911,9 +910,6 @@ if (!SpeechRecognition) {
     } else if (scrollUpLargeVariants.some(v => cmd === v || hasWord(cmd, v))) {
       window.scrollBy({ top: -300, behavior: 'smooth' });
       action = 'Scrolling up a lot';
-    } else if (scrollUpVariants.some(v => cmd === v || hasWord(cmd, v))) {
-      startScrolling(-1);
-      action = 'Scrolling up';
     } else if (topVariants.some(v => cmd === v || hasWord(cmd, v))) {
       stopScrolling();
       window.scrollTo({ top: 0, behavior: 'smooth' });
