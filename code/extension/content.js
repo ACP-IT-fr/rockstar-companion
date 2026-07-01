@@ -912,6 +912,15 @@ if (!SpeechRecognition) {
       childList: true,
       subtree: true
     });
+
+    if (window.location.hostname.includes('youtube.com')) {
+      setInterval(() => {
+        const progressBar = document.querySelector('.ytp-progress-bar');
+        if (progressBar && !progressBar.querySelector('.rockstar-marker')) {
+          drawVisualMarkers();
+        }
+      }, 2000);
+    }
   }
 
   function updateSpeedUI() {
@@ -1072,6 +1081,40 @@ if (!SpeechRecognition) {
     return trimmed;
   }
 
+  function drawVisualMarkers() {
+    const video = getActiveVideo();
+    if (!video || !video.duration) return;
+
+    const progressBar = document.querySelector('.ytp-progress-bar');
+    if (!progressBar) return;
+
+    // Clear old visual markers
+    progressBar.querySelectorAll('.rockstar-marker').forEach(m => m.remove());
+
+    const key = getBookmarksStorageKey();
+    safeStorageGet(key, (res) => {
+      const bookmarks = res[key] || {};
+      for (const [name, time] of Object.entries(bookmarks)) {
+        const pct = (time / video.duration) * 100;
+        
+        const marker = document.createElement('div');
+        marker.className = 'rockstar-marker';
+        marker.style.left = `${pct}%`;
+        marker.title = `Repère: ${name}`;
+        
+        marker.addEventListener('click', (e) => {
+          e.stopPropagation();
+          video.currentTime = time;
+          const minutes = Math.floor(time / 60);
+          const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+          showFeedback(`➡️ Saut vers Repère "${name}" (${minutes}:${seconds})`, true);
+        });
+        
+        progressBar.appendChild(marker);
+      }
+    });
+  }
+
   function saveBookmark(name, time, callback) {
     const key = getBookmarksStorageKey();
     const normName = normalizeBookmarkName(name);
@@ -1085,6 +1128,10 @@ if (!SpeechRecognition) {
         const minutes = Math.floor(time / 60);
         const seconds = Math.floor(time % 60).toString().padStart(2, '0');
         showFeedback(`📍 Repère "${name}" enregistré à ${minutes}:${seconds}`, true);
+        
+        // Redraw visual markers on progress bar
+        drawVisualMarkers();
+        
         if (callback) callback();
       });
     });
@@ -1159,7 +1206,7 @@ if (!SpeechRecognition) {
 
     const videoSpeedRegex = /^(?:vitesse|playback speed|playbackrate)\s*(?:de\s+)?(\d+(?:[.,]\d+)?|normale|normal)$/i;
     const saveBookmarkRegex = /^(?:enregistre|place|placer|sauvegarde|ajouter|marquer)\s+(?:le\s+)?(?:repère|repere|signet|bookmark)\s+(.+)$/i;
-    const loadBookmarkRegex = /^(?:va\s+au|retourne\s+au|reviens\s+au|charger|go\s+to|repère|repere|signet|bookmark)\s+(?:le\s+)?(.+)$/i;
+    const loadBookmarkRegex = /^(?:va\s+au|retourne\s+au|reviens\s+au|charger|go\s+to)?\s*(?:le\s+)?(?:repère|repere|signet|bookmark)\s+(.+)$/i;
     const rewindRegex = /^(?:recule|retourne|rewind|back|arrière|arriere)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
     const forwardRegex = /^(?:avance|forward|skip)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
 

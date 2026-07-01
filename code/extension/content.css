@@ -820,4 +820,28 @@
   color: #fff;
 }
 
+/* YouTube Progress Bar Markers */
+.ytp-progress-bar {
+  position: relative;
+}
+
+.rockstar-marker {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background-color: #ffc107;
+  border-radius: 2px;
+  z-index: 9999;
+  pointer-events: auto; /* Allow hovering & clicking */
+  cursor: pointer;
+  transform: scaleY(1.0);
+  transition: transform 0.1s, background-color 0.1s;
+}
+
+.rockstar-marker:hover {
+  transform: scaleY(1.8) scaleX(1.5);
+  background-color: #ff007f;
+}
+
 
