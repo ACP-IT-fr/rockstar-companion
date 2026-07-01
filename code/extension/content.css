@@ -725,3 +725,99 @@
   right: 290px;
 }
 
+/* Floating Commands Button */
+#ug-commands-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 230px;
+  width: 50px;
+  height: 50px;
+  border-radius: 25px;
+  background-color: #333;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, background-color 0.2s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+#ug-commands-btn:hover {
+  transform: scale(1.05);
+  background-color: #444;
+}
+
+#ug-commands-btn:active {
+  transform: scale(0.95);
+}
+
+/* Commands Panel */
+#ug-commands-panel {
+  position: fixed;
+  bottom: 85px;
+  right: 230px;
+  width: 250px;
+  max-height: 400px;
+  background-color: rgba(18, 17, 24, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.2s, transform 0.2s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#ug-commands-panel.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.commands-panel-header {
+  padding: 12px 15px;
+  font-weight: bold;
+  color: #ffc107;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+}
+
+.commands-panel-body {
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 330px;
+}
+
+.command-item {
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #ddd;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+}
+
+.command-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+

@@ -173,6 +173,9 @@ if (!SpeechRecognition) {
   let iconSpan = null;
   let statusSpan = null;
   
+  let commandsBtn = null;
+  let commandsPanel = null;
+  
   let feedbackContainer = null;
   let liveTextContainer = null;
   let speedContainer = null;
@@ -564,6 +567,89 @@ if (!SpeechRecognition) {
     speedContainer.innerText = 'Speed: ' + scrollSpeed;
     document.body.appendChild(speedContainer);
 
+    // Create floating commands button and panel
+    commandsBtn = document.createElement('button');
+    commandsBtn.id = 'ug-commands-btn';
+    commandsBtn.innerText = '📋';
+    commandsBtn.title = 'Afficher les commandes disponibles';
+    document.body.appendChild(commandsBtn);
+
+    commandsPanel = document.createElement('div');
+    commandsPanel.id = 'ug-commands-panel';
+    document.body.appendChild(commandsPanel);
+
+    function updateCommandsPanel() {
+      const isYouTube = window.location.hostname.includes('youtube.com');
+      let title = "Commandes Rockstar";
+      let listItems = [];
+      
+      if (isYouTube) {
+        title = "📹 Commandes YouTube";
+        listItems = [
+          { label: "▶️ Lecture / Play", cmd: "lecture" },
+          { label: "⏸️ Pause / Stop", cmd: "pause" },
+          { label: "↩️ Reculer 10s", cmd: "recule" },
+          { label: "↪️ Avancer 10s", cmd: "avance" },
+          { label: "🔄 Recommencer", cmd: "recommence" },
+          { label: "⚡ Vitesse 0.75x", cmd: "vitesse 0.75" },
+          { label: "⚡ Vitesse 1.25x", cmd: "vitesse 1.25" },
+          { label: "⚡ Vitesse Normale", cmd: "vitesse normale" },
+          { label: "📍 Poser Repère 1", cmd: "enregistre le repère 1" },
+          { label: "📍 Poser Repère 2", cmd: "enregistre le repère 2" },
+          { label: "➡️ Aller Repère 1", cmd: "retourne au repère 1" },
+          { label: "➡️ Aller Repère 2", cmd: "retourne au repère 2" }
+        ];
+      } else {
+        title = "🎸 Commandes Tablature";
+        listItems = [
+          { label: "⬇️ Défiler vers le bas", cmd: "défile" },
+          { label: "⏸️ Pause Scroll", cmd: "pause" },
+          { label: "🔝 Retour en haut", cmd: "go to top" },
+          { label: "🔽 Descendre un peu", cmd: "descends un peu" },
+          { label: "🔼 Monter un peu", cmd: "monte un peu" },
+          { label: "⚡ Défiler plus vite", cmd: "plus vite" },
+          { label: "⚡ Défiler plus lent", cmd: "moins vite" },
+          { label: "💤 Mettre en veille", cmd: "dors" }
+        ];
+      }
+      
+      commandsPanel.innerHTML = `
+        <div class="commands-panel-header">${title}</div>
+        <div class="commands-panel-body">
+          ${listItems.map(item => `<button class="command-item" data-cmd="${item.cmd}">${item.label}</button>`).join('')}
+        </div>
+      `;
+      
+      commandsPanel.querySelectorAll('.command-item').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const cmdText = button.getAttribute('data-cmd');
+          if (cmdText) {
+            wakeUp(15000, false);
+            handleCommand(cmdText);
+          }
+        });
+      });
+    }
+
+    // Expose it so it can be updated externally (e.g. on route transitions)
+    window.updateCommandsPanel = updateCommandsPanel;
+    updateCommandsPanel();
+
+    commandsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      commandsPanel.classList.toggle('visible');
+    });
+
+    document.addEventListener('click', () => {
+      if (commandsPanel) {
+        commandsPanel.classList.remove('visible');
+      }
+    });
+    
+    commandsPanel.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
     btn.addEventListener('click', () => {
       if (isListening) {
         stopListening();
@@ -791,6 +877,9 @@ if (!SpeechRecognition) {
       if (isSearchPage) {
         if (currentUrl !== lastUrl) {
           lastUrl = currentUrl;
+          if (typeof updateCommandsPanel === 'function') {
+            updateCommandsPanel();
+          }
           if (isUG) {
             // Clear old highlighted classes & custom best row
             document.querySelectorAll('.ug-voice-highlighted-row').forEach(row => {
@@ -811,7 +900,12 @@ if (!SpeechRecognition) {
           }
         }
       } else {
-        lastUrl = currentUrl;
+        if (currentUrl !== lastUrl) {
+          lastUrl = currentUrl;
+          if (typeof updateCommandsPanel === 'function') {
+            updateCommandsPanel();
+          }
+        }
       }
     });
     searchObserver.observe(document.documentElement, {
