@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "UG Voice Control",
+  "name": "Rockstar Companion",
   "version": "1.0",
-  "description": "Voice control for Ultimate Guitar: search songs and scroll tabs using your voice.",
+  "description": "Voice control for your music repertoire: search songs and scroll tabs using your voice.",
   "permissions": [
     "activeTab",
     "scripting",

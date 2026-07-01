@@ -1990,7 +1990,7 @@ if (!SpeechRecognition) {
       const muteAllSites = result.muteAllSites || false;
       const status = allowedDomains[currentDomain];
 
-      // Toujours initialiser le Drawer si sur Ultimate Guitar, si le site est autorisé, ou si la bannière d'activation est affichée (status === undefined)
+      // Toujours initialiser le Drawer si sur le site par défaut, si le site est autorisé, ou si la bannière d'activation est affichée (status === undefined)
       if (isUG || status === true || status === undefined) {
         initializeDrawer();
       }
