@@ -681,7 +681,8 @@ if (!SpeechRecognition) {
         let normalized = text.toLowerCase()
                    .replace(/[\u2019’]/g, "'")
                    .replace(/-/g, ' ')
-                   .trim();
+                   .trim()
+                   .replace(/\b(?:repair|reap here|repare|repaire|re\s+père|re-père)\b/g, 'repère');
         
         if (wakeWordLower === 'rockstar') {
           normalized = normalized.replace(/rock\s*star/g, 'rockstar')
@@ -762,6 +763,11 @@ if (!SpeechRecognition) {
           } else {
             console.log("Ignored (sleeping):", normalized);
           }
+          
+          // Force reset of speech recognition engine to clear buffers
+          try {
+            recognition.stop();
+          } catch (e) {}
         } else {
           interimRaw += transcript + ' ';
           let activeInterim = normalized;
