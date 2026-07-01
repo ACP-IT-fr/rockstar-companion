@@ -939,6 +939,91 @@ if (!SpeechRecognition) {
     }
   }
 
+  function getActiveVideo() {
+    // 1. Direct <video> element on the main page (e.g. youtube.com)
+    const video = document.querySelector('video');
+    if (video) return video;
+    
+    // 2. Look inside iframes (if accessible)
+    const iframes = document.querySelectorAll('iframe');
+    for (const iframe of iframes) {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        const v = doc.querySelector('video');
+        if (v) return v;
+      } catch (e) {
+        // Cross-origin iframe, ignore
+      }
+    }
+    return null;
+  }
+
+  function getBookmarksStorageKey() {
+    if (window.location.hostname.includes('youtube.com')) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoId = urlParams.get('v');
+      if (videoId) {
+        return `rockstar_bookmarks_yt_${videoId}`;
+      }
+    }
+    const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+    return `rockstar_bookmarks_${cleanUrl}`;
+  }
+
+  function normalizeBookmarkName(name) {
+    const trimmed = name.trim().toLowerCase();
+    if (textToNum[trimmed] !== undefined) {
+      return String(textToNum[trimmed]);
+    }
+    return trimmed;
+  }
+
+  function saveBookmark(name, time, callback) {
+    const key = getBookmarksStorageKey();
+    const normName = normalizeBookmarkName(name);
+    
+    safeStorageGet(key, (res) => {
+      const bookmarks = res[key] || {};
+      bookmarks[normName] = time;
+      
+      const setObj = { [key]: bookmarks };
+      safeStorageSet(setObj, () => {
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+        showFeedback(`📍 Repère "${name}" enregistré à ${minutes}:${seconds}`, true);
+        if (callback) callback();
+      });
+    });
+  }
+
+  function loadBookmark(name) {
+    const key = getBookmarksStorageKey();
+    const normName = normalizeBookmarkName(name);
+    
+    safeStorageGet(key, (res) => {
+      const bookmarks = res[key] || {};
+      const time = bookmarks[normName];
+      if (time !== undefined) {
+        const video = getActiveVideo();
+        if (video) {
+          video.currentTime = time;
+          const minutes = Math.floor(time / 60);
+          const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+          showFeedback(`➡️ Saut vers Repère "${name}" (${minutes}:${seconds})`, true);
+        } else if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
+          sendYouTubeCommand('seekTo', [time, true]);
+          const minutes = Math.floor(time / 60);
+          const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+          showFeedback(`➡️ Saut vers Repère "${name}" (${minutes}:${seconds})`, true);
+        } else {
+          showFeedback(`❌ Aucun lecteur vidéo actif`, false);
+        }
+      } else {
+        showFeedback(`❌ Repère "${name}" introuvable`, false);
+      }
+    });
+  }
+
   function hasWord(phrase, word) {
     const escaped = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const regex = new RegExp('(?:^|\\s|[.,!?])' + escaped + '(?:$|\\s|[.,!?])', 'i');
@@ -978,28 +1063,135 @@ if (!SpeechRecognition) {
     const openNumRegex = new RegExp("^(?:ouvre|open|go to|choisis|prends|lance)?\\s*(?:le\\s+|la\\s+|the\\s+)?(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "$", "i");
     const numMatch = cmd.match(openNumRegex);
 
+    const videoSpeedRegex = /^(?:vitesse|playback speed|playbackrate)\s*(?:de\s+)?(\d+(?:[.,]\d+)?|normale|normal)$/i;
+    const saveBookmarkRegex = /^(?:enregistre|place|placer|sauvegarde|ajouter|marquer)\s+(?:le\s+)?(?:repère|repere|signet|bookmark)\s+(.+)$/i;
+    const loadBookmarkRegex = /^(?:va\s+au|retourne\s+au|reviens\s+au|charger|go\s+to|repère|repere|signet|bookmark)\s+(?:le\s+)?(.+)$/i;
+    const rewindRegex = /^(?:recule|retourne|rewind|back|arrière|arriere)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
+    const forwardRegex = /^(?:avance|forward|skip)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
+
+    const videoSpeedMatch = cmd.match(videoSpeedRegex);
+    const saveBookmarkMatch = cmd.match(saveBookmarkRegex);
+    const loadBookmarkMatch = cmd.match(loadBookmarkRegex);
+    const rewindMatch = cmd.match(rewindRegex);
+    const forwardMatch = cmd.match(forwardRegex);
+
     if (playPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
+      const video = getActiveVideo();
+      if (video) video.play();
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('playVideo');
       }
-      action = 'Playing playback';
+      action = 'Playing playback/video';
     } else if (pausePlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
       stopScrolling();
+      const video = getActiveVideo();
+      if (video) video.pause();
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('pauseVideo');
       }
-      action = 'Pausing playback and scroll';
-    } else if (rewindPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
-      if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
-        sendYouTubeCommand('seekTo', [0, true]);
+      action = 'Pausing playback/video and scroll';
+    } else if (rewindMatch) {
+      const rawNum = rewindMatch[1];
+      let seconds = 10;
+      if (rawNum) {
+        if (textToNum[rawNum.toLowerCase()] !== undefined) {
+          seconds = textToNum[rawNum.toLowerCase()];
+        } else if (!isNaN(parseInt(rawNum, 10))) {
+          seconds = parseInt(rawNum, 10);
+        }
       }
-      action = 'Rewinding playback';
+      const video = getActiveVideo();
+      if (video) {
+        video.currentTime = Math.max(0, video.currentTime - seconds);
+        action = `Rewound video by ${seconds}s`;
+      } else if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
+        sendYouTubeCommand('seekTo', [0, true]);
+        action = 'Rewinding drawer video to start';
+      } else {
+        isSuccess = false;
+        action = 'No active video found to rewind';
+      }
+    } else if (forwardMatch) {
+      const rawNum = forwardMatch[1];
+      let seconds = 10;
+      if (rawNum) {
+        if (textToNum[rawNum.toLowerCase()] !== undefined) {
+          seconds = textToNum[rawNum.toLowerCase()];
+        } else if (!isNaN(parseInt(rawNum, 10))) {
+          seconds = parseInt(rawNum, 10);
+        }
+      }
+      const video = getActiveVideo();
+      if (video) {
+        video.currentTime = Math.min(video.duration || 9999, video.currentTime + seconds);
+        action = `Forwarded video by ${seconds}s`;
+      } else {
+        isSuccess = false;
+        action = 'No active video found to forward';
+      }
     } else if (restartPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
+      const video = getActiveVideo();
+      if (video) {
+        video.currentTime = 0;
+        video.play();
+      }
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('seekTo', [0, true]);
         sendYouTubeCommand('playVideo');
       }
-      action = 'Restarting playback';
+      action = 'Restarting playback/video';
+    } else if (saveBookmarkMatch) {
+      const video = getActiveVideo();
+      if (video) {
+        saveBookmark(saveBookmarkMatch[1], video.currentTime);
+        action = `Saving bookmark "${saveBookmarkMatch[1]}"`;
+      } else {
+        isSuccess = false;
+        action = 'No active video to save bookmark';
+      }
+    } else if (loadBookmarkMatch) {
+      loadBookmark(loadBookmarkMatch[1]);
+      action = `Loading bookmark "${loadBookmarkMatch[1]}"`;
+    } else if (videoSpeedMatch) {
+      let speedStr = videoSpeedMatch[1].replace(',', '.');
+      let targetRate = 1.0;
+      if (speedStr === 'normale' || speedStr === 'normal') {
+        targetRate = 1.0;
+      } else {
+        const parsed = parseFloat(speedStr);
+        if (!isNaN(parsed)) {
+          targetRate = Math.max(0.25, Math.min(parsed, 4.0));
+        }
+      }
+      const video = getActiveVideo();
+      if (video) {
+        video.playbackRate = targetRate;
+        action = `Set video speed to ${targetRate}x`;
+      } else if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
+        sendYouTubeCommand('setPlaybackRate', [targetRate]);
+        action = `Set drawer video speed to ${targetRate}x`;
+      } else {
+        isSuccess = false;
+        action = 'No active video to set speed';
+      }
+    } else if (cmd.includes('vitesse') && (speedUpVariants.some(v => cmd.includes(v)) || cmd.includes('rapide') || cmd.includes('augmenter'))) {
+      const video = getActiveVideo();
+      if (video) {
+        video.playbackRate = Math.min(4.0, video.playbackRate + 0.1);
+        action = `Increased video speed to ${video.playbackRate.toFixed(2)}x`;
+      } else {
+        isSuccess = false;
+        action = 'No active video to increase speed';
+      }
+    } else if (cmd.includes('vitesse') && (slowDownVariants.some(v => cmd.includes(v)) || cmd.includes('lent') || cmd.includes('diminuer'))) {
+      const video = getActiveVideo();
+      if (video) {
+        video.playbackRate = Math.max(0.25, video.playbackRate - 0.1);
+        action = `Decreased video speed to ${video.playbackRate.toFixed(2)}x`;
+      } else {
+        isSuccess = false;
+        action = 'No active video to decrease speed';
+      }
     } else if (scrollDownSmallVariants.some(v => cmd === v || hasWord(cmd, v))) {
       discreteScroll(200);
       action = 'Scrolling down a bit';
