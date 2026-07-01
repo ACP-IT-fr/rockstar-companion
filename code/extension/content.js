@@ -834,6 +834,12 @@ if (!SpeechRecognition) {
     }
   }
 
+  function hasWord(phrase, word) {
+    const escaped = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp('(?:^|\\s|[.,!?])' + escaped + '(?:$|\\s|[.,!?])', 'i');
+    return regex.test(phrase);
+  }
+
   function handleCommand(command) {
     let action = '';
     let isSuccess = true;
@@ -868,51 +874,51 @@ if (!SpeechRecognition) {
     const openNumRegex = new RegExp("^(?:ouvre|open|go to|choisis|prends|lance)?\\s*(?:le\\s+|la\\s+|the\\s+)?(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "$", "i");
     const numMatch = cmd.match(openNumRegex);
 
-    if (playPlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+    if (playPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('playVideo');
       }
       action = 'Playing playback';
-    } else if (pausePlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (pausePlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
       stopScrolling();
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('pauseVideo');
       }
       action = 'Pausing playback and scroll';
-    } else if (rewindPlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (rewindPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('seekTo', [0, true]);
       }
       action = 'Rewinding playback';
-    } else if (restartPlaybackVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (restartPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('seekTo', [0, true]);
         sendYouTubeCommand('playVideo');
       }
       action = 'Restarting playback';
-    } else if (scrollDownSmallVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (scrollDownSmallVariants.some(v => cmd === v || hasWord(cmd, v))) {
       window.scrollBy({ top: 150, behavior: 'smooth' });
       action = 'Scrolling down a bit';
-    } else if (scrollDownLargeVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (scrollDownLargeVariants.some(v => cmd === v || hasWord(cmd, v))) {
       window.scrollBy({ top: 300, behavior: 'smooth' });
       action = 'Scrolling down a lot';
-    } else if (scrollDownVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (scrollDownVariants.some(v => cmd === v || hasWord(cmd, v))) {
       startScrolling(1);
       action = 'Scrolling down';
-    } else if (scrollUpSmallVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (scrollUpSmallVariants.some(v => cmd === v || hasWord(cmd, v))) {
       window.scrollBy({ top: -150, behavior: 'smooth' });
       action = 'Scrolling up a bit';
-    } else if (scrollUpLargeVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (scrollUpLargeVariants.some(v => cmd === v || hasWord(cmd, v))) {
       window.scrollBy({ top: -300, behavior: 'smooth' });
       action = 'Scrolling up a lot';
-    } else if (scrollUpVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (scrollUpVariants.some(v => cmd === v || hasWord(cmd, v))) {
       startScrolling(-1);
       action = 'Scrolling up';
-    } else if (topVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (topVariants.some(v => cmd === v || hasWord(cmd, v))) {
       stopScrolling();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       action = 'Going to top';
-    } else if (sleepVariants.some(v => cmd === v || cmd.includes(v))) {
+    } else if (sleepVariants.some(v => cmd === v || hasWord(cmd, v))) {
       stopScrolling();
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
         sendYouTubeCommand('pauseVideo');
