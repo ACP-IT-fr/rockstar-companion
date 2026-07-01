@@ -68,6 +68,88 @@ if (!SpeechRecognition) {
   const currentDomain = window.location.hostname;
   const isUG = currentDomain.endsWith('ultimate-guitar.com');
   
+  const SITE_CONFIGS = {
+    'ultimate-guitar.com': {
+      isSearchPage: () => window.location.href.includes('search.php') || window.location.href.includes('search') || window.location.href.includes('explore'),
+      getLinks: () => {
+        const allLinks = Array.from(document.querySelectorAll('a'));
+        return allLinks.filter(a => 
+          (a.href.includes('/tab/') || a.href.includes('ultimate-guitar.com/tab/')) && 
+          !a.href.includes('#')
+        );
+      },
+      searchUrl: (query) => `https://www.ultimate-guitar.com/search.php?title=${encodeURIComponent(query)}&page=1&type[0]=300&rating[0]=4&rating[1]=5&order=myweight`
+    },
+    'google.com': {
+      isSearchPage: () => window.location.pathname.startsWith('/search'),
+      getLinks: () => {
+        const results = [];
+        document.querySelectorAll('h3').forEach(h3 => {
+          let a = h3.closest('a');
+          if (!a) {
+            a = h3.querySelector('a');
+          }
+          if (a && a.href && !a.href.includes('google.com/search') && !a.classList.contains('fl')) {
+            results.push(a);
+          }
+        });
+        return results;
+      },
+      searchUrl: (query) => `https://www.google.com/search?q=${encodeURIComponent(query)}`
+    },
+    'youtube.com': {
+      isSearchPage: () => window.location.pathname.startsWith('/results'),
+      getLinks: () => {
+        const results = [];
+        document.querySelectorAll('ytd-video-renderer').forEach(renderer => {
+          const a = renderer.querySelector('a#video-title, a#video-title-link, a.yt-simple-endpoint');
+          if (a && a.href && a.href.includes('/watch')) {
+            results.push(a);
+          }
+        });
+        if (results.length === 0) {
+          document.querySelectorAll('a#video-title, a#video-title-link').forEach(a => {
+            if (a.href && a.href.includes('/watch')) {
+              results.push(a);
+            }
+          });
+        }
+        const seen = new Set();
+        const uniqueResults = [];
+        results.forEach(a => {
+          const cleanHref = a.href.split('&')[0];
+          if (!seen.has(cleanHref)) {
+            seen.add(cleanHref);
+            uniqueResults.push(a);
+          }
+        });
+        return uniqueResults;
+      },
+      searchUrl: (query) => `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
+    },
+    'default': {
+      isSearchPage: () => window.location.href.includes('search') || window.location.href.includes('query') || window.location.href.includes('q='),
+      getLinks: () => {
+        const candidateLinks = [];
+        const seenUrls = new Set();
+        document.querySelectorAll('h1 a, h2 a, h3 a, h4 a, .result a, .item a').forEach(a => {
+          if (a.href && !a.href.startsWith('javascript:') && !a.href.includes('#') && a.innerText.trim().length > 5) {
+            const cleanUrl = a.href.split('?')[0];
+            if (!seenUrls.has(cleanUrl)) {
+              seenUrls.add(cleanUrl);
+              candidateLinks.push(a);
+            }
+          }
+        });
+        return candidateLinks.slice(0, 30);
+      },
+      searchUrl: (query) => `https://www.google.com/search?q=${encodeURIComponent(query)}`
+    }
+  };
+
+  const activeSiteKey = Object.keys(SITE_CONFIGS).find(domain => currentDomain.endsWith(domain)) || 'default';
+  const activeConfig = SITE_CONFIGS[activeSiteKey];
+  
   const storageKey = 'ug_voice_speed_' + window.location.pathname;
   const savedSpeed = localStorage.getItem(storageKey);
   if (savedSpeed) {
@@ -99,6 +181,8 @@ if (!SpeechRecognition) {
   let isInitialized = false;
   let isSuspendedByVisibility = false;
   let recognition = null;
+  let interimFinalizeTimeout = null;
+  let lastInterimTranscript = '';
 
   let drawerBtn = null;
   let drawerContainer = null;
@@ -505,6 +589,7 @@ if (!SpeechRecognition) {
 
     recognition.onresult = (event) => {
       let interimRaw = '';
+      clearTimeout(interimFinalizeTimeout);
       
       function normalize(text) {
         let normalized = text.toLowerCase()
@@ -573,6 +658,8 @@ if (!SpeechRecognition) {
         }
         
         if (event.results[i].isFinal) {
+          clearTimeout(interimFinalizeTimeout);
+          lastInterimTranscript = '';
           let finalTranscript = activeText;
           console.log("Voice Command Recognized:", finalTranscript);
           liveTextContainer.innerText = '';
@@ -591,6 +678,12 @@ if (!SpeechRecognition) {
           }
         } else {
           interimRaw += transcript + ' ';
+          let activeInterim = normalized;
+          if (normalized.includes(wakeWordLower)) {
+            const wakeIndex = normalized.lastIndexOf(wakeWordLower);
+            activeInterim = normalized.substring(wakeIndex + wakeWordLower.length).trim();
+          }
+          lastInterimTranscript = activeInterim;
         }
       }
       
@@ -614,6 +707,20 @@ if (!SpeechRecognition) {
           liveTextContainer.innerText = displayInterim;
           liveTextContainer.style.display = 'block';
         }
+      }
+
+      // Start silence finalize timeout if we have pending interim transcript and are awake
+      if (isAwake && lastInterimTranscript.trim() !== '') {
+        interimFinalizeTimeout = setTimeout(() => {
+          console.log("[Rockstar] Auto-finalizing interim speech:", lastInterimTranscript);
+          const transcriptToExecute = lastInterimTranscript;
+          lastInterimTranscript = '';
+          liveTextContainer.innerText = '';
+          liveTextContainer.style.display = 'none';
+          
+          wakeUp(15000, false);
+          handleCommand(transcriptToExecute);
+        }, 1200);
       }
     };
     
@@ -672,17 +779,19 @@ if (!SpeechRecognition) {
     
     if (isUG) {
       highlightBestResults();
-      numberSearchResults();
+    }
+    numberSearchResults();
 
-      // Mutation observer to handle SPA routing / dynamic DOM updates on search pages
-      let lastUrl = window.location.href;
-      const searchObserver = new MutationObserver(() => {
-        const currentUrl = window.location.href;
-        const isSearchPage = currentUrl.includes('search.php') || currentUrl.includes('search') || currentUrl.includes('explore');
-        
-        if (isSearchPage) {
-          if (currentUrl !== lastUrl) {
-            lastUrl = currentUrl;
+    // Mutation observer to handle SPA routing / dynamic DOM updates on search pages
+    let lastUrl = window.location.href;
+    const searchObserver = new MutationObserver(() => {
+      const currentUrl = window.location.href;
+      const isSearchPage = activeConfig.isSearchPage();
+      
+      if (isSearchPage) {
+        if (currentUrl !== lastUrl) {
+          lastUrl = currentUrl;
+          if (isUG) {
             // Clear old highlighted classes & custom best row
             document.querySelectorAll('.ug-voice-highlighted-row').forEach(row => {
               row.classList.remove('ug-voice-highlighted-row');
@@ -691,28 +800,24 @@ if (!SpeechRecognition) {
             if (customRow) customRow.remove();
             
             highlightBestResults();
-            numberSearchResults();
-          } else {
-            // Check if there are unnumbered tab links in the DOM
-            const allLinks = Array.from(document.querySelectorAll('a'));
-            const tabLinks = allLinks.filter(a => 
-              (a.href.includes('/tab/') || a.href.includes('ultimate-guitar.com/tab/')) && 
-              !a.href.includes('#')
-            );
-            const hasUnnumbered = tabLinks.some(link => !link.querySelector('.ug-result-badge'));
-            if (hasUnnumbered && tabLinks.length > 0) {
-              numberSearchResults();
-            }
           }
+          numberSearchResults();
         } else {
-          lastUrl = currentUrl;
+          // Check if there are unnumbered links in the DOM
+          const tabLinks = activeConfig.getLinks();
+          const hasUnnumbered = tabLinks.some(link => !link.querySelector('.ug-result-badge'));
+          if (hasUnnumbered && tabLinks.length > 0) {
+            numberSearchResults();
+          }
         }
-      });
-      searchObserver.observe(document.documentElement, {
-        childList: true,
-        subtree: true
-      });
-    }
+      } else {
+        lastUrl = currentUrl;
+      }
+    });
+    searchObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
   }
 
   function updateSpeedUI() {
@@ -922,18 +1027,16 @@ if (!SpeechRecognition) {
       goToSleep();
       action = 'Going to sleep';
     } else if (numMatch) {
-      if (!isUG) {
-        isSuccess = false;
-        action = 'Recherche non disponible sur ce site';
+      const num = textToNum[numMatch[1].toLowerCase()];
+      if (num && window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
+        try {
+          if (recognition) recognition.stop();
+        } catch(e) {}
+        window.location.href = window.ugSearchResultLinks[num];
+        action = `Opening result number ${num}`;
       } else {
-        const num = textToNum[numMatch[1].toLowerCase()];
-        if (num && window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
-          window.location.href = window.ugSearchResultLinks[num];
-          action = `Opening result number ${num}`;
-        } else {
-          isSuccess = false;
-          action = `Result number ${num || numMatch[1]} not found on this page`;
-        }
+        isSuccess = false;
+        action = `Result number ${num || numMatch[1]} not found on this page`;
       }
     } else {
       let isSearchCmd = false;
@@ -960,16 +1063,31 @@ if (!SpeechRecognition) {
       }
 
       if (isSearchCmd) {
-        if (!isUG) {
-          isSuccess = false;
-          action = 'Recherche non disponible sur ce site';
-        } else if (targetQuery) {
+        if (targetQuery) {
+          // Detect search target site: "sur google", "on youtube", etc.
+          let targetSite = null;
+          const siteSuffixRegex = /\s+(?:sur|on)\s+(google|youtube|ultimate-guitar|ultimate guitar|ug)$/i;
+          const siteMatch = targetQuery.match(siteSuffixRegex);
+          
+          if (siteMatch) {
+            const siteStr = siteMatch[1].toLowerCase();
+            if (siteStr === 'google') {
+              targetSite = 'google.com';
+            } else if (siteStr === 'youtube') {
+              targetSite = 'youtube.com';
+            } else if (siteStr === 'ultimate-guitar' || siteStr === 'ultimate guitar' || siteStr === 'ug') {
+              targetSite = 'ultimate-guitar.com';
+            }
+            // Remove suffix from query
+            targetQuery = targetQuery.replace(siteSuffixRegex, '').trim();
+          }
+
           if (isPlaylist) {
             searchPlaylistUG(targetQuery);
             action = `Searching playlist for "${targetQuery}"`;
           } else {
-            searchUG(targetQuery);
-            action = `Searching for "${targetQuery}"`;
+            performSearch(targetQuery, targetSite);
+            action = `Searching for "${targetQuery}" on ${targetSite || activeSiteKey}`;
           }
         } else {
           isSuccess = false;
@@ -1033,6 +1151,22 @@ if (!SpeechRecognition) {
 
   function searchPlaylistUG(query) {
     const url = `https://www.ultimate-guitar.com/user/mytabs?search=${encodeURIComponent(query)}`;
+    try {
+      if (recognition) recognition.stop();
+    } catch(e) {}
+    window.location.href = url;
+  }
+
+  function performSearch(query, siteKey) {
+    let site = siteKey;
+    if (!site) {
+      site = activeSiteKey !== 'default' ? activeSiteKey : 'ultimate-guitar.com';
+    }
+    const config = SITE_CONFIGS[site] || SITE_CONFIGS['default'];
+    const url = config.searchUrl(query);
+    try {
+      if (recognition) recognition.stop();
+    } catch(e) {}
     window.location.href = url;
   }
 
@@ -1174,7 +1308,7 @@ if (!SpeechRecognition) {
   }
 
   function numberSearchResults() {
-    if (!window.location.href.includes('search.php') && !window.location.href.includes('search') && !window.location.href.includes('explore')) return;
+    if (!activeConfig.isSearchPage()) return;
 
     let attempts = 0;
     const interval = setInterval(() => {
@@ -1184,29 +1318,24 @@ if (!SpeechRecognition) {
         return;
       }
 
-      const allLinks = Array.from(document.querySelectorAll('a'));
-      const tabLinks = allLinks.filter(a => 
-        (a.href.includes('/tab/') || a.href.includes('ultimate-guitar.com/tab/')) && 
-        !a.href.includes('#')
-      );
+      const tabLinks = activeConfig.getLinks();
 
       if (tabLinks.length === 0) return;
 
       clearInterval(interval);
-      console.log("[Rockstar] Found tab links for numbering:", tabLinks.length);
+      console.log("[Rockstar] Found links for numbering:", tabLinks.length);
 
       // Remove existing badges to avoid duplicates on re-render
       document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());
 
       window.ugSearchResultLinks = {};
       let counter = 1;
-      const processedPaths = new Set();
+      const processedUrls = new Set();
 
       tabLinks.forEach(link => {
         const url = link.href.split('?')[0];
-        const path = cleanUrlPath(url);
-        if (!processedPaths.has(path)) {
-          processedPaths.add(path);
+        if (!processedUrls.has(url)) {
+          processedUrls.add(url);
           window.ugSearchResultLinks[counter] = link.href;
 
           const badge = document.createElement('span');
