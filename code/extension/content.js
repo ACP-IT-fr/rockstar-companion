@@ -896,23 +896,19 @@ if (!SpeechRecognition) {
       }
       action = 'Restarting playback';
     } else if (scrollDownSmallVariants.some(v => cmd === v || hasWord(cmd, v))) {
-      stopScrolling();
-      window.scrollBy({ top: 200, behavior: 'smooth' });
+      discreteScroll(200);
       action = 'Scrolling down a bit';
     } else if (scrollDownLargeVariants.some(v => cmd === v || hasWord(cmd, v))) {
-      stopScrolling();
-      window.scrollBy({ top: 500, behavior: 'smooth' });
+      discreteScroll(500);
       action = 'Scrolling down a lot';
     } else if (scrollDownVariants.some(v => cmd === v || hasWord(cmd, v))) {
       startScrolling(1);
       action = 'Scrolling down';
     } else if (scrollUpSmallVariants.some(v => cmd === v || hasWord(cmd, v))) {
-      stopScrolling();
-      window.scrollBy({ top: -200, behavior: 'smooth' });
+      discreteScroll(-200);
       action = 'Scrolling up a bit';
     } else if (scrollUpLargeVariants.some(v => cmd === v || hasWord(cmd, v))) {
-      stopScrolling();
-      window.scrollBy({ top: -500, behavior: 'smooth' });
+      discreteScroll(-500);
       action = 'Scrolling up a lot';
     } else if (topVariants.some(v => cmd === v || hasWord(cmd, v))) {
       stopScrolling();
@@ -1011,6 +1007,22 @@ if (!SpeechRecognition) {
       clearInterval(scrollInterval);
       scrollInterval = null;
       if (speedContainer) speedContainer.classList.remove('visible');
+    }
+  }
+
+  function discreteScroll(offset) {
+    let wasScrolling = false;
+    let savedDirection = 0;
+    if (scrollInterval) {
+      wasScrolling = true;
+      savedDirection = currentDirection;
+      stopScrolling();
+    }
+    window.scrollBy({ top: offset, behavior: 'smooth' });
+    if (wasScrolling) {
+      setTimeout(() => {
+        startScrolling(savedDirection);
+      }, 500);
     }
   }
 
