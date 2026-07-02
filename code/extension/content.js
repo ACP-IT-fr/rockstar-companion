@@ -753,13 +753,31 @@ if (!SpeechRecognition) {
           liveTextContainer.style.display = 'none';
 
           if (normalized.includes(wakeWordLower)) {
-            goToSleep();
             if (finalTranscript.length > 0) {
-              handleCommand(finalTranscript);
+              const success = handleCommand(finalTranscript);
+              if (success) {
+                wakeUp(5000, false);
+              } else {
+                if (finalTranscript.split(/\s+/).length > 3) {
+                  goToSleep();
+                } else {
+                  wakeUp(5000, false);
+                }
+              }
+            } else {
+              wakeUp(7000, true);
             }
           } else if (isAwake) {
-            goToSleep();
-            handleCommand(finalTranscript);
+            const success = handleCommand(finalTranscript);
+            if (success) {
+              wakeUp(5000, false);
+            } else {
+              if (finalTranscript.split(/\s+/).length > 3) {
+                goToSleep();
+              } else {
+                wakeUp(3000, false);
+              }
+            }
           } else {
             console.log("Ignored (sleeping):", normalized);
           }
@@ -1439,6 +1457,7 @@ if (!SpeechRecognition) {
     }
     
     showFeedback(`🎤 Heard: "${command}"\n${action}`, isSuccess);
+    return isSuccess;
   }
 
   function startScrolling(direction) {
