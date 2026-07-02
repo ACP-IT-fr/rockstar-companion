@@ -102,7 +102,8 @@
       font-size: 12px;
       color: #aaa;
     }
-    .text-input-group input[type="text"] {
+    .text-input-group input[type="text"],
+    .text-input-group select {
       padding: 8px 10px;
       border: 1px solid #444;
       border-radius: 4px;
@@ -112,7 +113,11 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    .text-input-group input[type="text"]:focus {
+    .text-input-group select {
+      cursor: pointer;
+    }
+    .text-input-group input[type="text"]:focus,
+    .text-input-group select:focus {
       border-color: #ffc107;
     }
     #open-dashboard-btn {
@@ -229,6 +234,20 @@
         <input type="text" id="wake-word-input" value="Rockstar" placeholder="Ex: Rockstar">
         <p style="font-size: 11px; color: #888; margin: 4px 0 0 0;">
           Saisissez le mot à prononcer avant chaque commande.
+        </p>
+      </div>
+
+      <div class="text-input-group" style="margin-top: 12px;">
+        <label for="inactivity-delay-select">Fermeture auto du micro :</label>
+        <select id="inactivity-delay-select">
+          <option value="1">Après 1 minute (Recommandé)</option>
+          <option value="2">Après 2 minutes</option>
+          <option value="5">Après 5 minutes</option>
+          <option value="10">Après 10 minutes</option>
+          <option value="0">Désactivée (Toujours ouvert)</option>
+        </select>
+        <p style="font-size: 11px; color: #888; margin: 4px 0 0 0;">
+          Ferme le microphone en cas d'inactivité.
         </p>
       </div>
 

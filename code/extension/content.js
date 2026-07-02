@@ -221,11 +221,60 @@ if (!SpeechRecognition) {
   let metronomeFlashWidget = false;
   let metronomeFlashScreen = false;
   let screenFlashOverlay = null;
+  let inactivityTimeoutId = null;
+  let inactivityDelay = 1; // Default is 1 minute
   let nextBeatTime = 0.0;
   let currentBeat = 0;
   let metronomeTimer = null;
   const scheduleAheadTime = 0.1; // seconds
   const lookahead = 25.0; // milliseconds
+
+  function resetInactivityTimer() {
+    if (inactivityTimeoutId) {
+      clearTimeout(inactivityTimeoutId);
+      inactivityTimeoutId = null;
+    }
+    
+    // If inactivity timeout is off (inactivityDelay === 0 or negative), do not set timer
+    if (inactivityDelay <= 0) return;
+    
+    // Inactivity timeout duration in milliseconds
+    const duration = inactivityDelay * 60 * 1000;
+    
+    inactivityTimeoutId = setTimeout(() => {
+      // Check if we are active:
+      // 1. Is metronome playing? Keep active.
+      // 2. Is video/audio playback active? Keep active.
+      if (metronomePlaying) {
+        resetInactivityTimer();
+        return;
+      }
+      
+      const video = getActiveVideo();
+      if (video && !video.paused) {
+        resetInactivityTimer();
+        return;
+      }
+      
+      // Stop listening if inactive
+      if (isListening) {
+        console.log(`[Rockstar] Stopping listening due to ${inactivityDelay} min inactivity`);
+        stopListening();
+        showFeedback(`🎤 Micro fermé par inactivité (${inactivityDelay} min)`, true);
+      }
+    }, duration);
+  }
+
+  function registerInactivityListeners() {
+    const events = ['click', 'keydown', 'scroll'];
+    events.forEach(event => {
+      window.addEventListener(event, () => {
+        if (isListening) {
+          resetInactivityTimer();
+        }
+      }, { passive: true });
+    });
+  }
 
   function createScreenFlashOverlay() {
     if (document.getElementById('ug-metronome-screen-overlay') || screenFlashOverlay) return;
@@ -1054,6 +1103,7 @@ if (!SpeechRecognition) {
     };
 
     recognition.onresult = (event) => {
+      resetInactivityTimer();
       let interimRaw = '';
       clearTimeout(interimFinalizeTimeout);
       
@@ -1337,6 +1387,8 @@ if (!SpeechRecognition) {
         }
       }, 2000);
     }
+    
+    registerInactivityListeners();
   }
 
   function updateSpeedUI() {
@@ -1376,6 +1428,7 @@ if (!SpeechRecognition) {
       try {
         recognition.start();
         isListening = true;
+        resetInactivityTimer();
         if (btn) btn.classList.add('listening');
         if (isAwake) {
           safeStorageGet('rockstar_awake_until', (res) => {
@@ -1401,6 +1454,10 @@ if (!SpeechRecognition) {
   function stopListening() {
     isListening = false;
     isSuspendedByVisibility = false;
+    if (inactivityTimeoutId) {
+      clearTimeout(inactivityTimeoutId);
+      inactivityTimeoutId = null;
+    }
     if (tunerActive) {
        tunerActive = false;
        if (tunerContainer) tunerContainer.classList.remove('visible');
@@ -3294,7 +3351,7 @@ if (!SpeechRecognition) {
 
   // Storage preference listeners and bootstrap check
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
-    chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites'], (result) => {
+    chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites', 'inactivityDelay'], (result) => {
       const allowedDomains = result.allowedDomains || {};
       const muteAllSites = result.muteAllSites || false;
       const status = allowedDomains[currentDomain];
@@ -3310,6 +3367,9 @@ if (!SpeechRecognition) {
         if (result.wakeWord !== undefined) {
           wakeWord = result.wakeWord.trim() || 'Rockstar';
           wakeWordLower = wakeWord.toLowerCase();
+        }
+        if (result.inactivityDelay !== undefined) {
+          inactivityDelay = parseInt(result.inactivityDelay, 10);
         }
         
         if (isUG) {
@@ -3333,7 +3393,7 @@ if (!SpeechRecognition) {
 
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'sync') {
-        chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites'], (result) => {
+        chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites', 'inactivityDelay'], (result) => {
           const allowedDomains = result.allowedDomains || {};
           const muteAllSites = result.muteAllSites || false;
           const status = allowedDomains[currentDomain];
@@ -3347,6 +3407,14 @@ if (!SpeechRecognition) {
             const oldWakeWord = wakeWord;
             wakeWord = (result.wakeWord !== undefined ? result.wakeWord.trim() : 'Rockstar') || 'Rockstar';
             wakeWordLower = wakeWord.toLowerCase();
+            
+            const oldDelay = inactivityDelay;
+            if (result.inactivityDelay !== undefined) {
+              inactivityDelay = parseInt(result.inactivityDelay, 10);
+            }
+            if (isListening && oldDelay !== inactivityDelay) {
+              resetInactivityTimer();
+            }
             
             if (isInitialized && oldWakeWord !== wakeWord) {
               updateUIForWakeWord();

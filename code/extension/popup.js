@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const domainActivationCb = document.getElementById('domain-activation-cb');
   const domainActivationLabel = document.getElementById('domain-activation-label');
   const muteAllSitesCb = document.getElementById('mute-all-sites-cb');
+  const inactivityDelaySelect = document.getElementById('inactivity-delay-select');
 
   let currentDomain = '';
 
@@ -52,10 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Load settings
-  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'muteAllSites'], (result) => {
+  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'muteAllSites', 'inactivityDelay'], (result) => {
     cb7th.checked = result.chord7th || false;
     cbSus.checked = result.chordSus || false;
     muteAllSitesCb.checked = result.muteAllSites || false;
+    inactivityDelaySelect.value = result.inactivityDelay !== undefined ? result.inactivityDelay : '1';
     
     const word = result.wakeWord !== undefined ? result.wakeWord : 'Rockstar';
     wakeWordInput.value = word;
@@ -91,6 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Save mute settings
   muteAllSitesCb.addEventListener('change', () => {
     chrome.storage.sync.set({ muteAllSites: muteAllSitesCb.checked });
+  });
+
+  // Save inactivity delay setting
+  inactivityDelaySelect.addEventListener('change', () => {
+    chrome.storage.sync.set({ inactivityDelay: parseInt(inactivityDelaySelect.value, 10) });
   });
 
   // Open Dashboard Page
