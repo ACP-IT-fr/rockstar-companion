@@ -247,6 +247,281 @@
   margin-bottom: 5px;
 }
 
+#ug-metronome,
+#ug-metronome * {
+  box-sizing: border-box !important;
+}
+
+#ug-metronome {
+  position: fixed;
+  bottom: 270px;
+  right: 20px;
+  background-color: rgba(18, 17, 24, 0.95);
+  backdrop-filter: blur(15px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 190px;
+  height: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 0.3s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.08s ease, border-color 0.08s ease;
+}
+
+#ug-metronome.visible {
+  opacity: 1;
+}
+
+#ug-metronome.flash-active {
+  background-color: rgba(0, 230, 118, 0.2) !important;
+  border-color: rgba(0, 230, 118, 0.5) !important;
+}
+
+#ug-metronome.flash-active.flash-accent {
+  background-color: rgba(233, 30, 99, 0.25) !important;
+  border-color: rgba(233, 30, 99, 0.6) !important;
+}
+
+#ug-metronome-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: transparent;
+  pointer-events: none;
+  z-index: 999998;
+  transition: background-color 0.08s ease;
+}
+
+#ug-metronome-screen-overlay.flash-active {
+  background-color: rgba(0, 230, 118, 0.05);
+}
+
+#ug-metronome-screen-overlay.flash-active.flash-accent {
+  background-color: rgba(233, 30, 99, 0.08);
+}
+
+.metronome-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.metronome-options {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.metronome-opt-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.4;
+  transition: opacity 0.2s, background-color 0.2s, border-color 0.2s;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+}
+
+.metronome-opt-btn:hover {
+  opacity: 0.8;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.metronome-opt-btn.active {
+  opacity: 1;
+  background-color: rgba(255, 0, 127, 0.2);
+  border: 1px solid rgba(255, 0, 127, 0.4);
+}
+
+.metronome-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #333;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  transition: background-color 0.08s ease, box-shadow 0.08s ease;
+}
+
+.metronome-led.active {
+  background-color: #00E676; /* Green for regular beats */
+  box-shadow: 0 0 8px #00E676, 0 0 16px #00E676;
+}
+
+.metronome-led.active.accent {
+  background-color: #E91E63; /* Pink/Red for accented beat */
+  box-shadow: 0 0 10px #E91E63, 0 0 20px #E91E63;
+}
+
+.metronome-play-tempo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.metronome-btn {
+  background: linear-gradient(135deg, #bc13fe 0%, #ff007f 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, opacity 0.2s;
+  box-shadow: 0 2px 8px rgba(188, 19, 254, 0.3);
+  flex-shrink: 0;
+}
+
+.metronome-btn:hover {
+  opacity: 0.9;
+}
+
+.metronome-btn:active {
+  transform: scale(0.92);
+}
+
+.metronome-btn.playing {
+  background: linear-gradient(135deg, #ff007f 0%, #ff5e62 100%);
+  box-shadow: 0 2px 8px rgba(255, 0, 127, 0.3);
+}
+
+.metronome-tempo-controls {
+  display: flex;
+  align-items: center;
+  background-color: #222;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 3px 6px;
+  flex-grow: 1;
+  justify-content: space-between;
+  height: 32px;
+}
+
+.metronome-btn-small {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.metronome-btn-small:hover {
+  background-color: #333;
+  color: #ffc107;
+}
+
+.metronome-bpm-text {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffc107;
+  text-align: center;
+  min-width: 55px;
+}
+
+.metronome-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  width: 100%;
+}
+
+.volume-icon {
+  font-size: 12px;
+  color: #aaa;
+  flex-shrink: 0;
+}
+
+.volume-slider {
+  flex-grow: 1;
+}
+
+.metronome-selects-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.metronome-select {
+  width: 50% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex-grow: 1;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #fff;
+  padding: 6px 4px;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  height: 28px;
+}
+
+.metronome-select:focus {
+  border-color: #ff007f;
+}
+
+.metronome-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: #444;
+  outline: none;
+  margin: 4px 0;
+}
+
+.metronome-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ff007f;
+  cursor: pointer;
+  transition: transform 0.1s;
+  box-shadow: 0 0 4px rgba(255, 0, 127, 0.5);
+}
+
+.metronome-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
 #ug-voice-activation-banner {
   position: fixed;
   bottom: 20px;
@@ -834,20 +1109,302 @@
 .rockstar-marker {
   position: absolute;
   top: 0;
+  width: 1px;
+  height: 100%;
+  z-index: 9999;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.rockstar-marker::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  width: 17px;
+  top: 0;
+  height: 100%;
+  background: transparent;
+}
+
+.rockstar-marker-line {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 4px;
   height: 100%;
   background-color: #ffc107;
   border-radius: 2px;
-  z-index: 9999;
-  pointer-events: auto; /* Allow hovering & clicking */
-  cursor: pointer;
-  transform: scaleY(1.0);
-  transition: transform 0.1s, background-color 0.1s;
+  transform: translateX(-50%);
+  transition: transform 0.15s, background-color 0.15s;
 }
 
-.rockstar-marker:hover {
-  transform: scaleY(1.8) scaleX(1.5);
+.rockstar-marker:hover .rockstar-marker-line {
+  transform: translateX(-50%) scaleY(1.8) scaleX(1.5);
   background-color: #ff007f;
 }
+
+.rockstar-marker-label {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  transform: translateX(-50%);
+  background-color: rgba(18, 17, 24, 0.9);
+  color: #fff;
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  opacity: 0.85;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.rockstar-marker:hover .rockstar-marker-label {
+  opacity: 1;
+  transform: translateX(-50%) scale(1.05);
+  border-color: #ff007f;
+}
+
+/* Rockstar YouTube Markers UI */
+.rockstar-markers-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+}
+
+#rockstar-markers-btn {
+  width: 100%;
+  height: 100%;
+  border-radius: 25px;
+  background-color: #333;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, background-color 0.2s;
+  outline: none;
+}
+
+#rockstar-markers-btn:hover {
+  transform: scale(1.05);
+  background-color: #444;
+}
+
+#rockstar-markers-btn:active {
+  transform: scale(0.95);
+}
+
+#rockstar-markers-panel {
+  position: absolute;
+  bottom: 65px;
+  right: 0;
+  width: 280px;
+  max-height: 400px;
+  background-color: rgba(18, 17, 24, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+#rockstar-markers-panel.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.markers-panel-header {
+  padding: 12px 15px;
+  font-weight: bold;
+  color: #ffc107;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.markers-panel-body {
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 330px;
+}
+
+.rockstar-add-marker-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px dashed #ffc107;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  margin-bottom: 4px;
+}
+
+.rockstar-add-marker-btn:hover {
+  background-color: rgba(255, 193, 7, 0.25);
+}
+
+.markers-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rockstar-marker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.rockstar-marker-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.rockstar-marker-name-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: #fff;
+  font-size: 13px;
+  padding: 2px 4px;
+  outline: none;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  min-width: 0;
+}
+
+.rockstar-marker-name-input:focus {
+  border-bottom-color: #ffc107;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.rockstar-marker-time-btn {
+  background-color: #ffc107;
+  color: #111;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: monospace;
+  transition: background-color 0.1s;
+  white-space: nowrap;
+}
+
+.rockstar-marker-time-btn:hover {
+  background-color: #ffe082;
+}
+
+.rockstar-marker-delete-btn {
+  background: transparent;
+  border: none;
+  color: #ff5252;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.rockstar-marker-delete-btn:hover {
+  background-color: rgba(255, 82, 82, 0.15);
+}
+
+.markers-empty-msg {
+  color: #888;
+  font-size: 12px;
+  text-align: center;
+  padding: 15px 10px;
+  font-style: italic;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+}
+
+.rockstar-marker-num {
+  color: #ffc107;
+  font-weight: bold;
+  font-size: 13px;
+  margin-right: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  min-width: 16px;
+  text-align: right;
+}
+
+.rockstar-toggle-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #ddd;
+  cursor: pointer;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  padding: 0 4px;
+}
+
+.rockstar-toggle-option input {
+  cursor: pointer;
+  accent-color: #ffc107;
+  margin: 0;
+}
+
+/* Force YouTube controls visible styles */
+.rockstar-force-controls-visible .ytp-chrome-bottom,
+.rockstar-force-controls-visible.ytp-autohide .ytp-chrome-bottom {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.rockstar-force-controls-visible .ytp-chrome-top,
+.rockstar-force-controls-visible.ytp-autohide .ytp-chrome-top {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.rockstar-force-controls-visible .ytp-gradient-bottom,
+.rockstar-force-controls-visible.ytp-autohide .ytp-gradient-bottom {
+  opacity: 1 !important;
+}
+
+.rockstar-force-controls-visible .ytp-gradient-top,
+.rockstar-force-controls-visible.ytp-autohide .ytp-gradient-top {
+  opacity: 1 !important;
+}
+
 
 

@@ -176,6 +176,13 @@ if (!SpeechRecognition) {
   let commandsBtn = null;
   let commandsPanel = null;
   
+  let markersWrapper = null;
+  let markersBtn = null;
+  let markersPanel = null;
+  let lastDrawnVideoId = null;
+  let lastAccessedBookmarkTime = null;
+  let lastAccessedBookmarkName = null;
+  
   let feedbackContainer = null;
   let liveTextContainer = null;
   let speedContainer = null;
@@ -203,6 +210,36 @@ if (!SpeechRecognition) {
   let chordHistory = [];
   let chordClearTimeout = null;
   const freqBuf = new Float32Array(8192);
+
+  // Metronome variables
+  let metronomeContainer = null;
+  let metronomePlaying = false;
+  let metronomeBpm = 120;
+  let metronomeTimeSignature = '4/4';
+  let metronomeSoundType = 'wood';
+  let metronomeVolume = 0.5; // 0.0 to 1.0
+  let metronomeFlashWidget = false;
+  let metronomeFlashScreen = false;
+  let screenFlashOverlay = null;
+  let nextBeatTime = 0.0;
+  let currentBeat = 0;
+  let metronomeTimer = null;
+  const scheduleAheadTime = 0.1; // seconds
+  const lookahead = 25.0; // milliseconds
+
+  function createScreenFlashOverlay() {
+    if (document.getElementById('ug-metronome-screen-overlay') || screenFlashOverlay) return;
+    screenFlashOverlay = document.createElement('div');
+    screenFlashOverlay.id = 'ug-metronome-screen-overlay';
+    document.body.appendChild(screenFlashOverlay);
+  }
+
+  function removeScreenFlashOverlay() {
+    if (screenFlashOverlay) {
+      screenFlashOverlay.remove();
+      screenFlashOverlay = null;
+    }
+  }
 
   function initTuner() {
     const unlockAudioContext = () => {
@@ -241,6 +278,8 @@ if (!SpeechRecognition) {
       }
       tunerContainer.classList.add('visible');
       chordContainer.classList.add('visible');
+      if (metronomeContainer) metronomeContainer.classList.add('visible');
+      if (metronomeFlashScreen) createScreenFlashOverlay();
       tunerActive = true;
       updateTuner();
       return;
@@ -260,6 +299,8 @@ if (!SpeechRecognition) {
       tunerActive = true;
       tunerContainer.classList.add('visible');
       chordContainer.classList.add('visible');
+      if (metronomeContainer) metronomeContainer.classList.add('visible');
+      if (metronomeFlashScreen) createScreenFlashOverlay();
       updateTuner();
     }).catch(err => {
       console.error("[Rockstar] Microphone access denied for tuner", err);
@@ -501,6 +542,198 @@ if (!SpeechRecognition) {
     }
   }
 
+  // Metronome Scheduler and Helpers
+  function startMetronome() {
+    if (metronomePlaying) return;
+    
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    
+    metronomePlaying = true;
+    currentBeat = 0;
+    nextBeatTime = audioContext.currentTime + 0.05;
+    
+    const playBtn = document.getElementById('metronome-play-btn');
+    if (playBtn) {
+      playBtn.innerText = '⏸';
+      playBtn.classList.add('playing');
+    }
+    
+    scheduler();
+  }
+
+  function stopMetronome() {
+    if (!metronomePlaying) return;
+    metronomePlaying = false;
+    clearTimeout(metronomeTimer);
+    
+    const playBtn = document.getElementById('metronome-play-btn');
+    if (playBtn) {
+      playBtn.innerText = '▶';
+      playBtn.classList.remove('playing');
+    }
+    const led = document.getElementById('metronome-led');
+    if (led) {
+      led.className = 'metronome-led';
+    }
+    if (metronomeContainer) {
+      metronomeContainer.classList.remove('flash-active', 'flash-accent');
+    }
+    const overlay = document.getElementById('ug-metronome-screen-overlay');
+    if (overlay) {
+      overlay.classList.remove('flash-active', 'flash-accent');
+    }
+  }
+
+  function scheduler() {
+    if (!metronomePlaying) return;
+    while (nextBeatTime < audioContext.currentTime + scheduleAheadTime) {
+      scheduleBeat(currentBeat, nextBeatTime);
+      advanceBeat();
+    }
+    metronomeTimer = setTimeout(scheduler, lookahead);
+  }
+
+  function advanceBeat() {
+    const beatsPerMeasure = getBeatsPerMeasure();
+    const secondsPerBeat = 60.0 / metronomeBpm;
+    nextBeatTime += secondsPerBeat;
+    
+    currentBeat++;
+    if (currentBeat >= beatsPerMeasure) {
+      currentBeat = 0;
+    }
+  }
+
+  function getBeatsPerMeasure() {
+    switch (metronomeTimeSignature) {
+      case '4/4': return 4;
+      case '3/4': return 3;
+      case '2/4': return 2;
+      case '6/8': return 6;
+      case '1/4': return 1;
+      default: return 4;
+    }
+  }
+
+  function scheduleBeat(beatIndex, time) {
+    if (!audioContext) return;
+    
+    const osc = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    const isAccent = (metronomeTimeSignature !== '1/4' && beatIndex === 0);
+    
+    if (metronomeSoundType === 'digital') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(isAccent ? 1200 : 800, time);
+      
+      gainNode.gain.setValueAtTime(0, time);
+      gainNode.gain.linearRampToValueAtTime(2.0 * metronomeVolume, time + 0.002);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    } else if (metronomeSoundType === 'drum') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(isAccent ? 150 : 100, time);
+      osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.08);
+      
+      gainNode.gain.setValueAtTime(0, time);
+      gainNode.gain.linearRampToValueAtTime(2.8 * metronomeVolume, time + 0.002);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    } else {
+      // Default: 'wood'
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(isAccent ? 1400 : 1000, time);
+      osc.frequency.exponentialRampToValueAtTime(100, time + 0.04);
+      
+      gainNode.gain.setValueAtTime(0, time);
+      gainNode.gain.linearRampToValueAtTime(2.4 * metronomeVolume, time + 0.002);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    }
+    
+    osc.start(time);
+    osc.stop(time + 0.1);
+    
+    const delay = (time - audioContext.currentTime) * 1000;
+    setTimeout(() => {
+      flashLED(beatIndex, isAccent);
+    }, Math.max(0, delay));
+  }
+
+  function flashLED(beatIndex, isAccent) {
+    const led = document.getElementById('metronome-led');
+    if (led) {
+      led.classList.remove('active', 'accent');
+      void led.offsetWidth; // Force reflow
+      led.classList.add('active');
+      if (isAccent) {
+        led.classList.add('accent');
+      }
+    }
+
+    if (metronomeFlashWidget && metronomeContainer) {
+      metronomeContainer.classList.remove('flash-active', 'flash-accent');
+      void metronomeContainer.offsetWidth; // Force reflow
+      metronomeContainer.classList.add('flash-active');
+      if (isAccent) {
+        metronomeContainer.classList.add('flash-accent');
+      }
+      setTimeout(() => {
+        if (metronomeContainer) {
+          metronomeContainer.classList.remove('flash-active', 'flash-accent');
+        }
+      }, 80);
+    }
+
+    if (metronomeFlashScreen) {
+      const overlay = document.getElementById('ug-metronome-screen-overlay');
+      if (overlay) {
+        overlay.classList.remove('flash-active', 'flash-accent');
+        void overlay.offsetWidth; // Force reflow
+        overlay.classList.add('flash-active');
+        if (isAccent) {
+          overlay.classList.add('flash-accent');
+        }
+        setTimeout(() => {
+          if (overlay) {
+            overlay.classList.remove('flash-active', 'flash-accent');
+          }
+        }, 80);
+      }
+    }
+  }
+
+  function setMetronomeBpm(newBpm) {
+    metronomeBpm = Math.max(40, Math.min(240, newBpm));
+    
+    const display = document.getElementById('metronome-bpm-display');
+    if (display) display.innerText = `${metronomeBpm} BPM`;
+    
+    const slider = document.getElementById('metronome-bpm-slider');
+    if (slider) slider.value = metronomeBpm;
+  }
+
+  function setMetronomeTimeSignature(newSig) {
+    let sig = newSig.replace(/\s+/g, '/').toLowerCase();
+    if (sig === 'sans/accent' || sig === "pas/d'accent" || sig === "pas/d’accent") {
+      sig = '1/4';
+    }
+    
+    if (['4/4', '3/4', '2/4', '6/8', '1/4'].includes(sig)) {
+      metronomeTimeSignature = sig;
+      const select = document.getElementById('metronome-measure');
+      if (select) select.value = sig;
+      return true;
+    }
+    return false;
+  }
+
   let commandsWrapper = null;
 
   function getOrCreateFloatingBar() {
@@ -517,6 +750,8 @@ if (!SpeechRecognition) {
     const bar = getOrCreateFloatingBar();
     if (commandsWrapper) bar.appendChild(commandsWrapper);
     else if (commandsBtn) bar.appendChild(commandsBtn);
+    
+    if (markersWrapper) bar.appendChild(markersWrapper);
     
     if (btn) bar.appendChild(btn);
     if (drawerBtn) bar.appendChild(drawerBtn);
@@ -558,6 +793,110 @@ if (!SpeechRecognition) {
     document.body.appendChild(chordContainer);
     
     chordNameEl = chordContainer.querySelector('.chord-name');
+
+    // Create metronome UI elements
+    metronomeContainer = document.createElement('div');
+    metronomeContainer.id = 'ug-metronome';
+    metronomeContainer.innerHTML = `
+      <div class="metronome-header">
+        <span class="tuner-label">Métronome</span>
+        <div class="metronome-options">
+          <button id="metronome-opt-flash-widget" class="metronome-opt-btn" title="Faire clignoter le widget">🔳</button>
+          <button id="metronome-opt-flash-screen" class="metronome-opt-btn" title="Faire clignoter l'écran">🚨</button>
+        </div>
+        <div class="metronome-led" id="metronome-led"></div>
+      </div>
+      <div class="metronome-play-tempo-row">
+        <button id="metronome-play-btn" class="metronome-btn">▶</button>
+        <div class="metronome-tempo-controls">
+          <button id="metronome-minus-btn" class="metronome-btn-small">-</button>
+          <span id="metronome-bpm-display" class="metronome-bpm-text">120 BPM</span>
+          <button id="metronome-plus-btn" class="metronome-btn-small">+</button>
+        </div>
+      </div>
+      <input type="range" id="metronome-bpm-slider" min="40" max="240" value="120" class="metronome-slider" title="Tempo">
+      <div class="metronome-volume-row">
+        <span class="volume-icon">🔊</span>
+        <input type="range" id="metronome-volume-slider" min="0" max="100" value="50" class="metronome-slider volume-slider" title="Volume">
+      </div>
+      <div class="metronome-selects-row">
+        <select id="metronome-measure" class="metronome-select" title="Mesure">
+          <option value="4/4">4/4</option>
+          <option value="3/4">3/4</option>
+          <option value="2/4">2/4</option>
+          <option value="6/8">6/8</option>
+          <option value="1/4">1/4</option>
+        </select>
+        <select id="metronome-sound" class="metronome-select" title="Type de son">
+          <option value="wood">Bois</option>
+          <option value="digital">Digital</option>
+          <option value="drum">Tambour</option>
+        </select>
+      </div>
+    `;
+    document.body.appendChild(metronomeContainer);
+
+    const metronomePlayBtn = metronomeContainer.querySelector('#metronome-play-btn');
+    const metronomeMinusBtn = metronomeContainer.querySelector('#metronome-minus-btn');
+    const metronomePlusBtn = metronomeContainer.querySelector('#metronome-plus-btn');
+    const metronomeBpmSlider = metronomeContainer.querySelector('#metronome-bpm-slider');
+    const metronomeVolumeSlider = metronomeContainer.querySelector('#metronome-volume-slider');
+    const metronomeMeasureSelect = metronomeContainer.querySelector('#metronome-measure');
+    const metronomeSoundSelect = metronomeContainer.querySelector('#metronome-sound');
+    const optFlashWidget = metronomeContainer.querySelector('#metronome-opt-flash-widget');
+    const optFlashScreen = metronomeContainer.querySelector('#metronome-opt-flash-screen');
+
+    metronomePlayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (metronomePlaying) {
+        stopMetronome();
+      } else {
+        startMetronome();
+      }
+    });
+
+    metronomeMinusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setMetronomeBpm(metronomeBpm - 1);
+    });
+
+    metronomePlusBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setMetronomeBpm(metronomeBpm + 1);
+    });
+
+    metronomeBpmSlider.addEventListener('input', (e) => {
+      setMetronomeBpm(parseInt(e.target.value, 10));
+    });
+
+    metronomeVolumeSlider.addEventListener('input', (e) => {
+      metronomeVolume = parseInt(e.target.value, 10) / 100;
+    });
+
+    metronomeMeasureSelect.addEventListener('change', (e) => {
+      metronomeTimeSignature = e.target.value;
+    });
+
+    metronomeSoundSelect.addEventListener('change', (e) => {
+      metronomeSoundType = e.target.value;
+    });
+
+    optFlashWidget.addEventListener('click', (e) => {
+      e.stopPropagation();
+      metronomeFlashWidget = !metronomeFlashWidget;
+      optFlashWidget.classList.toggle('active', metronomeFlashWidget);
+    });
+
+    optFlashScreen.addEventListener('click', (e) => {
+      e.stopPropagation();
+      metronomeFlashScreen = !metronomeFlashScreen;
+      optFlashScreen.classList.toggle('active', metronomeFlashScreen);
+      if (metronomeFlashScreen) {
+        createScreenFlashOverlay();
+      } else {
+        removeScreenFlashOverlay();
+      }
+    });
 
     // Create voice controls button
     btn = document.createElement('button');
@@ -601,6 +940,11 @@ if (!SpeechRecognition) {
     commandsPanel.id = 'ug-commands-panel';
     commandsWrapper.appendChild(commandsPanel);
 
+    const isYouTube = window.location.hostname.includes('youtube.com');
+    if (isYouTube) {
+      createMarkersUI();
+    }
+
     // Append all three buttons to the floating bar in the correct order
     appendButtonsToFloatingBar();
 
@@ -623,7 +967,9 @@ if (!SpeechRecognition) {
           { label: "📍 Poser Repère 1", cmd: "enregistre le repère 1" },
           { label: "📍 Poser Repère 2", cmd: "enregistre le repère 2" },
           { label: "➡️ Aller Repère 1", cmd: "retourne au repère 1" },
-          { label: "➡️ Aller Repère 2", cmd: "retourne au repère 2" }
+          { label: "➡️ Aller Repère 2", cmd: "retourne au repère 2" },
+          { label: "⏱️ Démarrer Métronome", cmd: "démarre le métronome" },
+          { label: "⏱️ Arrêter Métronome", cmd: "arrête le métronome" }
         ];
       } else {
         title = "🎸 Commandes Tablature";
@@ -635,6 +981,8 @@ if (!SpeechRecognition) {
           { label: "🔼 Monter un peu", cmd: "monte un peu" },
           { label: "⚡ Défiler plus vite", cmd: "plus vite" },
           { label: "⚡ Défiler plus lent", cmd: "moins vite" },
+          { label: "⏱️ Démarrer Métronome", cmd: "démarre le métronome" },
+          { label: "⏱️ Arrêter Métronome", cmd: "arrête le métronome" },
           { label: "💤 Mettre en veille", cmd: "dors" }
         ];
       }
@@ -663,12 +1011,18 @@ if (!SpeechRecognition) {
 
     commandsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      commandsPanel.classList.toggle('visible');
+      const isVisible = commandsPanel.classList.toggle('visible');
+      if (isVisible && markersPanel) {
+        markersPanel.classList.remove('visible');
+      }
     });
 
     document.addEventListener('click', () => {
       if (commandsPanel) {
         commandsPanel.classList.remove('visible');
+      }
+      if (markersPanel) {
+        markersPanel.classList.remove('visible');
       }
     });
     
@@ -965,9 +1319,21 @@ if (!SpeechRecognition) {
 
     if (window.location.hostname.includes('youtube.com')) {
       setInterval(() => {
+        const currentVideoId = getCurrentYouTubeVideoId();
         const progressBar = document.querySelector('.ytp-progress-bar');
-        if (progressBar && !progressBar.querySelector('.rockstar-marker')) {
+        const hasIdChanged = currentVideoId !== lastDrawnVideoId;
+        if (progressBar && (!progressBar.querySelector('.rockstar-marker') || hasIdChanged)) {
           drawVisualMarkers();
+        }
+        if (hasIdChanged && markersPanel && markersPanel.classList.contains('visible')) {
+          updateMarkersPanelList();
+        }
+
+        // Enforce controls visibility setting
+        const isForced = localStorage.getItem('rockstar_always_show_controls') === 'true';
+        const player = document.querySelector('.html5-video-player');
+        if (player) {
+          player.classList.toggle('rockstar-force-controls-visible', isForced);
         }
       }, 2000);
     }
@@ -1039,6 +1405,11 @@ if (!SpeechRecognition) {
        tunerActive = false;
        if (tunerContainer) tunerContainer.classList.remove('visible');
        if (chordContainer) chordContainer.classList.remove('visible');
+        if (metronomeContainer) {
+          metronomeContainer.classList.remove('visible', 'flash-active', 'flash-accent');
+          stopMetronome();
+        }
+        removeScreenFlashOverlay();
        if (audioContext && audioContext.state === 'running') {
           audioContext.suspend();
        }
@@ -1131,37 +1502,329 @@ if (!SpeechRecognition) {
     return trimmed;
   }
 
-  function drawVisualMarkers() {
+  function findBookmarkTimeAndName(searchName, bookmarks) {
+    const normSearch = normalizeBookmarkName(searchName).trim().toLowerCase();
+    const entries = Object.entries(bookmarks);
+    
+    // Sort entries chronologically by time
+    entries.sort((a, b) => a[1] - b[1]);
+
+    // 1. Chronological index match (1-based)
+    // If normSearch is a positive integer (like "1" or "2"), check if it fits the index range
+    const isNum = /^\d+$/.test(normSearch);
+    if (isNum) {
+      const index = parseInt(normSearch, 10) - 1;
+      if (index >= 0 && index < entries.length) {
+        return { name: entries[index][0], time: entries[index][1] };
+      }
+    }
+
+    // 2. Exact match
+    for (const [name, time] of entries) {
+      if (normalizeBookmarkName(name).trim().toLowerCase() === normSearch) {
+        return { name, time };
+      }
+    }
+    
+    // 3. Prefix match if searchName is a number
+    if (isNum) {
+      for (const [name, time] of entries) {
+        const nameNorm = normalizeBookmarkName(name).trim().toLowerCase();
+        const numPrefixRegex = new RegExp('^' + normSearch + '(?:\\b|[^0-9])');
+        if (numPrefixRegex.test(nameNorm)) {
+          return { name, time };
+        }
+      }
+    }
+    
+    // 4. Substring match
+    for (const [name, time] of entries) {
+      const nameNorm = normalizeBookmarkName(name).trim().toLowerCase();
+      if (nameNorm.includes(normSearch)) {
+        return { name, time };
+      }
+    }
+    
+    return null;
+  }
+
+  function getCurrentYouTubeVideoId() {
+    if (window.location.hostname.includes('youtube.com')) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('v') || null;
+    }
+    return null;
+  }
+
+  function drawVisualMarkers(force = false) {
     const video = getActiveVideo();
     if (!video || !video.duration) return;
 
     const progressBar = document.querySelector('.ytp-progress-bar');
     if (!progressBar) return;
 
-    // Clear old visual markers
-    progressBar.querySelectorAll('.rockstar-marker').forEach(m => m.remove());
+    const currentVideoId = getCurrentYouTubeVideoId();
+    if (currentVideoId !== lastDrawnVideoId || force) {
+      progressBar.querySelectorAll('.rockstar-marker').forEach(m => m.remove());
+      lastDrawnVideoId = currentVideoId;
+    } else if (progressBar.querySelector('.rockstar-marker')) {
+      return;
+    }
 
     const key = getBookmarksStorageKey();
     safeStorageGet(key, (res) => {
       const bookmarks = res[key] || {};
-      for (const [name, time] of Object.entries(bookmarks)) {
+      const entries = Object.entries(bookmarks);
+      // Sort chronologically by time
+      entries.sort((a, b) => a[1] - b[1]);
+
+      entries.forEach(([name, time], idx) => {
         const pct = (time / video.duration) * 100;
         
         const marker = document.createElement('div');
         marker.className = 'rockstar-marker';
         marker.style.left = `${pct}%`;
-        marker.title = `Repère: ${name}`;
+        marker.title = `Repère ${idx + 1}: ${name}`;
+        
+        // 1. Yellow/orange marker line
+        const markerLine = document.createElement('div');
+        markerLine.className = 'rockstar-marker-line';
+        marker.appendChild(markerLine);
+        
+        // 2. Floating text label
+        const markerLabel = document.createElement('div');
+        markerLabel.className = 'rockstar-marker-label';
+        const isPureNum = /^\d+$/.test(name);
+        markerLabel.innerText = isPureNum ? name : `${idx + 1}. ${name}`;
+        marker.appendChild(markerLabel);
         
         marker.addEventListener('click', (e) => {
           e.stopPropagation();
           video.currentTime = time;
+          lastAccessedBookmarkTime = time;
+          lastAccessedBookmarkName = name;
           const minutes = Math.floor(time / 60);
           const seconds = Math.floor(time % 60).toString().padStart(2, '0');
           showFeedback(`➡️ Saut vers Repère "${name}" (${minutes}:${seconds})`, true);
         });
         
         progressBar.appendChild(marker);
+      });
+    });
+  }
+
+  function createMarkersUI() {
+    if (document.getElementById('rockstar-markers-panel') || document.getElementById('rockstar-markers-btn')) return;
+
+    markersWrapper = document.createElement('div');
+    markersWrapper.className = 'rockstar-markers-wrapper';
+
+    markersBtn = document.createElement('button');
+    markersBtn.id = 'rockstar-markers-btn';
+    markersBtn.innerText = '📍';
+    markersBtn.title = 'Afficher les repères de lecture';
+    markersWrapper.appendChild(markersBtn);
+
+    markersPanel = document.createElement('div');
+    markersPanel.id = 'rockstar-markers-panel';
+    
+    markersPanel.innerHTML = `
+      <div class="markers-panel-header">
+        <span>📍 Repères YouTube</span>
+      </div>
+      <div class="markers-panel-body">
+        <button class="rockstar-add-marker-btn">➕ Poser un repère</button>
+        <label class="rockstar-toggle-option">
+          <input type="checkbox" id="rockstar-toggle-force-controls" />
+          <span>Afficher la barre de navigation</span>
+        </label>
+        <div class="markers-panel-list"></div>
+      </div>
+    `;
+    markersWrapper.appendChild(markersPanel);
+
+    // Toggle panel
+    markersBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = markersPanel.classList.toggle('visible');
+      if (isVisible) {
+        // Hide commands panel
+        if (commandsPanel) commandsPanel.classList.remove('visible');
+        updateMarkersPanelList();
       }
+    });
+
+    markersPanel.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // Close panel on clicking outside
+    document.addEventListener('click', () => {
+      if (markersPanel) {
+        markersPanel.classList.remove('visible');
+      }
+    });
+
+    // Wire up Toggle Controls Visibility checkbox
+    const toggleForceControls = markersPanel.querySelector('#rockstar-toggle-force-controls');
+    const isForced = localStorage.getItem('rockstar_always_show_controls') === 'true';
+    toggleForceControls.checked = isForced;
+    
+    toggleForceControls.addEventListener('change', () => {
+      const active = toggleForceControls.checked;
+      localStorage.setItem('rockstar_always_show_controls', active);
+      
+      const player = document.querySelector('.html5-video-player');
+      if (player) {
+        player.classList.toggle('rockstar-force-controls-visible', active);
+      }
+    });
+
+    // Wire up Add button
+    const addBtn = markersPanel.querySelector('.rockstar-add-marker-btn');
+    addBtn.addEventListener('click', () => {
+      const video = getActiveVideo();
+      if (!video) {
+        showFeedback("❌ Aucun lecteur vidéo actif", false);
+        return;
+      }
+      const time = video.currentTime;
+      const key = getBookmarksStorageKey();
+      
+      safeStorageGet(key, (res) => {
+        const bookmarks = res[key] || {};
+        
+        // Find next available numeric name
+        let defaultName = "";
+        let i = 1;
+        while (true) {
+          const nameToCheck = String(i);
+          if (bookmarks[nameToCheck] === undefined) {
+            defaultName = nameToCheck;
+            break;
+          }
+          i++;
+        }
+        
+        saveBookmark(defaultName, time, () => {
+          updateMarkersPanelList();
+        });
+      });
+    });
+  }
+
+  function updateMarkersPanelList() {
+    if (!markersPanel) return;
+    const listContainer = markersPanel.querySelector('.markers-panel-list');
+    if (!listContainer) return;
+
+    const key = getBookmarksStorageKey();
+    safeStorageGet(key, (res) => {
+      const bookmarks = res[key] || {};
+      listContainer.innerHTML = '';
+
+      const entries = Object.entries(bookmarks);
+      if (entries.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'markers-empty-msg';
+        emptyMsg.innerText = 'Aucun repère. Utilisez la voix ou cliquez sur "+" pour en ajouter.';
+        listContainer.appendChild(emptyMsg);
+        return;
+      }
+
+      // Sort chronologically by time
+      entries.sort((a, b) => a[1] - b[1]);
+
+      entries.forEach(([name, time], idx) => {
+        const item = document.createElement('div');
+        item.className = 'rockstar-marker-item';
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'rockstar-marker-num';
+        numSpan.innerText = `${idx + 1}.`;
+        item.appendChild(numSpan);
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'rockstar-marker-name-input';
+        nameInput.value = name;
+        nameInput.title = 'Cliquez pour renommer';
+
+        // Rename on change/blur/Enter
+        const commitRename = () => {
+          const newName = nameInput.value.trim();
+          if (!newName) {
+            nameInput.value = name;
+            return;
+          }
+          if (newName === name) return;
+
+          safeStorageGet(key, (resCurrent) => {
+            const currentBookmarks = resCurrent[key] || {};
+            // Delete old entry and write new
+            const markerTime = currentBookmarks[name];
+            delete currentBookmarks[name];
+            currentBookmarks[newName] = markerTime !== undefined ? markerTime : time;
+
+            const setObj = { [key]: currentBookmarks };
+            safeStorageSet(setObj, () => {
+              showFeedback(`✏️ Repère renommé en "${newName}"`, true);
+              drawVisualMarkers(true);
+              updateMarkersPanelList();
+            });
+          });
+        };
+
+        nameInput.addEventListener('blur', commitRename);
+        nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            nameInput.blur();
+          }
+        });
+
+        // Time format
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+        const timeBtn = document.createElement('button');
+        timeBtn.className = 'rockstar-marker-time-btn';
+        timeBtn.innerText = `${minutes}:${seconds}`;
+        timeBtn.title = 'Aller à ce repère';
+
+        timeBtn.addEventListener('click', () => {
+          const video = getActiveVideo();
+          if (video) {
+            video.currentTime = time;
+            lastAccessedBookmarkTime = time;
+            lastAccessedBookmarkName = nameInput.value;
+            showFeedback(`➡️ Saut vers Repère "${nameInput.value}" (${minutes}:${seconds})`, true);
+          }
+        });
+
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'rockstar-marker-delete-btn';
+        deleteBtn.innerText = '🗑️';
+        deleteBtn.title = 'Supprimer le repère';
+
+        deleteBtn.addEventListener('click', () => {
+          safeStorageGet(key, (resCurrent) => {
+            const currentBookmarks = resCurrent[key] || {};
+            delete currentBookmarks[name];
+
+            const setObj = { [key]: currentBookmarks };
+            safeStorageSet(setObj, () => {
+              showFeedback(`❌ Repère "${name}" supprimé`, true);
+              drawVisualMarkers(true);
+              updateMarkersPanelList();
+            });
+          });
+        });
+
+        item.appendChild(nameInput);
+        item.appendChild(timeBtn);
+        item.appendChild(deleteBtn);
+        listContainer.appendChild(item);
+      });
     });
   }
 
@@ -1179,8 +1842,13 @@ if (!SpeechRecognition) {
         const seconds = Math.floor(time % 60).toString().padStart(2, '0');
         showFeedback(`📍 Repère "${name}" enregistré à ${minutes}:${seconds}`, true);
         
-        // Redraw visual markers on progress bar
-        drawVisualMarkers();
+        // Redraw visual markers on progress bar (force it)
+        drawVisualMarkers(true);
+        
+        // Update markers list panel if active
+        if (typeof updateMarkersPanelList === 'function') {
+          updateMarkersPanelList();
+        }
         
         if (callback) callback();
       });
@@ -1189,23 +1857,28 @@ if (!SpeechRecognition) {
 
   function loadBookmark(name) {
     const key = getBookmarksStorageKey();
-    const normName = normalizeBookmarkName(name);
     
     safeStorageGet(key, (res) => {
       const bookmarks = res[key] || {};
-      const time = bookmarks[normName];
-      if (time !== undefined) {
+      const match = findBookmarkTimeAndName(name, bookmarks);
+      if (match) {
+        const { name: matchedName, time } = match;
+        
+        // Track last accessed bookmark
+        lastAccessedBookmarkTime = time;
+        lastAccessedBookmarkName = matchedName;
+        
         const video = getActiveVideo();
         if (video) {
           video.currentTime = time;
           const minutes = Math.floor(time / 60);
           const seconds = Math.floor(time % 60).toString().padStart(2, '0');
-          showFeedback(`➡️ Saut vers Repère "${name}" (${minutes}:${seconds})`, true);
+          showFeedback(`➡️ Saut vers Repère "${matchedName}" (${minutes}:${seconds})`, true);
         } else if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
           sendYouTubeCommand('seekTo', [time, true]);
           const minutes = Math.floor(time / 60);
           const seconds = Math.floor(time % 60).toString().padStart(2, '0');
-          showFeedback(`➡️ Saut vers Repère "${name}" (${minutes}:${seconds})`, true);
+          showFeedback(`➡️ Saut vers Repère "${matchedName}" (${minutes}:${seconds})`, true);
         } else {
           showFeedback(`❌ Aucun lecteur vidéo actif`, false);
         }
@@ -1216,9 +1889,10 @@ if (!SpeechRecognition) {
   }
 
   function hasWord(phrase, word) {
-    const escaped = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-    const regex = new RegExp('(?:^|\\s|[.,!?])' + escaped + '(?:$|\\s|[.,!?])', 'i');
-    return regex.test(phrase);
+    const normalizeWord = (w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w);
+    const target = normalizeWord(word.toLowerCase().trim());
+    const words = phrase.toLowerCase().replace(/[.,!?]/g, '').split(/\s+/);
+    return words.some(w => normalizeWord(w) === target);
   }
 
   function handleCommand(command) {
@@ -1251,14 +1925,15 @@ if (!SpeechRecognition) {
     ];
     const searchPrefixes = ['search for ', 'search ', 'cherche ', 'chercher ', 'trouve ', 'trouver ', 'find '];
 
+    const repeatVariants = ['encore', 'a nouveau', 'à nouveau', 'rejoue', 'rejouer', 'repete', 'répète', 'répéter', 'repeter', 'again', 'repeat', 'once more', 'one more time'];
     const openNumRegex = new RegExp("^(?:ouvre|open|go to|choisis|prends|lance)?\\s*(?:le\\s+|la\\s+|the\\s+)?(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "$", "i");
     const numMatch = cmd.match(openNumRegex);
 
     const videoSpeedRegex = /^(?:vitesse|playback speed|playbackrate)\s*(?:de\s+)?(\d+(?:[.,]\d+)?|normale|normal)$/i;
-    const saveBookmarkRegex = /^(?:enregistre|place|placer|sauvegarde|ajouter|marquer)\s+(?:le\s+)?(?:repère|repere|signet|bookmark)\s+(.+)$/i;
-    const loadBookmarkRegex = /^(?:va\s+au|retourne\s+au|reviens\s+au|charger|go\s+to)?\s*(?:le\s+)?(?:repère|repere|signet|bookmark)\s+(.+)$/i;
-    const rewindRegex = /^(?:recule|retourne|rewind|back|arrière|arriere)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
-    const forwardRegex = /^(?:avance|forward|skip)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
+    const saveBookmarkRegex = /^(?:enregistre[s]?|place[s]?|placer|sauvegarde[s]?|ajouter|marquer)\s+(?:le\s+)?(?:repère|repere|signet|bookmark)\s+(.+)$/i;
+    const loadBookmarkRegex = /^(?:va\s+au|retourne[s]?\s+au|reviens[s]?\s+au|charger|go\s+to)?\s*(?:le\s+)?(?:repère|repere|signet|bookmark)\s+(.+)$/i;
+    const rewindRegex = /^(?:recule[s]?|retourne[s]?|rewind|back|arrière|arriere)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
+    const forwardRegex = /^(?:avance[s]?|forward|skip)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
 
     const videoSpeedMatch = cmd.match(videoSpeedRegex);
     const saveBookmarkMatch = cmd.match(saveBookmarkRegex);
@@ -1266,7 +1941,87 @@ if (!SpeechRecognition) {
     const rewindMatch = cmd.match(rewindRegex);
     const forwardMatch = cmd.match(forwardRegex);
 
-    if (playPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
+    // Metronome command variants and regexes
+    const metronomeStartVariants = ['démarre le métronome', 'demarre le metronome', 'active le métronome', 'active le metronome', 'joue le métronome', 'joue le metronome', 'metronome play', 'metronome start', 'lance le métronome', 'lance le metronome', 'start metronome', 'play metronome'];
+    const metronomeStopVariants = ['arrête le métronome', 'arrete le metronome', 'coupe le métronome', 'coupe le metronome', 'stop le métronome', 'stop le metronome', 'metronome stop', 'metronome pause', 'stop metronome', 'pause metronome'];
+    const metronomeTempoRegex = /^(?:tempo|métronome tempo|metronome tempo|vitesse du métronome|vitesse du metronome|bpm)\s*(?:à|a|de\s+)?(\d{2,3})$/i;
+    const metronomeMeasureRegex = /^(?:mesure|signature|time signature)\s*(4\s*4|4\/4|3\s*4|3\/4|2\s*4|2\/4|6\s*8|6\/8|1\s*4|1\/4|sans\s+accent|pas\s+d'accent|pas\s+d’accent)$/i;
+    const metronomeSoundRegex = /^(?:son|bruit|type de son|metronome sound|sound)\s*(bois|wood|digital|numérique|numerique|tambour|drum)$/i;
+    const metronomeVolumeRegex = /^(?:volume|volume du métronome|volume du metronome|metronome volume)\s*(?:à|a|de\s+)?(\d{1,3})%?$/i;
+    const metronomeOptWidgetRegex = /^(?:clignote[r]?\s+(?:le\s+)?widget|metronome flash card|flash card|flash widget)$/i;
+    const metronomeOptScreenRegex = /^(?:clignote[r]?\s+(?:l'|l’)?écran|clignote[r]?\s+(?:l'|l’)?ecran|metronome flash screen|flash screen)$/i;
+
+    const metronomeTempoMatch = cmd.match(metronomeTempoRegex);
+    const metronomeMeasureMatch = cmd.match(metronomeMeasureRegex);
+    const metronomeSoundMatch = cmd.match(metronomeSoundRegex);
+    const metronomeVolumeMatch = cmd.match(metronomeVolumeRegex);
+    const metronomeOptWidgetMatch = cmd.match(metronomeOptWidgetRegex);
+    const metronomeOptScreenMatch = cmd.match(metronomeOptScreenRegex);
+
+    if (metronomeStartVariants.some(v => cmd === v || hasWord(cmd, v))) {
+      startMetronome();
+      action = 'Démarrage du métronome';
+    } else if (metronomeStopVariants.some(v => cmd === v || hasWord(cmd, v))) {
+      stopMetronome();
+      action = 'Arrêt du métronome';
+    } else if (metronomeTempoMatch) {
+      const bpm = parseInt(metronomeTempoMatch[1], 10);
+      if (bpm >= 40 && bpm <= 240) {
+        setMetronomeBpm(bpm);
+        action = `Tempo réglé à ${bpm} BPM`;
+      } else {
+        isSuccess = false;
+        action = `Tempo invalide (40-240): ${bpm}`;
+      }
+    } else if (metronomeMeasureMatch) {
+      const rawMeasure = metronomeMeasureMatch[1];
+      const success = setMetronomeTimeSignature(rawMeasure);
+      if (success) {
+        action = `Mesure réglée sur ${metronomeTimeSignature}`;
+      } else {
+        isSuccess = false;
+        action = `Mesure invalide: ${rawMeasure}`;
+      }
+    } else if (metronomeSoundMatch) {
+      const rawSound = metronomeSoundMatch[1].toLowerCase();
+      let sound = 'wood';
+      if (rawSound === 'digital' || rawSound === 'numérique' || rawSound === 'numerique') {
+        sound = 'digital';
+      } else if (rawSound === 'tambour' || rawSound === 'drum') {
+        sound = 'drum';
+      }
+      
+      metronomeSoundType = sound;
+      const select = document.getElementById('metronome-sound');
+      if (select) select.value = sound;
+      action = `Son du métronome réglé sur ${sound === 'wood' ? 'Bois' : sound === 'digital' ? 'Digital' : 'Tambour'}`;
+    } else if (metronomeVolumeMatch) {
+      const vol = parseInt(metronomeVolumeMatch[1], 10);
+      if (vol >= 0 && vol <= 100) {
+        metronomeVolume = vol / 100;
+        const slider = document.getElementById('metronome-volume-slider');
+        if (slider) slider.value = vol;
+        action = `Volume du métronome réglé à ${vol}%`;
+      } else {
+        isSuccess = false;
+        action = `Volume invalide (0-100): ${vol}`;
+      }
+    } else if (metronomeOptWidgetMatch) {
+      metronomeFlashWidget = !metronomeFlashWidget;
+      const btnOpt = document.getElementById('metronome-opt-flash-widget');
+      if (btnOpt) btnOpt.classList.toggle('active', metronomeFlashWidget);
+      action = `Clignotement du widget : ${metronomeFlashWidget ? 'Activé' : 'Désactivé'}`;
+    } else if (metronomeOptScreenMatch) {
+      metronomeFlashScreen = !metronomeFlashScreen;
+      const btnOpt = document.getElementById('metronome-opt-flash-screen');
+      if (btnOpt) btnOpt.classList.toggle('active', metronomeFlashScreen);
+      if (metronomeFlashScreen) {
+        createScreenFlashOverlay();
+      } else {
+        removeScreenFlashOverlay();
+      }
+      action = `Clignotement de l'écran : ${metronomeFlashScreen ? 'Activé' : 'Désactivé'}`;
+    } else if (playPlaybackVariants.some(v => cmd === v || hasWord(cmd, v))) {
       const video = getActiveVideo();
       if (video) video.play();
       if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
@@ -1343,6 +2098,30 @@ if (!SpeechRecognition) {
     } else if (loadBookmarkMatch) {
       loadBookmark(loadBookmarkMatch[1]);
       action = `Loading bookmark "${loadBookmarkMatch[1]}"`;
+    } else if (repeatVariants.some(v => cmd === v || hasWord(cmd, v))) {
+      if (lastAccessedBookmarkTime !== null) {
+        const video = getActiveVideo();
+        if (video) {
+          video.currentTime = lastAccessedBookmarkTime;
+          const minutes = Math.floor(lastAccessedBookmarkTime / 60);
+          const seconds = Math.floor(lastAccessedBookmarkTime % 60).toString().padStart(2, '0');
+          showFeedback(`🔄 Encore ! Saut vers "${lastAccessedBookmarkName || 'Repère'}" (${minutes}:${seconds})`, true);
+          action = `Repeating last bookmark at ${minutes}:${seconds}`;
+        } else if (activeDrawerPlaybackLink && activeDrawerPlaybackLink.type === 'youtube') {
+          sendYouTubeCommand('seekTo', [lastAccessedBookmarkTime, true]);
+          const minutes = Math.floor(lastAccessedBookmarkTime / 60);
+          const seconds = Math.floor(lastAccessedBookmarkTime % 60).toString().padStart(2, '0');
+          showFeedback(`🔄 Encore ! Saut vers "${lastAccessedBookmarkName || 'Repère'}" (${minutes}:${seconds})`, true);
+          action = `Repeating last drawer bookmark at ${minutes}:${seconds}`;
+        } else {
+          isSuccess = false;
+          action = 'No active video to play again';
+        }
+      } else {
+        isSuccess = false;
+        showFeedback("❌ Aucun repère récent à répéter", false);
+        action = 'No recent bookmark to repeat';
+      }
     } else if (videoSpeedMatch) {
       let speedStr = videoSpeedMatch[1].replace(',', '.');
       let targetRate = 1.0;
