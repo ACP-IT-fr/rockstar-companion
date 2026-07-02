@@ -501,6 +501,27 @@ if (!SpeechRecognition) {
     }
   }
 
+  let commandsWrapper = null;
+
+  function getOrCreateFloatingBar() {
+    let bar = document.getElementById('rockstar-floating-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'rockstar-floating-bar';
+      document.body.appendChild(bar);
+    }
+    return bar;
+  }
+
+  function appendButtonsToFloatingBar() {
+    const bar = getOrCreateFloatingBar();
+    if (commandsWrapper) bar.appendChild(commandsWrapper);
+    else if (commandsBtn) bar.appendChild(commandsBtn);
+    
+    if (btn) bar.appendChild(btn);
+    if (drawerBtn) bar.appendChild(drawerBtn);
+  }
+
   function initializeRockstar() {
     if (isInitialized) return;
     isInitialized = true;
@@ -552,7 +573,6 @@ if (!SpeechRecognition) {
     btn.appendChild(iconSpan);
     btn.appendChild(statusSpan);
     btn.title = 'Voice control OFF. Click to enable';
-    document.body.appendChild(btn);
 
     feedbackContainer = document.createElement('div');
     feedbackContainer.id = 'ug-voice-feedback';
@@ -567,16 +587,22 @@ if (!SpeechRecognition) {
     speedContainer.innerText = 'Speed: ' + scrollSpeed;
     document.body.appendChild(speedContainer);
 
-    // Create floating commands button and panel
+    // Create floating commands button and panel wrapper
+    commandsWrapper = document.createElement('div');
+    commandsWrapper.className = 'rockstar-commands-wrapper';
+
     commandsBtn = document.createElement('button');
     commandsBtn.id = 'ug-commands-btn';
     commandsBtn.innerText = '📋';
     commandsBtn.title = 'Afficher les commandes disponibles';
-    document.body.appendChild(commandsBtn);
+    commandsWrapper.appendChild(commandsBtn);
 
     commandsPanel = document.createElement('div');
     commandsPanel.id = 'ug-commands-panel';
-    document.body.appendChild(commandsPanel);
+    commandsWrapper.appendChild(commandsPanel);
+
+    // Append all three buttons to the floating bar in the correct order
+    appendButtonsToFloatingBar();
 
     function updateCommandsPanel() {
       const isYouTube = window.location.hostname.includes('youtube.com');
@@ -1731,9 +1757,8 @@ if (!SpeechRecognition) {
       </div>
     `;
     document.body.appendChild(bannerEl);
-    if (drawerBtn) {
-      drawerBtn.classList.add('banner-active');
-    }
+    const bar = getOrCreateFloatingBar();
+    bar.classList.add('banner-active');
     
     document.getElementById('banner-btn-accept').addEventListener('click', () => {
       chrome.storage.sync.get('allowedDomains', (res) => {
@@ -1767,9 +1792,8 @@ if (!SpeechRecognition) {
     }
     const existing = document.getElementById('ug-voice-activation-banner');
     if (existing) existing.remove();
-    if (drawerBtn) {
-      drawerBtn.classList.remove('banner-active');
-    }
+    const bar = getOrCreateFloatingBar();
+    bar.classList.remove('banner-active');
   }
 
   function extractUGMetadata() {
@@ -1822,9 +1846,10 @@ if (!SpeechRecognition) {
     drawerBtn.id = 'ug-drawer-btn';
     drawerBtn.innerHTML = '🎸';
     drawerBtn.title = 'Ouvrir Rockstar Companion (Notes & Playbacks)';
-    document.body.appendChild(drawerBtn);
+    appendButtonsToFloatingBar();
     if (document.getElementById('ug-voice-activation-banner')) {
-      drawerBtn.classList.add('banner-active');
+      const bar = getOrCreateFloatingBar();
+      bar.classList.add('banner-active');
     }
 
     // 2. Create Drawer Container
