@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helper to update help commands text
   function updateWakeWordDisplay(val) {
-    const displayVal = val.trim() || 'Rockstar';
+    const displayVal = val.trim() || 'Roddy';
     wakeWordDisplays.forEach(el => {
       el.textContent = displayVal;
     });
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     muteAllSitesCb.checked = result.muteAllSites || false;
     inactivityDelaySelect.value = result.inactivityDelay !== undefined ? result.inactivityDelay : '1';
     
-    const word = result.wakeWord !== undefined ? result.wakeWord : 'Rockstar';
+    const word = result.wakeWord !== undefined ? result.wakeWord : 'Roddy';
     wakeWordInput.value = word;
     updateWakeWordDisplay(word);
   });

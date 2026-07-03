@@ -52,7 +52,7 @@
     bannerEl = document.createElement('div');
     bannerEl.id = 'ug-voice-activation-banner';
     bannerEl.innerHTML = `
-      <div class="activation-banner-title">🎸 Rockstar Companion</div>
+      <div class="activation-banner-title">🎙️ Vox Roddy</div>
       <div style="font-size: 13px; line-height: 1.4; color: #eee; margin-top: 4px;">Activer le contrôle vocal et l'accordeur sur ce site ?</div>
       <div class="activation-banner-actions" style="margin-top: 8px;">
         <button class="activation-banner-btn secondary" id="banner-btn-refuse">Ne plus demander</button>

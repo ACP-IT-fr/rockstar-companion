@@ -6,9 +6,9 @@
   --border-color: rgba(255, 255, 255, 0.08);
   --text-primary: #ffffff;
   --text-secondary: #9ea0a5;
-  --accent-purple: #bc13fe;
-  --accent-pink: #ff007f;
-  --accent-gradient: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
+  --accent-orange: #ff6c00;
+  --accent-gold: #ff9f1c;
+  --accent-gradient: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-gold) 100%);
   --danger-color: #ff3b30;
   --success-color: #34c759;
 }
@@ -53,6 +53,7 @@ body {
   font-weight: bold;
   background: var(--accent-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -77,7 +78,7 @@ body {
 }
 
 .filter-box input[type="text"]:focus {
-  border-color: var(--accent-purple);
+  border-color: var(--accent-orange);
 }
 
 .filter-row {
@@ -98,7 +99,7 @@ body {
 }
 
 .filter-row select:focus {
-  border-color: var(--accent-purple);
+  border-color: var(--accent-orange);
   color: var(--text-primary);
 }
 
@@ -140,8 +141,8 @@ body {
 }
 
 .song-item.active {
-  background-color: rgba(188, 19, 254, 0.1);
-  border-left: 3px solid var(--accent-purple);
+  background-color: rgba(255, 108, 0, 0.1);
+  border-left: 3px solid var(--accent-orange);
   padding-left: 17px;
 }
 
@@ -178,9 +179,9 @@ body {
   font-family: monospace;
 }
 
-.badge.purple {
-  background-color: rgba(188, 19, 254, 0.15);
-  color: #d880ff;
+.badge.orange {
+  background-color: rgba(255, 108, 0, 0.15);
+  color: #ff9f1c;
 }
 
 .sidebar-footer {
@@ -252,19 +253,19 @@ body {
 }
 
 .detail-artist-input {
-  color: var(--accent-pink);
+  color: var(--accent-gold);
   font-weight: 600;
   font-size: 15px;
   background: none;
   border: none;
-  border-bottom: 1px dashed rgba(236, 72, 153, 0.3);
+  border-bottom: 1px dashed rgba(255, 108, 0, 0.3);
   width: 100%;
   outline: none;
   padding: 4px 0;
   transition: border-bottom-color 0.2s;
 }
 .detail-artist-input:focus {
-  border-bottom: 1px solid var(--accent-pink);
+  border-bottom: 1px solid var(--accent-gold);
 }
 
 .header-actions {
@@ -328,9 +329,9 @@ body {
 .plus-btn {
   padding: 6px 12px;
   font-size: 11px;
-  background-color: rgba(188, 19, 254, 0.15);
-  color: #d880ff;
-  border: 1px solid rgba(188, 19, 254, 0.2);
+  background-color: rgba(255, 108, 0, 0.15);
+  color: #ff9f1c;
+  border: 1px solid rgba(255, 108, 0, 0.2);
 }
 
 /* Metadata cards */
@@ -372,7 +373,7 @@ body {
 }
 
 .meta-card input:focus {
-  border-color: var(--accent-purple);
+  border-color: var(--accent-orange);
 }
 
 /* Main content grid */
@@ -440,7 +441,7 @@ body {
 }
 
 .card textarea:focus {
-  border-color: var(--accent-purple);
+  border-color: var(--accent-orange);
 }
 
 /* Playbacks / Links List */
@@ -483,12 +484,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
-  color: #d880ff;
+  color: #ff9f1c;
 }
 
 .link-item.active {
-  border-color: var(--accent-pink);
-  background-color: rgba(255, 0, 127, 0.05);
+  border-color: var(--accent-gold);
+  background-color: rgba(255, 159, 28, 0.05);
 }
 
 .link-delete-btn {
@@ -509,7 +510,7 @@ body {
 /* Add Link Form */
 .add-link-form {
   background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--accent-purple);
+  border: 1px solid var(--accent-orange);
   border-radius: 8px;
   padding: 15px;
   margin-bottom: 20px;
@@ -540,7 +541,7 @@ body {
 }
 
 .form-group input:focus, .form-group select:focus {
-  border-color: var(--accent-purple);
+  border-color: var(--accent-orange);
 }
 
 .form-btn-row {

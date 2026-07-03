@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="song-item-title">${escapeHtml(song.title)}</div>
         <div class="song-item-artist">${escapeHtml(song.artist)}</div>
         <div class="song-item-meta">
-          ${song.key ? `<span class="badge purple">${escapeHtml(song.key)}</span>` : ''}
+          ${song.key ? `<span class="badge orange">${escapeHtml(song.key)}</span>` : ''}
           ${song.capo > 0 ? `<span class="badge">Capo ${song.capo}</span>` : ''}
           ${song.transpose !== 0 ? `<span class="badge">Trans ${song.transpose > 0 ? '+' : ''}${song.transpose}</span>` : ''}
         </div>

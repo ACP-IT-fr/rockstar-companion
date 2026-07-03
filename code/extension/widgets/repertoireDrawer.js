@@ -59,8 +59,8 @@
     // Create Floating Button
     drawerBtn = document.createElement('button');
     drawerBtn.id = 'ug-drawer-btn';
-    drawerBtn.innerHTML = '🎸';
-    drawerBtn.title = 'Ouvrir Rockstar Companion (Notes & Playbacks)';
+    drawerBtn.innerHTML = '🎙️';
+    drawerBtn.title = 'Ouvrir Vox Roddy (Notes & Playbacks)';
     
     if (window.RockstarCore.appendButtonsToFloatingBar) {
       window.RockstarCore.appendButtonsToFloatingBar();

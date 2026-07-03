@@ -275,8 +275,8 @@
   const settings = {
     chord7th: false,
     chordSus: false,
-    wakeWord: 'Rockstar',
-    wakeWordLower: 'rockstar',
+    wakeWord: 'Roddy',
+    wakeWordLower: 'roddy',
     allowedDomains: {},
     muteAllSites: false,
     inactivityDelay: 1
@@ -300,7 +300,7 @@
     safeStorageSyncGet(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites', 'inactivityDelay'], (result) => {
       const chord7th = result.chord7th || false;
       const chordSus = result.chordSus || false;
-      const wakeWord = result.wakeWord !== undefined && result.wakeWord !== null ? (String(result.wakeWord).trim() || 'Rockstar') : 'Rockstar';
+      const wakeWord = result.wakeWord !== undefined && result.wakeWord !== null ? (String(result.wakeWord).trim() || 'Roddy') : 'Roddy';
       const allowedDomains = result.allowedDomains || {};
       const muteAllSites = result.muteAllSites || false;
       const inactivityDelay = result.inactivityDelay !== undefined && result.inactivityDelay !== null ? parseInt(result.inactivityDelay, 10) : 1;

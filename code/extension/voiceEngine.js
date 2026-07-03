@@ -10,13 +10,13 @@
   let interimFinalizeTimeout = null;
   
   // Paramètres récupérés de RockstarCore
-  let wakeWord = 'Rockstar';
-  let wakeWordLower = 'rockstar';
+  let wakeWord = 'Roddy';
+  let wakeWordLower = 'roddy';
   let inactivityDelay = 1;
 
   window.RockstarCore.onSettingsChanged((settings) => {
-    wakeWord = settings.wakeWord || 'Rockstar';
-    wakeWordLower = settings.wakeWordLower || 'rockstar';
+    wakeWord = settings.wakeWord || 'Roddy';
+    wakeWordLower = settings.wakeWordLower || 'roddy';
     
     const oldDelay = inactivityDelay;
     inactivityDelay = settings.inactivityDelay !== undefined ? settings.inactivityDelay : 1;
@@ -34,7 +34,9 @@
                .trim()
                .replace(/\b(?:repair|reap here|repare|repaire|re\s+père|re-père)\b/g, 'repère');
     
-    if (wakeWordLower === 'rockstar') {
+    if (wakeWordLower === 'roddy') {
+      normalized = normalized.replace(/\b(?:roadie|roady|rody|rhody|ruddy|rudy|rodi|roddi)\b/g, 'roddy');
+    } else if (wakeWordLower === 'rockstar') {
       normalized = normalized.replace(/rock\s*star/g, 'rockstar')
                              .replace(/roxstar/g, 'rockstar')
                              .replace(/rock's tar/g, 'rockstar');
