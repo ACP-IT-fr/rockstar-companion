@@ -810,7 +810,8 @@
   }
 
   function searchPlaylistUG(query) {
-    const url = `https://www.ultimate-guitar.com/user/mytabs?search=${encodeURIComponent(query)}`;
+    const cleaned = query.replace(/\s+(?:on|sur)?\s*(?:ultimate\s*guitar|ug)\s*$/i, '').trim();
+    const url = `https://www.ultimate-guitar.com/user/mytabs?search=${encodeURIComponent(cleaned)}`;
     if (window.RockstarCore.stopListening) {
       window.RockstarCore.stopListening();
     }
@@ -818,7 +819,8 @@
   }
 
   function performSearch(query, siteKey) {
-    const url = `https://www.ultimate-guitar.com/search.php?title=${encodeURIComponent(query)}&page=1&type[0]=300&rating[0]=4&rating[1]=5&order=myweight`;
+    const cleaned = query.replace(/\s+(?:on|sur)?\s*(?:ultimate\s*guitar|ug)\s*$/i, '').trim();
+    const url = `https://www.ultimate-guitar.com/search.php?title=${encodeURIComponent(cleaned)}&page=1&type[0]=300&rating[0]=4&rating[1]=5&order=myweight`;
     if (window.RockstarCore.stopListening) {
       window.RockstarCore.stopListening();
     }
@@ -836,7 +838,9 @@
   const searchPlaylistPrefixes = [
     'playlist search ', 'search playlist ', 
     'cherche dans ma playlist ', 'chercher dans ma playlist ', 'cherche dans mes playlists ', 'chercher dans mes playlists ',
+    'recherche dans ma playlist ', 'rechercher dans ma playlist ', 'recherche dans mes playlists ', 'rechercher dans mes playlists ',
     'cherche playlist ', 'chercher playlist ',
+    'recherche playlist ', 'rechercher playlist ',
     'trouve dans ma playlist ', 'trouver dans ma playlist ', 'trouve dans mes playlists ', 'trouver dans mes playlists '
   ];
   
@@ -847,15 +851,21 @@
       handler: (cmdText) => {
         const query = cmdText.substring(prefix.length).trim();
         if (query) {
-          searchPlaylistUG(query);
-          return { success: true, action: `Recherche de playlist pour "${query}"` };
+          const cleaned = query.replace(/\s+(?:on|sur)?\s*(?:ultimate\s*guitar|ug)\s*$/i, '').trim();
+          searchPlaylistUG(cleaned);
+          return { success: true, action: `Recherche de playlist pour "${cleaned}"` };
         }
         return { success: false, action: 'Recherche de playlist vide' };
       }
     });
   });
 
-  const searchPrefixes = ['search for ', 'search ', 'cherche ', 'chercher ', 'trouve ', 'trouver ', 'find '];
+  const searchPrefixes = [
+    'search for ', 'search ', 
+    'cherche ', 'chercher ', 
+    'recherche ', 'rechercher ', 
+    'trouve ', 'trouver ', 'find '
+  ];
   searchPrefixes.forEach(prefix => {
     window.RockstarCore.registerCommand({
       name: 'General Search',
@@ -863,8 +873,9 @@
       handler: (cmdText) => {
         const query = cmdText.substring(prefix.length).trim();
         if (query) {
-          performSearch(query, window.RockstarCore.activeSiteKey);
-          return { success: true, action: `Recherche de "${query}"` };
+          const cleaned = query.replace(/\s+(?:on|sur)?\s*(?:ultimate\s*guitar|ug)\s*$/i, '').trim();
+          performSearch(cleaned, window.RockstarCore.activeSiteKey);
+          return { success: true, action: `Recherche de "${cleaned}"` };
         }
         return { success: false, action: 'Recherche vide' };
       }
