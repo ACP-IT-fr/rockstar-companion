@@ -819,8 +819,34 @@
   }
 
   function performSearch(query, siteKey) {
-    const cleaned = query.replace(/\s+(?:on|sur)?\s*(?:ultimate\s*guitar|ug)\s*$/i, '').trim();
-    const url = `https://www.ultimate-guitar.com/search.php?title=${encodeURIComponent(cleaned)}&page=1&type[0]=300&rating[0]=4&rating[1]=5&order=myweight`;
+    let target = siteKey || 'ultimate-guitar.com';
+    let cleaned = query.trim();
+
+    // Suffix regexes
+    const ytRegex = /\s+(?:on|sur)?\s*(?:youtube|yt)\s*$/i;
+    const googleRegex = /\s+(?:on|sur)?\s*google\s*$/i;
+    const ugRegex = /\s+(?:on|sur)?\s*(?:ultimate\s*guitar|ug)\s*$/i;
+
+    if (ytRegex.test(cleaned)) {
+      target = 'youtube.com';
+      cleaned = cleaned.replace(ytRegex, '').trim();
+    } else if (googleRegex.test(cleaned)) {
+      target = 'google.com';
+      cleaned = cleaned.replace(googleRegex, '').trim();
+    } else if (ugRegex.test(cleaned)) {
+      target = 'ultimate-guitar.com';
+      cleaned = cleaned.replace(ugRegex, '').trim();
+    }
+
+    let url = '';
+    if (target === 'youtube.com' || target === 'youtube') {
+      url = `https://www.youtube.com/results?search_query=${encodeURIComponent(cleaned)}`;
+    } else if (target === 'google.com' || target === 'google') {
+      url = `https://www.google.com/search?q=${encodeURIComponent(cleaned)}`;
+    } else {
+      url = `https://www.ultimate-guitar.com/search.php?title=${encodeURIComponent(cleaned)}&page=1&type[0]=300&rating[0]=4&rating[1]=5&order=myweight`;
+    }
+
     if (window.RockstarCore.stopListening) {
       window.RockstarCore.stopListening();
     }
@@ -873,9 +899,8 @@
       handler: (cmdText) => {
         const query = cmdText.substring(prefix.length).trim();
         if (query) {
-          const cleaned = query.replace(/\s+(?:on|sur)?\s*(?:ultimate\s*guitar|ug)\s*$/i, '').trim();
-          performSearch(cleaned, window.RockstarCore.activeSiteKey);
-          return { success: true, action: `Recherche de "${cleaned}"` };
+          performSearch(query, window.RockstarCore.activeSiteKey);
+          return { success: true, action: `Recherche de "${query}"` };
         }
         return { success: false, action: 'Recherche vide' };
       }
