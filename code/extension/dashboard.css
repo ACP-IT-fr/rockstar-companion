@@ -344,52 +344,100 @@ body {
   border: 1px solid rgba(242, 100, 25, 0.15);
 }
 
-/* Metadata cards */
-.metadata-section {
+/* Parameter Deck styling (DAW Studio Dark Tech) */
+.parameter-deck {
   display: flex;
-  gap: 20px;
-  padding: 20px 40px;
+  gap: 24px;
+  padding: 16px 40px;
+  background-color: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
 }
 
-.meta-card {
-  flex: 1;
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 15px 20px;
+.param-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  flex: 1;
 }
 
-.meta-card label {
+.param-group label {
   font-size: 11px;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  font-weight: 500;
 }
 
-.meta-card input {
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: 18px;
-  font-weight: bold;
-  outline: none;
+.param-input-wrapper input {
   width: 100%;
-  border-bottom: 1px solid transparent;
-  transition: border-bottom-color 0.2s;
+  padding: 8px 12px;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: 'Outfit', sans-serif;
 }
 
-.meta-card:focus-within {
+.param-input-wrapper input:focus {
   border-color: var(--accent-orange);
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-.meta-card input:focus {
-  border-bottom-color: rgba(255, 255, 255, 0.25);
+.param-control-strip {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 2px;
+  max-width: 160px;
+}
+
+.param-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 600;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s, transform 0.1s;
+  user-select: none;
+}
+
+.param-btn:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.param-btn:active {
+  transform: scale(0.9);
+}
+
+.param-input-read {
+  flex: 1;
+  background: #000000 !important;
+  border: none !important;
+  color: var(--accent-gold) !important;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  text-align: center;
+  width: 48px;
+  height: 32px;
+  outline: none;
+  pointer-events: none;
 }
 
 /* Main content grid */

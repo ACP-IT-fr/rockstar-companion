@@ -92,19 +92,29 @@
         </div>
       </header>
       
-      <!-- Métadonnées en badges & Saisie rapide -->
-      <section class="metadata-section">
-        <div class="meta-card">
+      <!-- Métadonnées en deck de paramètres style hardware DAW -->
+      <section class="parameter-deck">
+        <div class="param-group">
           <label for="edit-key">Tonalité (Clé)</label>
-          <input type="text" id="edit-key" placeholder="Ex: Gm / Sol min">
+          <div class="param-input-wrapper">
+            <input type="text" id="edit-key" placeholder="Ex: Gm / Sol min">
+          </div>
         </div>
-        <div class="meta-card">
-          <label for="edit-capo">Capodastre (Case)</label>
-          <input type="number" id="edit-capo" min="0" max="24" value="0">
+        <div class="param-group">
+          <label>Capodastre (Case)</label>
+          <div class="param-control-strip">
+            <button type="button" class="param-btn" id="capo-dec" title="Diminuer le Capo">-</button>
+            <input type="number" id="edit-capo" readonly min="0" max="24" value="0" class="param-input-read">
+            <button type="button" class="param-btn" id="capo-inc" title="Augmenter le Capo">+</button>
+          </div>
         </div>
-        <div class="meta-card">
-          <label for="edit-transpose">Transposition</label>
-          <input type="number" id="edit-transpose" min="-12" max="12" value="0">
+        <div class="param-group">
+          <label>Transposition</label>
+          <div class="param-control-strip">
+            <button type="button" class="param-btn" id="transpose-dec" title="Diminuer la Transposition">-</button>
+            <input type="number" id="edit-transpose" readonly min="-12" max="12" value="0" class="param-input-read">
+            <button type="button" class="param-btn" id="transpose-inc" title="Augmenter la Transposition">+</button>
+          </div>
         </div>
       </section>
       

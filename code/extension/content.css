@@ -811,10 +811,16 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 6px 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#rockstar-drawer .drawer-input-group:focus-within {
+  border-color: #f26419;
+  box-shadow: 0 0 0 2px rgba(242, 100, 25, 0.15);
 }
 
 #rockstar-drawer .drawer-input-group label {
@@ -849,14 +855,15 @@
 }
 
 #rockstar-drawer textarea:focus {
-  border-color: #ff6c00;
+  border-color: #f26419;
+  box-shadow: 0 0 0 2px rgba(242, 100, 25, 0.15);
 }
 
 /* Link addition form in Drawer */
 #rockstar-drawer .drawer-link-form {
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid #ff6c00;
-  border-radius: 6px;
+  background-color: rgba(15, 15, 19, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   padding: 12px;
   display: flex;
   flex-direction: column;

@@ -238,6 +238,39 @@ document.addEventListener('DOMContentLoaded', () => {
   editCapo.addEventListener('change', saveCurrentSongState);
   editTranspose.addEventListener('change', saveCurrentSongState);
   
+  // Calibration buttons for Capo & Transposition (DAW rack-style)
+  document.getElementById('capo-dec').addEventListener('click', () => {
+    let val = parseInt(editCapo.value, 10) || 0;
+    if (val > 0) {
+      editCapo.value = val - 1;
+      editCapo.dispatchEvent(new Event('change'));
+    }
+  });
+
+  document.getElementById('capo-inc').addEventListener('click', () => {
+    let val = parseInt(editCapo.value, 10) || 0;
+    if (val < 24) {
+      editCapo.value = val + 1;
+      editCapo.dispatchEvent(new Event('change'));
+    }
+  });
+
+  document.getElementById('transpose-dec').addEventListener('click', () => {
+    let val = parseInt(editTranspose.value, 10) || 0;
+    if (val > -12) {
+      editTranspose.value = val - 1;
+      editTranspose.dispatchEvent(new Event('change'));
+    }
+  });
+
+  document.getElementById('transpose-inc').addEventListener('click', () => {
+    let val = parseInt(editTranspose.value, 10) || 0;
+    if (val < 12) {
+      editTranspose.value = val + 1;
+      editTranspose.dispatchEvent(new Event('change'));
+    }
+  });
+  
   let debounceTimeout = null;
   function saveWithDebounce() {
     clearTimeout(debounceTimeout);
