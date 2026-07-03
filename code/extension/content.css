@@ -99,8 +99,8 @@
 
 #ug-voice-speed {
   position: fixed;
-  bottom: 270px;
-  right: 20px;
+  bottom: 45px;
+  left: 20px;
   background-color: rgba(9, 9, 11, 0.85);
   color: #fff;
   padding: 8px 15px;
@@ -112,7 +112,7 @@
   z-index: 999999;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s, transform 0.3s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.3s, transform 0.3s, left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   transform: translateY(10px);
 }
 
