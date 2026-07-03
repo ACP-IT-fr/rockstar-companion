@@ -233,6 +233,20 @@
 
     liveTextContainer = document.createElement('div');
     liveTextContainer.id = 'ug-voice-live-text';
+    liveTextContainer.innerHTML = `
+      <div class="ug-voice-bar-section" id="ug-voice-live-raw">
+        <span class="ug-voice-bar-label">Flux Micro:</span>
+        <span class="ug-voice-bar-value">Silencieux</span>
+      </div>
+      <div class="ug-voice-bar-section" id="ug-voice-live-history">
+        <span class="ug-voice-bar-label">Commandes:</span>
+        <span class="ug-voice-bar-value">(Aucune)</span>
+      </div>
+      <div class="ug-voice-bar-section" id="ug-voice-live-last">
+        <span class="ug-voice-bar-label">Dernière:</span>
+        <span class="ug-voice-bar-value">-</span>
+      </div>
+    `;
     document.body.appendChild(liveTextContainer);
 
     // 3. Indicateur de vitesse

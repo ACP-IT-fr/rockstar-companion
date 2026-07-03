@@ -9,6 +9,44 @@
   let lastInterimTranscript = '';
   let interimFinalizeTimeout = null;
   
+  const rawHistory = [];
+  const commandHistory = [];
+
+  function updateRawDisplay(currentInterim = '') {
+    const rawValEl = document.querySelector('#ug-voice-live-raw .ug-voice-bar-value');
+    if (!rawValEl) return;
+    let historyText = rawHistory.join(' | ');
+    if (currentInterim) {
+      historyText = (historyText ? historyText + ' > ' : '') + currentInterim;
+    }
+    rawValEl.innerText = historyText || (window.RockstarCore.isListening ? 'Écoute...' : 'Silencieux');
+  }
+
+  function addRawSentence(sentence) {
+    if (!sentence || sentence.trim() === '') return;
+    rawHistory.push(sentence.trim());
+    if (rawHistory.length > 2) {
+      rawHistory.shift();
+    }
+    updateRawDisplay();
+  }
+
+  function addCommand(cmd) {
+    if (!cmd || cmd.trim() === '') return;
+    commandHistory.push(cmd.trim());
+    if (commandHistory.length > 3) {
+      commandHistory.shift();
+    }
+    const histValEl = document.querySelector('#ug-voice-live-history .ug-voice-bar-value');
+    if (histValEl) {
+      histValEl.innerText = commandHistory.join(', ');
+    }
+    const lastValEl = document.querySelector('#ug-voice-live-last .ug-voice-bar-value');
+    if (lastValEl) {
+      lastValEl.innerText = cmd.trim().toUpperCase();
+    }
+  }
+
   // Paramètres récupérés de RockstarCore
   let wakeWord = 'Roddy';
   let wakeWordLower = 'roddy';
@@ -24,6 +62,7 @@
     if (window.RockstarCore.isListening && oldDelay !== inactivityDelay) {
       resetInactivityTimer();
     }
+    updateRawDisplay();
   });
 
   // Normalisation du texte
@@ -135,6 +174,7 @@
             }
           });
         }
+        updateRawDisplay();
       } catch (e) {
         console.error("Speech recognition could not start", e);
         window.RockstarCore.isListening = false;
@@ -159,6 +199,7 @@
     
     window.RockstarCore.isAwake = false;
     window.RockstarCore.safeStorageRemove('rockstar_awake_until');
+    updateRawDisplay();
   }
 
   // Hook d'initialisation du moteur de reconnaissance
@@ -197,16 +238,14 @@
           let finalTranscript = activeText;
           console.log("Voice Command Recognized:", finalTranscript);
 
-          const liveText = document.getElementById('ug-voice-live-text');
-          if (liveText) {
-            liveText.innerText = '';
-            liveText.style.display = 'none';
-          }
+          // Add raw transcript to speech history
+          addRawSentence(transcript);
 
           if (normalized.includes(wakeWordLower)) {
             if (finalTranscript.length > 0) {
               const success = window.RockstarCore.handleCommand(finalTranscript);
               if (success) {
+                addCommand(finalTranscript);
                 if (window.RockstarCore.isAwake) {
                   wakeUp(5000, false);
                 }
@@ -223,6 +262,7 @@
           } else if (window.RockstarCore.isAwake) {
             const success = window.RockstarCore.handleCommand(finalTranscript);
             if (success) {
+              addCommand(finalTranscript);
               if (window.RockstarCore.isAwake) {
                 wakeUp(5000, false);
               }
@@ -249,28 +289,24 @@
         }
       }
 
-      const liveText = document.getElementById('ug-voice-live-text');
       if (interimRaw.trim() !== '') {
         const normalizedInterim = normalize(interimRaw);
         const wordCount = normalizedInterim.trim().split(/\s+/).length;
         if (wordCount > 10) {
-          if (liveText) liveText.style.display = 'none';
+          updateRawDisplay();
           recognition.stop();
           return;
         }
 
-        if (liveText) {
-          if (!window.RockstarCore.isAwake && !normalizedInterim.includes(wakeWordLower)) {
-            liveText.style.display = 'none';
-          } else {
-            let displayInterim = normalizedInterim;
-            if (normalizedInterim.includes(wakeWordLower)) {
-              const wakeIndex = normalizedInterim.lastIndexOf(wakeWordLower);
-              displayInterim = normalizedInterim.substring(wakeIndex).trim();
-            }
-            liveText.innerText = displayInterim;
-            liveText.style.display = 'block';
+        if (!window.RockstarCore.isAwake && !normalizedInterim.includes(wakeWordLower)) {
+          updateRawDisplay();
+        } else {
+          let displayInterim = normalizedInterim;
+          if (normalizedInterim.includes(wakeWordLower)) {
+            const wakeIndex = normalizedInterim.lastIndexOf(wakeWordLower);
+            displayInterim = normalizedInterim.substring(wakeIndex).trim();
           }
+          updateRawDisplay(displayInterim);
         }
       }
 
@@ -279,12 +315,14 @@
           console.log("[RockstarVoice] Auto-finalizing interim speech:", lastInterimTranscript);
           const transcriptToExecute = lastInterimTranscript;
           lastInterimTranscript = '';
-          if (liveText) {
-            liveText.innerText = '';
-            liveText.style.display = 'none';
-          }
+          
+          addRawSentence(transcriptToExecute);
+          
           wakeUp(15000, false);
-          window.RockstarCore.handleCommand(transcriptToExecute);
+          const success = window.RockstarCore.handleCommand(transcriptToExecute);
+          if (success) {
+            addCommand(transcriptToExecute);
+          }
         }, 1200);
       }
     };
