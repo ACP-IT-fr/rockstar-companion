@@ -513,6 +513,41 @@
     // Remplir et attacher la barre d'outils
     appendButtonsToFloatingBar();
 
+    // Création du bouton de masquage de la colonne de widgets
+    const toggleWidgetsBtn = document.createElement('button');
+    toggleWidgetsBtn.id = 'ug-widgets-toggle-btn';
+    toggleWidgetsBtn.className = 'ug-widgets-toggle-btn';
+    toggleWidgetsBtn.innerHTML = `&#8250;`; // Arrow pointing right (hide)
+    toggleWidgetsBtn.title = "Masquer la colonne de widgets";
+    document.body.appendChild(toggleWidgetsBtn);
+
+    // Initial state matching listening state
+    function updateToggleBtnVisibility() {
+      if (window.RockstarCore.isListening) {
+        toggleWidgetsBtn.classList.add('visible');
+      } else {
+        toggleWidgetsBtn.classList.remove('visible');
+        document.body.classList.remove('ug-widgets-hidden');
+        toggleWidgetsBtn.innerHTML = `&#8250;`;
+        toggleWidgetsBtn.title = "Masquer la colonne de widgets";
+      }
+    }
+
+    // Toggle logic
+    toggleWidgetsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = document.body.classList.toggle('ug-widgets-hidden');
+      toggleWidgetsBtn.innerHTML = isHidden ? `&#8249;` : `&#8250;`;
+      toggleWidgetsBtn.title = isHidden ? "Afficher les widgets" : "Masquer la colonne de widgets";
+    });
+
+    // Listen to listening state changes to show/hide the toggle button itself
+    window.RockstarCore.onListeningChanged(() => {
+      updateToggleBtnVisibility();
+    });
+
+    updateToggleBtnVisibility();
+
     // Synchronisation de l'état initial pour éviter les race conditions
     if (window.RockstarCore.isListening) {
       btn.classList.add('listening');

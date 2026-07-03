@@ -143,7 +143,6 @@
     const ac = autoCorrelate(buf, audioContext.sampleRate);
 
     if (ac == -1) {
-      tunerContainer.style.opacity = '0.3';
       pitchHistory = [];
       return;
     }
@@ -154,7 +153,6 @@
     const sortedPitches = [...pitchHistory].sort((a, b) => a - b);
     const smoothedPitch = sortedPitches[Math.floor(sortedPitches.length / 2)];
 
-    tunerContainer.style.opacity = '1';
     const noteNum = Math.round(12 * (Math.log(smoothedPitch / 440) / Math.log(2))) + 69;
     const noteName = noteStrings[noteNum % 12];
     const octave = Math.floor(noteNum / 12) - 1;

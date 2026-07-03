@@ -71,7 +71,7 @@
     if (totalEnergy < 0.1) {
        if (!chordClearTimeout) {
          chordClearTimeout = setTimeout(() => {
-           chordContainer.style.opacity = '0.3';
+           chordNameEl.innerText = "-";
            chordHistory = [];
            chordClearTimeout = null;
          }, 1500);
@@ -122,7 +122,6 @@
          }
        }
 
-       chordContainer.style.opacity = '1';
        chordNameEl.innerText = stableChord;
     }
   }
