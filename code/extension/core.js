@@ -239,8 +239,14 @@
 
     for (const def of registeredCommands) {
       let isMatch = false;
-      if (def.variants && def.variants.some(v => cmd === v || hasWord(cmd, v))) {
-        isMatch = true;
+      if (def.variants) {
+        isMatch = def.variants.some(v => {
+          const trimmedV = v.trim();
+          if (v.endsWith(' ')) {
+            return cmd === trimmedV || cmd.startsWith(v);
+          }
+          return cmd === trimmedV || hasWord(cmd, trimmedV) || (trimmedV.includes(' ') && cmd.includes(trimmedV));
+        });
       } else if (def.regex && cmd.match(def.regex)) {
         isMatch = true;
       }
