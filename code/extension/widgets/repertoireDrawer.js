@@ -5,6 +5,26 @@
   let drawerBtn = null;
   let drawerContainer = null;
   let currentSong = null;
+
+  function normalizeUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.hostname.includes('youtube.com')) {
+        const videoId = urlObj.searchParams.get('v');
+        if (videoId) {
+          return `https://www.youtube.com/watch?v=${videoId}`;
+        }
+      } else if (urlObj.hostname.includes('youtu.be')) {
+        const videoId = urlObj.pathname.slice(1);
+        if (videoId) {
+          return `https://www.youtube.com/watch?v=${videoId}`;
+        }
+      }
+      return urlObj.origin + urlObj.pathname;
+    } catch (e) {
+      return url.split('?')[0].split('#')[0];
+    }
+  }
   let activeDrawerPlaybackLink = null;
   let dictationRecognition = null;
   let activeDictationTarget = null;
@@ -53,7 +73,224 @@
     };
   }
 
+  function setupDrawerEventListeners() {
+    if (!drawerContainer) return;
+
+    const artistInput = drawerContainer.querySelector('#drawer-artist');
+    const keyInput = drawerContainer.querySelector('#drawer-key');
+    const capoInput = drawerContainer.querySelector('#drawer-capo');
+    const transInput = drawerContainer.querySelector('#drawer-transpose');
+    const notesText = drawerContainer.querySelector('#drawer-notes');
+    const tipsText = drawerContainer.querySelector('#drawer-tips');
+
+    function saveDrawerData() {
+      if (!currentSong) return;
+      if (artistInput) {
+        currentSong.artist = artistInput.value.trim() || "Artiste inconnu";
+      }
+      currentSong.key = keyInput.value.trim();
+      currentSong.capo = parseInt(capoInput.value, 10) || 0;
+      currentSong.transpose = parseInt(transInput.value, 10) || 0;
+      currentSong.notes = notesText.value;
+      currentSong.interpretationNotes = notesText.value;
+      currentSong.playingTips = tipsText.value;
+
+      if (window.storageService) {
+        window.storageService.saveSong(currentSong);
+      }
+    }
+
+    if (artistInput) {
+      const newArtistInput = artistInput.cloneNode(true);
+      artistInput.parentNode.replaceChild(newArtistInput, artistInput);
+      newArtistInput.addEventListener('blur', saveDrawerData);
+    }
+
+    const newKeyInput = keyInput.cloneNode(true);
+    keyInput.parentNode.replaceChild(newKeyInput, keyInput);
+    newKeyInput.addEventListener('blur', saveDrawerData);
+
+    const newCapoInput = capoInput.cloneNode(true);
+    capoInput.parentNode.replaceChild(newCapoInput, capoInput);
+    newCapoInput.addEventListener('change', saveDrawerData);
+
+    const newTransInput = transInput.cloneNode(true);
+    transInput.parentNode.replaceChild(newTransInput, transInput);
+    newTransInput.addEventListener('change', saveDrawerData);
+
+    const newNotesText = notesText.cloneNode(true);
+    notesText.parentNode.replaceChild(newNotesText, notesText);
+
+    const newTipsText = tipsText.cloneNode(true);
+    tipsText.parentNode.replaceChild(newTipsText, tipsText);
+
+    let debounceSave = null;
+    function debouncedSave() {
+      clearTimeout(debounceSave);
+      debounceSave = setTimeout(saveDrawerData, 1000);
+    }
+    newNotesText.addEventListener('input', debouncedSave);
+    newTipsText.addEventListener('input', debouncedSave);
+
+    // Magic Wand
+    const magicBtn = drawerContainer.querySelector('#drawer-magic-btn');
+    if (magicBtn) {
+      const newMagicBtn = magicBtn.cloneNode(true);
+      magicBtn.parentNode.replaceChild(newMagicBtn, magicBtn);
+      newMagicBtn.addEventListener('click', () => {
+        const extracted = autoExtractMetadata();
+        let updated = false;
+
+        const currentArtistInput = drawerContainer.querySelector('#drawer-artist');
+        const currentKeyInput = drawerContainer.querySelector('#drawer-key');
+        const currentCapoInput = drawerContainer.querySelector('#drawer-capo');
+        const currentTransInput = drawerContainer.querySelector('#drawer-transpose');
+
+        if (extracted.artist && currentArtistInput) {
+          currentArtistInput.value = extracted.artist;
+          currentSong.artist = extracted.artist;
+          updated = true;
+        }
+        if (extracted.key && currentKeyInput) {
+          currentKeyInput.value = extracted.key;
+          currentSong.key = extracted.key;
+          updated = true;
+        }
+        if (extracted.capo !== undefined && extracted.capo > 0 && currentCapoInput) {
+          currentCapoInput.value = extracted.capo;
+          currentSong.capo = extracted.capo;
+          updated = true;
+        }
+        if (extracted.transpose !== undefined && extracted.transpose !== 0 && currentTransInput) {
+          currentTransInput.value = extracted.transpose;
+          currentSong.transpose = extracted.transpose;
+          updated = true;
+        }
+
+        if (updated) {
+          [currentArtistInput, currentKeyInput, currentCapoInput, currentTransInput].forEach(input => {
+            if (!input) return;
+            input.style.transition = 'background-color 0.3s';
+            input.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+            setTimeout(() => {
+              input.style.backgroundColor = 'transparent';
+            }, 800);
+          });
+          saveDrawerData();
+          if (window.RockstarCore.showFeedback) {
+            window.RockstarCore.showFeedback("Mises à jour appliquées par la baguette magique !", true);
+          }
+        } else {
+          if (window.RockstarCore.showFeedback) {
+            window.RockstarCore.showFeedback("Aucune clé/capo/transposition/artiste trouvée à extraire.", false);
+          }
+        }
+      });
+    }
+
+    // Dictation
+    const dictationButtons = drawerContainer.querySelectorAll('.drawer-dictate-btn');
+    const DictationSpeechClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!DictationSpeechClass) {
+      dictationButtons.forEach(btn => btn.style.display = 'none');
+    } else {
+      dictationButtons.forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', () => {
+          const targetId = newBtn.getAttribute('data-target');
+          toggleDictation(targetId, newBtn);
+        });
+      });
+    }
+
+    // Link Addition
+    const addLinkBtn = drawerContainer.querySelector('#drawer-add-link-btn');
+    const linkForm = drawerContainer.querySelector('#drawer-link-form');
+    const linkTitle = drawerContainer.querySelector('#drawer-new-link-title');
+    const linkUrl = drawerContainer.querySelector('#drawer-new-link-url');
+    const linkType = drawerContainer.querySelector('#drawer-new-link-type');
+    const saveLinkBtn = drawerContainer.querySelector('#drawer-save-link-btn');
+    const cancelLinkBtn = drawerContainer.querySelector('#drawer-cancel-link-btn');
+
+    if (addLinkBtn && linkForm && saveLinkBtn && cancelLinkBtn) {
+      const newAddLinkBtn = addLinkBtn.cloneNode(true);
+      addLinkBtn.parentNode.replaceChild(newAddLinkBtn, addLinkBtn);
+      newAddLinkBtn.addEventListener('click', () => {
+        linkForm.style.display = linkForm.style.display === 'none' ? 'block' : 'none';
+        linkTitle.value = '';
+        linkUrl.value = '';
+        linkType.value = 'youtube';
+      });
+
+      linkUrl.addEventListener('input', () => {
+        const val = linkUrl.value.toLowerCase().trim();
+        if (val.includes('youtube.com') || val.includes('youtu.be')) {
+          linkType.value = 'youtube';
+        } else if (val.includes('spotify.com') || val.startsWith('spotify:')) {
+          linkType.value = 'spotify';
+        } else {
+          linkType.value = 'other';
+        }
+      });
+
+      const newCancelLinkBtn = cancelLinkBtn.cloneNode(true);
+      cancelLinkBtn.parentNode.replaceChild(newCancelLinkBtn, cancelLinkBtn);
+      newCancelLinkBtn.addEventListener('click', () => {
+        linkForm.style.display = 'none';
+      });
+
+      const newSaveLinkBtn = saveLinkBtn.cloneNode(true);
+      saveLinkBtn.parentNode.replaceChild(newSaveLinkBtn, saveLinkBtn);
+      newSaveLinkBtn.addEventListener('click', () => {
+        const url = linkUrl.value.trim();
+        const title = linkTitle.value.trim();
+        const type = linkType.value;
+
+        if (!url) return;
+        if (!currentSong.links) currentSong.links = [];
+
+        currentSong.links.push({
+          title: title || (type === 'youtube' ? 'Vidéo YouTube' : 'Audio Spotify'),
+          url: url,
+          type: type
+        });
+
+        if (window.storageService) {
+          window.storageService.saveSong(currentSong).then(() => {
+            linkForm.style.display = 'none';
+            renderDrawerLinks();
+          });
+        }
+      });
+    }
+  }
+
   function createDrawerUI() {
+    const existingBtn = document.getElementById('ug-drawer-btn');
+    const existingDrawer = document.getElementById('rockstar-drawer');
+
+    if (existingBtn && existingDrawer) {
+      drawerBtn = existingBtn;
+      drawerContainer = existingDrawer;
+
+      // Re-bind listeners by cloning the buttons
+      const newBtn = drawerBtn.cloneNode(true);
+      drawerBtn.parentNode.replaceChild(newBtn, drawerBtn);
+      drawerBtn = newBtn;
+      drawerBtn.addEventListener('click', toggleDrawer);
+
+      const closeBtn = drawerContainer.querySelector('#drawer-close-btn');
+      if (closeBtn) {
+        const newCloseBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        newCloseBtn.addEventListener('click', closeDrawer);
+      }
+
+      setupDrawerEventListeners();
+      return;
+    }
+
     if (document.getElementById('rockstar-drawer') || document.getElementById('ug-drawer-btn')) return;
 
     // Create Floating Button
@@ -158,160 +395,7 @@
     drawerBtn.addEventListener('click', toggleDrawer);
     drawerContainer.querySelector('#drawer-close-btn').addEventListener('click', closeDrawer);
 
-    const artistInput = drawerContainer.querySelector('#drawer-artist');
-    const keyInput = drawerContainer.querySelector('#drawer-key');
-    const capoInput = drawerContainer.querySelector('#drawer-capo');
-    const transInput = drawerContainer.querySelector('#drawer-transpose');
-    const notesText = drawerContainer.querySelector('#drawer-notes');
-    const tipsText = drawerContainer.querySelector('#drawer-tips');
-
-    function saveDrawerData() {
-      if (!currentSong) return;
-      if (artistInput) {
-        currentSong.artist = artistInput.value.trim() || "Artiste inconnu";
-      }
-      currentSong.key = keyInput.value.trim();
-      currentSong.capo = parseInt(capoInput.value, 10) || 0;
-      currentSong.transpose = parseInt(transInput.value, 10) || 0;
-      currentSong.notes = notesText.value;
-      currentSong.interpretationNotes = notesText.value;
-      currentSong.playingTips = tipsText.value;
-
-      if (window.storageService) {
-        window.storageService.saveSong(currentSong);
-      }
-    }
-
-    if (artistInput) {
-      artistInput.addEventListener('blur', saveDrawerData);
-    }
-    keyInput.addEventListener('blur', saveDrawerData);
-    capoInput.addEventListener('change', saveDrawerData);
-    transInput.addEventListener('change', saveDrawerData);
-
-    let debounceSave = null;
-    function debouncedSave() {
-      clearTimeout(debounceSave);
-      debounceSave = setTimeout(saveDrawerData, 1000);
-    }
-    notesText.addEventListener('input', debouncedSave);
-    tipsText.addEventListener('input', debouncedSave);
-
-    // Magic Wand
-    const magicBtn = drawerContainer.querySelector('#drawer-magic-btn');
-    if (magicBtn) {
-      magicBtn.addEventListener('click', () => {
-        const extracted = autoExtractMetadata();
-        let updated = false;
-
-        if (extracted.artist) {
-          artistInput.value = extracted.artist;
-          currentSong.artist = extracted.artist;
-          updated = true;
-        }
-        if (extracted.key) {
-          keyInput.value = extracted.key;
-          currentSong.key = extracted.key;
-          updated = true;
-        }
-        if (extracted.capo !== undefined && extracted.capo > 0) {
-          capoInput.value = extracted.capo;
-          currentSong.capo = extracted.capo;
-          updated = true;
-        }
-        if (extracted.transpose !== undefined && extracted.transpose !== 0) {
-          transInput.value = extracted.transpose;
-          currentSong.transpose = extracted.transpose;
-          updated = true;
-        }
-
-        if (updated) {
-          [artistInput, keyInput, capoInput, transInput].forEach(input => {
-            if (!input) return;
-            input.style.transition = 'background-color 0.3s';
-            input.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
-            setTimeout(() => {
-              input.style.backgroundColor = 'transparent';
-            }, 800);
-          });
-          saveDrawerData();
-          if (window.RockstarCore.showFeedback) {
-            window.RockstarCore.showFeedback("Mises à jour appliquées par la baguette magique !", true);
-          }
-        } else {
-          if (window.RockstarCore.showFeedback) {
-            window.RockstarCore.showFeedback("Aucune clé/capo/transposition/artiste trouvée à extraire.", false);
-          }
-        }
-      });
-    }
-
-    // Dictation
-    const dictationButtons = drawerContainer.querySelectorAll('.drawer-dictate-btn');
-    const DictationSpeechClass = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!DictationSpeechClass) {
-      dictationButtons.forEach(btn => btn.style.display = 'none');
-    } else {
-      dictationButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const targetId = btn.getAttribute('data-target');
-          toggleDictation(targetId, btn);
-        });
-      });
-    }
-
-    // Link Addition
-    const addLinkBtn = drawerContainer.querySelector('#drawer-add-link-btn');
-    const linkForm = drawerContainer.querySelector('#drawer-link-form');
-    const linkTitle = drawerContainer.querySelector('#drawer-new-link-title');
-    const linkUrl = drawerContainer.querySelector('#drawer-new-link-url');
-    const linkType = drawerContainer.querySelector('#drawer-new-link-type');
-    const saveLinkBtn = drawerContainer.querySelector('#drawer-save-link-btn');
-    const cancelLinkBtn = drawerContainer.querySelector('#drawer-cancel-link-btn');
-
-    addLinkBtn.addEventListener('click', () => {
-      linkForm.style.display = linkForm.style.display === 'none' ? 'block' : 'none';
-      linkTitle.value = '';
-      linkUrl.value = '';
-      linkType.value = 'youtube';
-    });
-
-    linkUrl.addEventListener('input', () => {
-      const val = linkUrl.value.toLowerCase().trim();
-      if (val.includes('youtube.com') || val.includes('youtu.be')) {
-        linkType.value = 'youtube';
-      } else if (val.includes('spotify.com') || val.startsWith('spotify:')) {
-        linkType.value = 'spotify';
-      } else {
-        linkType.value = 'other';
-      }
-    });
-
-    cancelLinkBtn.addEventListener('click', () => {
-      linkForm.style.display = 'none';
-    });
-
-    saveLinkBtn.addEventListener('click', () => {
-      const url = linkUrl.value.trim();
-      const title = linkTitle.value.trim();
-      const type = linkType.value;
-
-      if (!url) return;
-      if (!currentSong.links) currentSong.links = [];
-
-      currentSong.links.push({
-        title: title || (type === 'youtube' ? 'Vidéo YouTube' : 'Audio Spotify'),
-        url: url,
-        type: type
-      });
-
-      if (window.storageService) {
-        window.storageService.saveSong(currentSong).then(() => {
-          linkForm.style.display = 'none';
-          renderDrawerLinks();
-        });
-      }
-    });
+    setupDrawerEventListeners();
   }
 
   function toggleDrawer() {
@@ -341,7 +425,7 @@
   }
 
   function loadSongForDrawer() {
-    const url = window.location.href;
+    const url = normalizeUrl(window.location.href);
     if (!window.storageService) return;
 
     window.storageService.getSong(url).then(song => {
@@ -849,4 +933,15 @@
       });
     }
   });
+  // URL SPA Navigation Observer
+  let lastLoadedUrl = window.location.href;
+  setInterval(() => {
+    const currentUrl = window.location.href;
+    if (normalizeUrl(currentUrl) !== normalizeUrl(lastLoadedUrl)) {
+      lastLoadedUrl = currentUrl;
+      if (isDrawerInitialized) {
+        loadSongForDrawer();
+      }
+    }
+  }, 1000);
 })();

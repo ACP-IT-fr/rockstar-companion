@@ -1,5 +1,5 @@
 /**
- * Service d'exportation pour Rockstar Companion
+ * Service d'exportation pour Vox Roddy
  * Permet d'exporter et importer les chansons et notes locales au format JSON.
  */
 const exportService = {

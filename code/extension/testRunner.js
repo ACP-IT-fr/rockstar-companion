@@ -5,7 +5,7 @@
       const resultsDiv = document.createElement('div');
       resultsDiv.id = 'test-results';
       resultsDiv.style.cssText = 'background: #222; color: #fff; padding: 20px; border: 2px solid #555; font-family: monospace; white-space: pre; position: fixed; top: 10px; left: 10px; z-index: 10000; width: 600px; max-height: 400px; overflow-y: auto;';
-      resultsDiv.innerText = 'Starting Rockstar Companion integration tests...\n';
+      resultsDiv.innerText = 'Starting Vox Roddy integration tests...\n';
       document.body.appendChild(resultsDiv);
 
       const log = (msg, success = true) => {

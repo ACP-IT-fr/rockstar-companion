@@ -179,6 +179,7 @@
       for (const [k, v] of Object.entries(obj)) {
         localStorage.setItem('sync_' + k, typeof v === 'object' ? JSON.stringify(v) : v);
       }
+      loadSettings();
       if (callback) callback();
     }
   }
@@ -342,6 +343,7 @@
     safeStorageRemove,
     safeStorageSyncGet,
     safeStorageSyncSet,
+    loadSettings,
     getAudioContext,
     getAnalyser,
     setAnalyser,

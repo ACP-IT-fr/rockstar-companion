@@ -12,6 +12,8 @@
   let speedContainer = null;
   let bannerEl = null;
   let commandsWrapper = null;
+  let settingsBtn = null;
+  let settingsPanel = null;
 
   function appendButtonsToFloatingBar() {
     const bar = window.RockstarCore.getOrCreateFloatingBar();
@@ -30,8 +32,11 @@
       window.RockstarCore.appendRepertoireDrawerBtn(bar);
     }
   }
+  window.RockstarCore.appendButtonsToFloatingBar = appendButtonsToFloatingBar;
 
   function showFeedback(text, isSuccess) {
+    // Commenté temporairement pour éviter l'empilement de notifications
+    /*
     if (!feedbackContainer) return;
     const toast = document.createElement('div');
     toast.className = 'ug-voice-toast ' + (isSuccess ? 'success' : 'error');
@@ -42,6 +47,7 @@
       toast.classList.add('fade-out');
       setTimeout(() => toast.remove(), 500);
     }, 3000);
+    */
   }
 
   function showActivationBanner() {
@@ -103,7 +109,7 @@
 
   function updateCommandsPanel() {
     const isYouTube = window.location.hostname.includes('youtube.com');
-    let title = "Commandes Rockstar";
+    let title = "Commandes Roddy";
     
     // Obtenir toutes les commandes d'aide enregistrées dynamiquement
     const helpCmds = window.RockstarCore.getHelpCommands();
@@ -246,8 +252,133 @@
         <span class="ug-voice-bar-label">Dernière:</span>
         <span class="ug-voice-bar-value">-</span>
       </div>
+      <button id="ug-voice-settings-btn" title="Paramètres Vox Roddy" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s;">⚙️</button>
     `;
     document.body.appendChild(liveTextContainer);
+
+    // Panel de réglages rapide
+    settingsPanel = document.createElement('div');
+    settingsPanel.id = 'ug-voice-settings-panel';
+    settingsPanel.className = 'ug-voice-settings-panel';
+    settingsPanel.innerHTML = `
+      <div class="settings-panel-header">
+        <span>⚙️ Réglages Vox Roddy</span>
+        <button id="ug-voice-settings-close" class="settings-panel-close">&times;</button>
+      </div>
+      <div class="settings-panel-body">
+        <div class="settings-section">
+          <div class="settings-section-title">Détection d'Accords</div>
+          <label class="settings-row">
+            <input type="checkbox" id="settings-chord-7th">
+            <span>Accords de 7ème (7, maj7, m7)</span>
+          </label>
+          <label class="settings-row">
+            <input type="checkbox" id="settings-chord-sus">
+            <span>Accords suspendus (sus2, sus4)</span>
+          </label>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-section-title">Contrôle Vocal</div>
+          <div class="settings-field">
+            <label for="settings-wake-word">Mot déclencheur :</label>
+            <input type="text" id="settings-wake-word" placeholder="Roddy">
+          </div>
+          <div class="settings-field">
+            <label for="settings-wake-word-variants">Variantes (séparées par virgules) :</label>
+            <input type="text" id="settings-wake-word-variants" placeholder="Ex: roadie, roady...">
+          </div>
+          <div class="settings-field">
+            <label for="settings-inactivity-delay">Fermeture auto du micro :</label>
+            <select id="settings-inactivity-delay">
+              <option value="1">Après 1 minute (Recommandé)</option>
+              <option value="2">Après 2 minutes</option>
+              <option value="5">Après 5 minutes</option>
+              <option value="10">Après 10 minutes</option>
+              <option value="0">Désactivée (Toujours ouvert)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <label class="settings-row">
+            <input type="checkbox" id="settings-mute-all-sites">
+            <span>Silencieux sur les autres sites</span>
+          </label>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(settingsPanel);
+
+    // Interaction du Panel
+    const settingsBtn = document.getElementById('ug-voice-settings-btn');
+    const closeBtn = document.getElementById('ug-voice-settings-close');
+
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = settingsPanel.style.display === 'flex';
+      settingsPanel.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible) {
+        // Fermer les autres volets
+        if (commandsWrapper) commandsWrapper.classList.remove('active');
+        if (commandsPanel) commandsPanel.classList.remove('visible');
+        const markersPanel = document.getElementById('rockstar-markers-panel');
+        if (markersPanel) markersPanel.classList.remove('visible');
+      }
+    });
+
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settingsPanel.style.display = 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (settingsPanel && !settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+        settingsPanel.style.display = 'none';
+      }
+    });
+
+    // Liaison des données aux préférences
+    const cb7th = document.getElementById('settings-chord-7th');
+    const cbSus = document.getElementById('settings-chord-sus');
+    const wwInput = document.getElementById('settings-wake-word');
+    const wwVariantsInput = document.getElementById('settings-wake-word-variants');
+    const idSelect = document.getElementById('settings-inactivity-delay');
+    const mutAll = document.getElementById('settings-mute-all-sites');
+
+    function populatePanelFields(s) {
+      if (cb7th) cb7th.checked = s.chord7th || false;
+      if (cbSus) cbSus.checked = s.chordSus || false;
+      if (wwInput) wwInput.value = s.wakeWord || 'Roddy';
+      if (wwVariantsInput) wwVariantsInput.value = s.wakeWordVariants || '';
+      if (idSelect) idSelect.value = s.inactivityDelay !== undefined ? s.inactivityDelay : '1';
+      if (mutAll) mutAll.checked = s.muteAllSites || false;
+    }
+
+    // Réagir aux changements dans RockstarCore
+    window.RockstarCore.onSettingsChanged((s) => {
+      populatePanelFields(s);
+    });
+
+    // Enregistrer les modifications
+    cb7th.addEventListener('change', () => {
+      window.RockstarCore.safeStorageSyncSet({ chord7th: cb7th.checked });
+    });
+    cbSus.addEventListener('change', () => {
+      window.RockstarCore.safeStorageSyncSet({ chordSus: cbSus.checked });
+    });
+    wwInput.addEventListener('input', () => {
+      window.RockstarCore.safeStorageSyncSet({ wakeWord: wwInput.value.trim() });
+    });
+    wwVariantsInput.addEventListener('input', () => {
+      window.RockstarCore.safeStorageSyncSet({ wakeWordVariants: wwVariantsInput.value.trim() });
+    });
+    idSelect.addEventListener('change', () => {
+      window.RockstarCore.safeStorageSyncSet({ inactivityDelay: parseInt(idSelect.value, 10) });
+    });
+    mutAll.addEventListener('change', () => {
+      window.RockstarCore.safeStorageSyncSet({ muteAllSites: mutAll.checked });
+    });
 
     // 3. Indicateur de vitesse
     speedContainer = document.createElement('div');
@@ -272,7 +403,11 @@
     commandsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isActive = commandsWrapper.classList.toggle('active');
+      commandsPanel.classList.toggle('visible', isActive);
       if (isActive) {
+        if (settingsPanel) settingsPanel.style.display = 'none';
+        const markersPanel = document.getElementById('rockstar-markers-panel');
+        if (markersPanel) markersPanel.classList.remove('visible');
         updateCommandsPanel();
       }
     });
@@ -280,6 +415,7 @@
     document.addEventListener('click', (e) => {
       if (commandsPanel && !commandsPanel.contains(e.target) && e.target !== commandsBtn) {
         commandsWrapper.classList.remove('active');
+        commandsPanel.classList.remove('visible');
       }
     });
 

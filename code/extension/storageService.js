@@ -1,5 +1,5 @@
 /**
- * Service de stockage abstrait pour Rockstar Companion
+ * Service de stockage abstrait pour Vox Roddy
  * Encapsule les accès à chrome.storage.local pour faciliter une future migration vers une API REST.
  */
 const storageService = {
