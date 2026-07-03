@@ -50,11 +50,13 @@
   // Paramètres récupérés de RockstarCore
   let wakeWord = 'Roddy';
   let wakeWordLower = 'roddy';
+  let wakeWordVariants = 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi';
   let inactivityDelay = 1;
 
   window.RockstarCore.onSettingsChanged((settings) => {
     wakeWord = settings.wakeWord || 'Roddy';
     wakeWordLower = settings.wakeWordLower || 'roddy';
+    wakeWordVariants = settings.wakeWordVariants !== undefined ? settings.wakeWordVariants : 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi';
     
     const oldDelay = inactivityDelay;
     inactivityDelay = settings.inactivityDelay !== undefined ? settings.inactivityDelay : 1;
@@ -73,9 +75,19 @@
                .trim()
                .replace(/\b(?:repair|reap here|repare|repaire|re\s+père|re-père)\b/g, 'repère');
     
-    if (wakeWordLower === 'roddy') {
-      normalized = normalized.replace(/\b(?:roadie|roady|rody|rhody|ruddy|rudy|rodi|roddi)\b/g, 'roddy');
-    } else if (wakeWordLower === 'rockstar') {
+    if (wakeWordVariants) {
+      const variantsList = wakeWordVariants.split(',')
+                            .map(v => v.trim().toLowerCase())
+                            .filter(v => v.length > 0);
+      if (variantsList.length > 0) {
+        const escapedVariants = variantsList.map(v => v.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'));
+        const pattern = '\\b(?:' + escapedVariants.join('|') + ')\\b';
+        const regex = new RegExp(pattern, 'g');
+        normalized = normalized.replace(regex, wakeWordLower);
+      }
+    }
+
+    if (wakeWordLower === 'rockstar') {
       normalized = normalized.replace(/rock\s*star/g, 'rockstar')
                              .replace(/roxstar/g, 'rockstar')
                              .replace(/rock's tar/g, 'rockstar');

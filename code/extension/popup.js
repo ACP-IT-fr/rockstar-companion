@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cb7th = document.getElementById('chord-7th');
   const cbSus = document.getElementById('chord-sus');
   const wakeWordInput = document.getElementById('wake-word-input');
+  const wakeWordVariantsInput = document.getElementById('wake-word-variants-input');
   const wakeWordDisplays = document.querySelectorAll('.wake-word-display');
   
   const domainActivationGroup = document.getElementById('domain-activation-group');
@@ -53,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Load settings
-  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'muteAllSites', 'inactivityDelay'], (result) => {
+  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'wakeWordVariants', 'muteAllSites', 'inactivityDelay'], (result) => {
     cb7th.checked = result.chord7th || false;
     cbSus.checked = result.chordSus || false;
     muteAllSitesCb.checked = result.muteAllSites || false;
@@ -62,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const word = result.wakeWord !== undefined ? result.wakeWord : 'Roddy';
     wakeWordInput.value = word;
     updateWakeWordDisplay(word);
+
+    const variants = result.wakeWordVariants !== undefined ? result.wakeWordVariants : 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi';
+    wakeWordVariantsInput.value = variants;
   });
 
   // Save chord settings
@@ -78,6 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const val = wakeWordInput.value;
     chrome.storage.sync.set({ wakeWord: val });
     updateWakeWordDisplay(val);
+  });
+
+  // Save wake word variants setting
+  wakeWordVariantsInput.addEventListener('input', () => {
+    const val = wakeWordVariantsInput.value;
+    chrome.storage.sync.set({ wakeWordVariants: val });
   });
 
   // Save domain activation setting

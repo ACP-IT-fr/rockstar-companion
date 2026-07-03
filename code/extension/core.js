@@ -277,6 +277,7 @@
     chordSus: false,
     wakeWord: 'Roddy',
     wakeWordLower: 'roddy',
+    wakeWordVariants: 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi',
     allowedDomains: {},
     muteAllSites: false,
     inactivityDelay: 1
@@ -297,15 +298,16 @@
   }
 
   function loadSettings(callback) {
-    safeStorageSyncGet(['chord7th', 'chordSus', 'wakeWord', 'allowedDomains', 'muteAllSites', 'inactivityDelay'], (result) => {
+    safeStorageSyncGet(['chord7th', 'chordSus', 'wakeWord', 'wakeWordVariants', 'allowedDomains', 'muteAllSites', 'inactivityDelay'], (result) => {
       const chord7th = result.chord7th || false;
       const chordSus = result.chordSus || false;
       const wakeWord = result.wakeWord !== undefined && result.wakeWord !== null ? (String(result.wakeWord).trim() || 'Roddy') : 'Roddy';
+      const wakeWordVariants = result.wakeWordVariants !== undefined && result.wakeWordVariants !== null ? String(result.wakeWordVariants) : 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi';
       const allowedDomains = result.allowedDomains || {};
       const muteAllSites = result.muteAllSites || false;
       const inactivityDelay = result.inactivityDelay !== undefined && result.inactivityDelay !== null ? parseInt(result.inactivityDelay, 10) : 1;
       
-      updateSettings({ chord7th, chordSus, wakeWord, allowedDomains, muteAllSites, inactivityDelay });
+      updateSettings({ chord7th, chordSus, wakeWord, wakeWordVariants, allowedDomains, muteAllSites, inactivityDelay });
       settingsLoaded = true;
       if (callback) callback();
     });
