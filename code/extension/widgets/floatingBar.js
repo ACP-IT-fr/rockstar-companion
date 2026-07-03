@@ -14,6 +14,8 @@
   let commandsWrapper = null;
   let settingsBtn = null;
   let settingsPanel = null;
+  let helpBtn = null;
+  let helpPanel = null;
 
   function appendButtonsToFloatingBar() {
     const bar = window.RockstarCore.getOrCreateFloatingBar();
@@ -252,6 +254,7 @@
         <span class="ug-voice-bar-label">Dernière:</span>
         <span class="ug-voice-bar-value">-</span>
       </div>
+      <button id="ug-voice-help-btn" title="Aide & Commandes Vox Roddy" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s; margin-right: 6px;">❓</button>
       <button id="ug-voice-settings-btn" title="Paramètres Vox Roddy" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s;">⚙️</button>
     `;
     document.body.appendChild(liveTextContainer);
@@ -320,6 +323,7 @@
       settingsPanel.style.display = isVisible ? 'none' : 'flex';
       if (!isVisible) {
         // Fermer les autres volets
+        if (helpPanel) helpPanel.style.display = 'none';
         if (commandsWrapper) commandsWrapper.classList.remove('active');
         if (commandsPanel) commandsPanel.classList.remove('visible');
         const markersPanel = document.getElementById('rockstar-markers-panel');
@@ -335,6 +339,92 @@
     document.addEventListener('click', (e) => {
       if (settingsPanel && !settingsPanel.contains(e.target) && e.target !== settingsBtn) {
         settingsPanel.style.display = 'none';
+      }
+    });
+
+    // Panel d'aide rapide
+    helpPanel = document.createElement('div');
+    helpPanel.id = 'ug-voice-help-panel';
+    helpPanel.className = 'ug-voice-settings-panel';
+    helpPanel.innerHTML = `
+      <div class="settings-panel-header">
+        <span>❓ Aide & Commandes</span>
+        <button id="ug-voice-help-close" class="settings-panel-close">&times;</button>
+      </div>
+      <div class="settings-panel-body" style="font-size: 12px; line-height: 1.4;">
+        <p style="margin-top: 0; color: #a1a1aa; font-size: 11px;">Prononcez le mot déclencheur (par défaut <b style="color: #f6921e;">"Roddy"</b>) suivi d'une commande.</p>
+        
+        <div class="settings-section">
+          <div class="settings-section-title" style="color: #f6921e; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; margin-bottom: 4px; font-size: 11px; text-transform: uppercase;">🎸 Tablature</div>
+          <ul style="padding-left: 16px; margin: 0; color: #d4d4d8; display: flex; flex-direction: column; gap: 4px; list-style-type: disc;">
+            <li><b>"search [morceau]"</b> / <b>"cherche [morceau]"</b></li>
+            <li><b>"cherche dans ma playlist [morceau]"</b></li>
+            <li><b>"défile"</b> (défilement automatique)</li>
+            <li><b>"descends un peu / beaucoup"</b></li>
+            <li><b>"monte / remonte un peu / beaucoup"</b></li>
+            <li><b>"pause"</b> (arrêt défilement)</li>
+            <li><b>"début"</b> (retour en haut)</li>
+            <li><b>"plus vite"</b> / <b>"moins vite"</b></li>
+            <li><b>"dors"</b> / <b>"stop"</b> (veille micro)</li>
+          </ul>
+        </div>
+
+        <div class="settings-section" style="margin-top: 10px;">
+          <div class="settings-section-title" style="color: #f6921e; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; margin-bottom: 4px; font-size: 11px; text-transform: uppercase;">📹 Vidéo (YouTube)</div>
+          <ul style="padding-left: 16px; margin: 0; color: #d4d4d8; display: flex; flex-direction: column; gap: 4px; list-style-type: disc;">
+            <li><b>"lecture"</b> / <b>"joue"</b> / <b>"play"</b></li>
+            <li><b>"pause"</b> / <b>"stop"</b></li>
+            <li><b>"recule [de X secondes]"</b></li>
+            <li><b>"avance [de X secondes]"</b></li>
+            <li><b>"recommence"</b></li>
+            <li><b>"vitesse [0.25 - 4.0]"</b></li>
+            <li><b>"vitesse normale"</b></li>
+            <li><b>"enregistre le repère [nom]"</b></li>
+            <li><b>"retourne au repère [nom]"</b></li>
+          </ul>
+        </div>
+
+        <div class="settings-section" style="margin-top: 10px;">
+          <div class="settings-section-title" style="color: #f6921e; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; margin-bottom: 4px; font-size: 11px; text-transform: uppercase;">⏱️ Métronome</div>
+          <ul style="padding-left: 16px; margin: 0; color: #d4d4d8; display: flex; flex-direction: column; gap: 4px; list-style-type: disc;">
+            <li><b>"démarre le métronome"</b></li>
+            <li><b>"arrête le métronome"</b></li>
+            <li><b>"tempo [40 - 240]"</b> (ex: "tempo 120")</li>
+            <li><b>"mesure [4/4, 3/4...]"</b></li>
+            <li><b>"son [bois, digital...]"</b></li>
+            <li><b>"volume [0 - 100]"</b></li>
+          </ul>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(helpPanel);
+
+    // Interaction d'aide
+    const helpBtn = document.getElementById('ug-voice-help-btn');
+    const helpCloseBtn = document.getElementById('ug-voice-help-close');
+
+    helpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = helpPanel.style.display === 'flex';
+      helpPanel.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible) {
+        // Fermer les autres volets
+        settingsPanel.style.display = 'none';
+        if (commandsWrapper) commandsWrapper.classList.remove('active');
+        if (commandsPanel) commandsPanel.classList.remove('visible');
+        const markersPanel = document.getElementById('rockstar-markers-panel');
+        if (markersPanel) markersPanel.classList.remove('visible');
+      }
+    });
+
+    helpCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      helpPanel.style.display = 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (helpPanel && !helpPanel.contains(e.target) && e.target !== helpBtn) {
+        helpPanel.style.display = 'none';
       }
     });
 
@@ -406,6 +496,7 @@
       commandsPanel.classList.toggle('visible', isActive);
       if (isActive) {
         if (settingsPanel) settingsPanel.style.display = 'none';
+        if (helpPanel) helpPanel.style.display = 'none';
         const markersPanel = document.getElementById('rockstar-markers-panel');
         if (markersPanel) markersPanel.classList.remove('visible');
         updateCommandsPanel();
