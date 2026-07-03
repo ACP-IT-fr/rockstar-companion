@@ -9,6 +9,10 @@
   let lastAccessedBookmarkTime = null;
   let lastAccessedBookmarkName = null;
 
+  function getYTPlayer() {
+    return document.querySelector('.html5-video-player') || document.getElementById('movie_player');
+  }
+
   const textToNum = {
     '10': 10, 'dix': 10, 'dis': 10, 'ten': 10,
     '9': 9, 'neuf': 9, 'nine': 9,
@@ -428,8 +432,13 @@
     name: 'Play Video',
     variants: playPlaybackVariants,
     handler: () => {
-      const video = window.RockstarCore.getActiveVideo();
-      if (video) video.play();
+      const ytPlayer = getYTPlayer();
+      if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
+        ytPlayer.playVideo();
+      } else {
+        const video = window.RockstarCore.getActiveVideo();
+        if (video) video.play();
+      }
       
       const activeDrawerLink = window.RockstarCore.getActiveDrawerPlaybackLink ? window.RockstarCore.getActiveDrawerPlaybackLink() : null;
       if (activeDrawerLink && activeDrawerLink.type === 'youtube' && window.RockstarCore.sendYouTubeCommand) {
@@ -446,8 +455,13 @@
       if (window.RockstarCore.stopScrolling) {
         window.RockstarCore.stopScrolling();
       }
-      const video = window.RockstarCore.getActiveVideo();
-      if (video) video.pause();
+      const ytPlayer = getYTPlayer();
+      if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+        ytPlayer.pauseVideo();
+      } else {
+        const video = window.RockstarCore.getActiveVideo();
+        if (video) video.pause();
+      }
 
       const activeDrawerLink = window.RockstarCore.getActiveDrawerPlaybackLink ? window.RockstarCore.getActiveDrawerPlaybackLink() : null;
       if (activeDrawerLink && activeDrawerLink.type === 'youtube' && window.RockstarCore.sendYouTubeCommand) {
@@ -471,8 +485,13 @@
           seconds = parseInt(rawNum, 10);
         }
       }
+      const ytPlayer = getYTPlayer();
       const video = window.RockstarCore.getActiveVideo();
-      if (video) {
+      if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+        const currentTime = ytPlayer.getCurrentTime();
+        ytPlayer.seekTo(Math.max(0, currentTime - seconds), true);
+        return { success: true, action: `Reculé de ${seconds}s` };
+      } else if (video) {
         video.currentTime = Math.max(0, video.currentTime - seconds);
         return { success: true, action: `Reculé de ${seconds}s` };
       } else if (window.RockstarCore.sendYouTubeCommand) {
@@ -497,8 +516,14 @@
           seconds = parseInt(rawNum, 10);
         }
       }
+      const ytPlayer = getYTPlayer();
       const video = window.RockstarCore.getActiveVideo();
-      if (video) {
+      if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+        const currentTime = ytPlayer.getCurrentTime();
+        const duration = ytPlayer.getDuration();
+        ytPlayer.seekTo(Math.min(duration || 9999, currentTime + seconds), true);
+        return { success: true, action: `Avancé de ${seconds}s` };
+      } else if (video) {
         video.currentTime = Math.min(video.duration || 9999, video.currentTime + seconds);
         return { success: true, action: `Avancé de ${seconds}s` };
       }
@@ -511,8 +536,14 @@
     name: 'Restart Video',
     variants: restartPlaybackVariants,
     handler: () => {
+      const ytPlayer = getYTPlayer();
       const video = window.RockstarCore.getActiveVideo();
-      if (video) {
+      if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+        ytPlayer.seekTo(0, true);
+        if (typeof ytPlayer.playVideo === 'function') {
+          ytPlayer.playVideo();
+        }
+      } else if (video) {
         video.currentTime = 0;
         video.play();
       }
@@ -555,11 +586,13 @@
     variants: repeatVariants,
     handler: () => {
       if (lastAccessedBookmarkTime !== null) {
+        const ytPlayer = getYTPlayer();
         const video = window.RockstarCore.getActiveVideo();
-        if (video) {
+        if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+          ytPlayer.seekTo(lastAccessedBookmarkTime, true);
+          return { success: true, action: `🔄 Encore ! Repère "${lastAccessedBookmarkName || 'Repère'}"` };
+        } else if (video) {
           video.currentTime = lastAccessedBookmarkTime;
-          const minutes = Math.floor(lastAccessedBookmarkTime / 60);
-          const seconds = Math.floor(lastAccessedBookmarkTime % 60).toString().padStart(2, '0');
           return { success: true, action: `🔄 Encore ! Repère "${lastAccessedBookmarkName || 'Repère'}"` };
         } else if (window.RockstarCore.sendYouTubeCommand) {
           window.RockstarCore.sendYouTubeCommand('seekTo', [lastAccessedBookmarkTime, true]);
@@ -585,9 +618,13 @@
           targetRate = Math.max(0.25, Math.min(parsed, 4.0));
         }
       }
+      const ytPlayer = getYTPlayer();
       const video = window.RockstarCore.getActiveVideo();
       if (video) {
         video.playbackRate = targetRate;
+      }
+      if (ytPlayer && typeof ytPlayer.setPlaybackRate === 'function') {
+        ytPlayer.setPlaybackRate(targetRate);
       }
       if (window.RockstarCore.sendYouTubeCommand) {
         window.RockstarCore.sendYouTubeCommand('setPlaybackRate', [targetRate]);
@@ -604,8 +641,15 @@
     variants: [],
     regex: new RegExp("vitesse.*(" + speedUpVariants.join('|') + "|augmenter|rapide)", "i"),
     handler: () => {
+      const ytPlayer = getYTPlayer();
       const video = window.RockstarCore.getActiveVideo();
-      if (video) {
+      if (ytPlayer && typeof ytPlayer.setPlaybackRate === 'function' && typeof ytPlayer.getPlaybackRate === 'function') {
+        const currentRate = ytPlayer.getPlaybackRate();
+        const targetRate = Math.min(4.0, currentRate + 0.1);
+        ytPlayer.setPlaybackRate(targetRate);
+        if (video) video.playbackRate = targetRate;
+        return { success: true, action: `Vitesse augmentée à ${targetRate.toFixed(2)}x` };
+      } else if (video) {
         video.playbackRate = Math.min(4.0, video.playbackRate + 0.1);
         return { success: true, action: `Vitesse augmentée à ${video.playbackRate.toFixed(2)}x` };
       }
@@ -618,8 +662,15 @@
     variants: [],
     regex: new RegExp("vitesse.*(" + slowDownVariants.join('|') + "|diminuer|lent)", "i"),
     handler: () => {
+      const ytPlayer = getYTPlayer();
       const video = window.RockstarCore.getActiveVideo();
-      if (video) {
+      if (ytPlayer && typeof ytPlayer.setPlaybackRate === 'function' && typeof ytPlayer.getPlaybackRate === 'function') {
+        const currentRate = ytPlayer.getPlaybackRate();
+        const targetRate = Math.max(0.25, currentRate - 0.1);
+        ytPlayer.setPlaybackRate(targetRate);
+        if (video) video.playbackRate = targetRate;
+        return { success: true, action: `Vitesse diminuée à ${targetRate.toFixed(2)}x` };
+      } else if (video) {
         video.playbackRate = Math.max(0.25, video.playbackRate - 0.1);
         return { success: true, action: `Vitesse diminuée à ${video.playbackRate.toFixed(2)}x` };
       }

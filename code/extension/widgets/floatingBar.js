@@ -176,8 +176,33 @@
     }
   });
 
+  let awakeProgressAnimFrame = null;
+  function updateAwakeProgress() {
+    if (!btn) return;
+    const awakeUntil = window.RockstarCore.awakeUntil;
+    const awakeDuration = window.RockstarCore.awakeDuration;
+    
+    if (awakeUntil && awakeDuration) {
+      const now = Date.now();
+      const remaining = awakeUntil - now;
+      if (remaining > 0) {
+        const pct = Math.max(0, Math.min(100, (remaining / awakeDuration) * 100));
+        btn.style.setProperty('--awake-progress', pct + '%');
+        awakeProgressAnimFrame = requestAnimationFrame(updateAwakeProgress);
+        return;
+      }
+    }
+    btn.style.setProperty('--awake-progress', '0%');
+  }
+
   window.RockstarCore.onAwakeChanged((isAwake) => {
     if (!window.RockstarCore.isListening) return;
+    
+    if (awakeProgressAnimFrame) {
+      cancelAnimationFrame(awakeProgressAnimFrame);
+      awakeProgressAnimFrame = null;
+    }
+
     if (btn) {
       btn.classList.toggle('awake', isAwake);
       if (statusSpan) {
@@ -185,12 +210,14 @@
       }
       if (isAwake) {
         btn.title = 'Listening... Click to turn off';
+        awakeProgressAnimFrame = requestAnimationFrame(updateAwakeProgress);
       } else {
         const settings = window.RockstarCore.settings;
         btn.title = `Listening for "${settings.wakeWord}"... Click to turn off`;
         if (statusSpan) {
           statusSpan.innerText = `Listening (Say ${settings.wakeWord}...)`;
         }
+        btn.style.setProperty('--awake-progress', '100%');
       }
     }
   });
@@ -300,6 +327,19 @@
               <option value="10">Après 10 minutes</option>
               <option value="0">Désactivée (Toujours ouvert)</option>
             </select>
+          </div>
+          <div class="settings-field" style="display: flex; flex-direction: column; align-items: stretch;">
+            <label for="settings-wake-active-duration">Durée d'activation :</label>
+            <select id="settings-wake-active-duration" style="width: 100%;">
+              <option value="5">5 secondes</option>
+              <option value="10">10 secondes (Recommandé)</option>
+              <option value="15">15 secondes</option>
+              <option value="20">20 secondes</option>
+              <option value="30">30 secondes</option>
+            </select>
+            <p style="font-size: 10px; color: #a1a1aa; margin: 4px 0 0 0; line-height: 1.3; font-weight: normal;">
+              Temps restant pour enchaîner les commandes sans redire « <span class="floating-wake-word-display">Roddy</span> ».
+            </p>
           </div>
         </div>
 
@@ -434,6 +474,7 @@
     const wwInput = document.getElementById('settings-wake-word');
     const wwVariantsInput = document.getElementById('settings-wake-word-variants');
     const idSelect = document.getElementById('settings-inactivity-delay');
+    const wadSelect = document.getElementById('settings-wake-active-duration');
     const mutAll = document.getElementById('settings-mute-all-sites');
 
     function populatePanelFields(s) {
@@ -442,12 +483,17 @@
       if (wwInput) wwInput.value = s.wakeWord || 'Roddy';
       if (wwVariantsInput) wwVariantsInput.value = s.wakeWordVariants || '';
       if (idSelect) idSelect.value = s.inactivityDelay !== undefined ? s.inactivityDelay : '1';
+      if (wadSelect) wadSelect.value = s.wakeActiveDuration !== undefined ? s.wakeActiveDuration : '10';
       if (mutAll) mutAll.checked = s.muteAllSites || false;
     }
 
     // Réagir aux changements dans RockstarCore
     window.RockstarCore.onSettingsChanged((s) => {
       populatePanelFields(s);
+      const floatWwDisplays = document.querySelectorAll('.floating-wake-word-display');
+      floatWwDisplays.forEach(el => {
+        el.textContent = s.wakeWord || 'Roddy';
+      });
     });
 
     // Enregistrer les modifications
@@ -466,6 +512,11 @@
     idSelect.addEventListener('change', () => {
       window.RockstarCore.safeStorageSyncSet({ inactivityDelay: parseInt(idSelect.value, 10) });
     });
+    if (wadSelect) {
+      wadSelect.addEventListener('change', () => {
+        window.RockstarCore.safeStorageSyncSet({ wakeActiveDuration: parseInt(wadSelect.value, 10) });
+      });
+    }
     mutAll.addEventListener('change', () => {
       window.RockstarCore.safeStorageSyncSet({ muteAllSites: mutAll.checked });
     });

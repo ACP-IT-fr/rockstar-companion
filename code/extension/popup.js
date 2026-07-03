@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const domainActivationLabel = document.getElementById('domain-activation-label');
   const muteAllSitesCb = document.getElementById('mute-all-sites-cb');
   const inactivityDelaySelect = document.getElementById('inactivity-delay-select');
+  const wakeActiveDurationSelect = document.getElementById('wake-active-duration-select');
 
   let currentDomain = '';
 
@@ -54,11 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Load settings
-  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'wakeWordVariants', 'muteAllSites', 'inactivityDelay'], (result) => {
+  chrome.storage.sync.get(['chord7th', 'chordSus', 'wakeWord', 'wakeWordVariants', 'muteAllSites', 'inactivityDelay', 'wakeActiveDuration'], (result) => {
     cb7th.checked = result.chord7th || false;
     cbSus.checked = result.chordSus || false;
     muteAllSitesCb.checked = result.muteAllSites || false;
     inactivityDelaySelect.value = result.inactivityDelay !== undefined ? result.inactivityDelay : '1';
+    wakeActiveDurationSelect.value = result.wakeActiveDuration !== undefined ? result.wakeActiveDuration : '10';
     
     const word = result.wakeWord !== undefined ? result.wakeWord : 'Roddy';
     wakeWordInput.value = word;
@@ -108,6 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Save inactivity delay setting
   inactivityDelaySelect.addEventListener('change', () => {
     chrome.storage.sync.set({ inactivityDelay: parseInt(inactivityDelaySelect.value, 10) });
+  });
+
+  // Save wake active duration setting
+  wakeActiveDurationSelect.addEventListener('change', () => {
+    chrome.storage.sync.set({ wakeActiveDuration: parseInt(wakeActiveDurationSelect.value, 10) });
   });
 
   // Open Dashboard Page

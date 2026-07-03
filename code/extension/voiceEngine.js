@@ -52,11 +52,13 @@
   let wakeWordLower = 'roddy';
   let wakeWordVariants = 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi';
   let inactivityDelay = 1;
+  let wakeActiveDuration = 10;
 
   window.RockstarCore.onSettingsChanged((settings) => {
     wakeWord = settings.wakeWord || 'Roddy';
     wakeWordLower = settings.wakeWordLower || 'roddy';
     wakeWordVariants = settings.wakeWordVariants !== undefined ? settings.wakeWordVariants : 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi';
+    wakeActiveDuration = settings.wakeActiveDuration !== undefined ? settings.wakeActiveDuration : 10;
     
     const oldDelay = inactivityDelay;
     inactivityDelay = settings.inactivityDelay !== undefined ? settings.inactivityDelay : 1;
@@ -143,6 +145,8 @@
   function wakeUp(timeoutMs = 15000, showToast = true) {
     window.RockstarCore.isAwake = true;
     const awakeUntil = Date.now() + timeoutMs;
+    window.RockstarCore.awakeUntil = awakeUntil;
+    window.RockstarCore.awakeDuration = timeoutMs;
     window.RockstarCore.safeStorageSet({ rockstar_awake_until: awakeUntil });
     
     if (showToast && window.RockstarCore.showFeedback) {
@@ -157,6 +161,8 @@
 
   function goToSleep() {
     window.RockstarCore.isAwake = false;
+    window.RockstarCore.awakeUntil = null;
+    window.RockstarCore.awakeDuration = null;
     window.RockstarCore.safeStorageRemove('rockstar_awake_until');
     if (window.RockstarCore.showFeedback) {
       window.RockstarCore.showFeedback(`💤 ${wakeWord} is sleeping...`, true);
@@ -174,7 +180,7 @@
         resetInactivityTimer();
         
         if (!auto) {
-          wakeUp(15000, true);
+          wakeUp(Math.max(15000, wakeActiveDuration * 1000), true);
         } else {
           window.RockstarCore.safeStorageGet('rockstar_awake_until', (res) => {
             const now = Date.now();
@@ -259,30 +265,30 @@
               if (success) {
                 addCommand(finalTranscript);
                 if (window.RockstarCore.isAwake) {
-                  wakeUp(5000, false);
+                  wakeUp(wakeActiveDuration * 1000, false);
                 }
               } else {
                 if (finalTranscript.split(/\s+/).length > 3) {
                   goToSleep();
                 } else {
-                  wakeUp(5000, false);
+                  wakeUp(wakeActiveDuration * 1000, false);
                 }
               }
             } else {
-              wakeUp(7000, true);
+              wakeUp(wakeActiveDuration * 1000, true);
             }
           } else if (window.RockstarCore.isAwake) {
             const success = window.RockstarCore.handleCommand(finalTranscript);
             if (success) {
               addCommand(finalTranscript);
               if (window.RockstarCore.isAwake) {
-                wakeUp(5000, false);
+                wakeUp(wakeActiveDuration * 1000, false);
               }
             } else {
               if (finalTranscript.split(/\s+/).length > 3) {
                 goToSleep();
               } else {
-                wakeUp(3000, false);
+                wakeUp(Math.max(3000, Math.round(wakeActiveDuration * 1000 * 0.6)), false);
               }
             }
           }
@@ -330,7 +336,7 @@
           
           addRawSentence(transcriptToExecute);
           
-          wakeUp(15000, false);
+          wakeUp(Math.max(15000, wakeActiveDuration * 1000), false);
           const success = window.RockstarCore.handleCommand(transcriptToExecute);
           if (success) {
             addCommand(transcriptToExecute);

@@ -147,7 +147,31 @@
     variants: pauseVariants,
     handler: () => {
       stopScrolling();
-      return { success: true, action: 'Pause défilement' };
+      
+      let videoPaused = false;
+      const ytPlayer = document.querySelector('.html5-video-player') || document.getElementById('movie_player');
+      const video = window.RockstarCore.getActiveVideo ? window.RockstarCore.getActiveVideo() : null;
+      
+      if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+        ytPlayer.pauseVideo();
+        videoPaused = true;
+      } else if (video) {
+        video.pause();
+        videoPaused = true;
+      }
+      
+      if (window.RockstarCore.getActiveDrawerPlaybackLink) {
+        const activeDrawerLink = window.RockstarCore.getActiveDrawerPlaybackLink();
+        if (activeDrawerLink && activeDrawerLink.type === 'youtube' && window.RockstarCore.sendYouTubeCommand) {
+          window.RockstarCore.sendYouTubeCommand('pauseVideo');
+          videoPaused = true;
+        }
+      }
+      
+      return { 
+        success: true, 
+        action: videoPaused ? 'Pause vidéo & défilement' : 'Pause défilement' 
+      };
     }
   });
 
