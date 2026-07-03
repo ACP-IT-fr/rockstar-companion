@@ -264,16 +264,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const isActive = activePlaybackLink && activePlaybackLink.url === link.url;
       li.className = `link-item ${isActive ? 'active' : ''}`;
       
-      let linkIcon = '🔗';
-      if (link.type === 'youtube') linkIcon = '📺';
-      if (link.type === 'spotify') linkIcon = '🎵';
+      let linkIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+      if (link.type === 'youtube') {
+        linkIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-orange);"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><polygon points="10 8 16 11 10 14 10 8"/></svg>';
+      } else if (link.type === 'spotify') {
+        linkIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #1ed760;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+      }
 
       li.innerHTML = `
         <div class="link-info" title="Lancer le playback">
-          <span class="link-icon">${linkIcon}</span>
+          <span class="link-icon" style="display: flex; align-items: center;">${linkIcon}</span>
           <span class="link-title">${escapeHtml(link.title || 'Lien de playback')}</span>
         </div>
-        <button class="link-delete-btn" data-index="${index}">🗑️</button>
+        <button class="link-delete-btn" data-index="${index}" style="display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
       `;
 
       // Clic pour lancer l'embed

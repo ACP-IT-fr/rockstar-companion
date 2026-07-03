@@ -59,7 +59,7 @@
     // Create Floating Button
     drawerBtn = document.createElement('button');
     drawerBtn.id = 'ug-drawer-btn';
-    drawerBtn.innerHTML = '🎙️';
+    drawerBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="floating-btn-svg"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
     drawerBtn.title = 'Ouvrir Vox Roddy (Notes & Playbacks)';
     
     if (window.RockstarCore.appendButtonsToFloatingBar) {
@@ -76,7 +76,7 @@
           <input type="text" id="drawer-artist" class="drawer-artist-input" placeholder="Artiste" value="-">
         </div>
         <div class="drawer-header-actions">
-          <button id="drawer-magic-btn" title="Extraire automatiquement les clés et transpositions depuis la page">🪄</button>
+          <button id="drawer-magic-btn" title="Extraire automatiquement les clés et transpositions depuis la page"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-orange);"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg></button>
           <button id="drawer-close-btn">&times;</button>
         </div>
       </div>
@@ -102,7 +102,7 @@
         <div class="drawer-section">
           <div class="drawer-label-row">
             <label>Notes d'interprétation</label>
-            <button class="drawer-dictate-btn" data-target="drawer-notes" title="Dicter les notes">🎤</button>
+            <button class="drawer-dictate-btn" data-target="drawer-notes" title="Dicter les notes" style="display: flex; align-items: center; justify-content: center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="dictate-btn-svg"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg></button>
           </div>
           <textarea id="drawer-notes" placeholder="Notes de structure, ressentis..."></textarea>
         </div>
@@ -110,7 +110,7 @@
         <div class="drawer-section">
           <div class="drawer-label-row">
             <label>Astuces de jeu</label>
-            <button class="drawer-dictate-btn" data-target="drawer-tips" title="Dicter les astuces">🎤</button>
+            <button class="drawer-dictate-btn" data-target="drawer-tips" title="Dicter les astuces" style="display: flex; align-items: center; justify-content: center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="dictate-btn-svg"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg></button>
           </div>
           <textarea id="drawer-tips" placeholder="Rythmique, strumming..."></textarea>
         </div>
@@ -406,13 +406,16 @@
         li.classList.add('active');
       }
 
-      let icon = '🔗';
-      if (link.type === 'youtube') icon = '📺';
-      if (link.type === 'spotify') icon = '🎵';
+      let icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+      if (link.type === 'youtube') {
+        icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-orange);"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><polygon points="10 8 16 11 10 14 10 8"/></svg>';
+      } else if (link.type === 'spotify') {
+        icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #1ed760;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+      }
 
       li.innerHTML = `
         <span class="drawer-link-info">
-          <span>${icon}</span>
+          <span style="display: flex; align-items: center;">${icon}</span>
           <span class="drawer-link-title">${link.title}</span>
         </span>
         <button class="drawer-link-delete" data-index="${idx}">&times;</button>

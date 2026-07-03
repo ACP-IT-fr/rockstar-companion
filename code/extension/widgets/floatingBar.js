@@ -203,7 +203,7 @@
     btn.id = 'ug-voice-btn';
     
     iconSpan = document.createElement('span');
-    iconSpan.innerText = '🎤';
+    iconSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="floating-btn-svg" style="display: block;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
     
     statusSpan = document.createElement('span');
     statusSpan.id = 'ug-voice-status';
@@ -261,7 +261,7 @@
 
     commandsBtn = document.createElement('button');
     commandsBtn.id = 'ug-commands-btn';
-    commandsBtn.innerText = '📋';
+    commandsBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="floating-btn-svg" style="display: block;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="9" x2="15" y1="9" y2="9"/><line x1="9" x2="15" y1="13" y2="13"/><line x1="9" x2="13" y1="17" y2="17"/></svg>`;
     commandsBtn.title = 'Afficher les commandes disponibles';
     commandsWrapper.appendChild(commandsBtn);
 
