@@ -105,11 +105,13 @@
         const isMetronomeStopped = playBtn && playBtn.textContent.trim() === '▶';
         log(`11. Commande "arrête le métronome" : ${isMetronomeStopped ? 'SUCCESS' : 'FAILED'} (Bouton: ${playBtn ? playBtn.textContent : 'null'})`, isMetronomeStopped);
 
-        // 10. Vérifier les conteneurs tuner et accord
+        // 10. Vérifier les conteneurs tuner, accord et singing tracker
         const tuner = document.getElementById('ug-tuner');
         const chord = document.getElementById('ug-chord');
+        const singing = document.getElementById('ug-singing-tracker');
         log(`12. Présence de l'accordeur (#ug-tuner) : ${tuner ? 'SUCCESS' : 'FAILED'}`, !!tuner);
         log(`13. Présence du détecteur d'accords (#ug-chord) : ${chord ? 'SUCCESS' : 'FAILED'}`, !!chord);
+        log(`14. Présence du tracker de chant (#ug-singing-tracker) : ${singing ? 'SUCCESS' : 'FAILED'}`, !!singing);
 
         log("\n--- TOUS LES TESTS D'INTÉGRATION SONT COMPLÉTÉS ---");
       } catch (e) {

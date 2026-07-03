@@ -304,7 +304,7 @@
 
 #ug-metronome {
   position: fixed;
-  bottom: 300px;
+  bottom: 415px;
   right: 20px;
   background-color: rgba(18, 17, 24, 0.95);
   backdrop-filter: blur(15px);
@@ -318,7 +318,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
-  width: 190px;
+  width: 160px;
   height: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   opacity: 0;
@@ -424,7 +424,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -433,8 +433,8 @@
   border: none;
   border-radius: 8px;
   color: white;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   font-size: 14px;
   cursor: pointer;
   display: flex;
@@ -464,20 +464,20 @@
   background-color: #222;
   border: 1px solid #444;
   border-radius: 8px;
-  padding: 3px 6px;
+  padding: 3px 4px;
   flex-grow: 1;
   justify-content: space-between;
-  height: 32px;
+  height: 30px;
 }
 
 .metronome-btn-small {
   background: transparent;
   border: none;
   color: #aaa;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -492,11 +492,12 @@
 }
 
 .metronome-bpm-text {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: bold;
   color: #ff6c00;
   text-align: center;
-  min-width: 55px;
+  min-width: 48px;
+  white-space: nowrap;
 }
 
 .metronome-volume-row {
@@ -1595,3 +1596,205 @@
 .settings-field select {
   cursor: pointer;
 }
+
+/* Singing Pitch Tracker Widget */
+#ug-singing-tracker {
+  position: fixed;
+  bottom: 310px;
+  right: 20px;
+  background-color: rgba(9, 9, 11, 0.5);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 160px;
+  height: 95px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 0.3s, right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s, height 0.3s, bottom 0.35s;
+}
+
+#ug-singing-tracker.visible {
+  opacity: 1;
+}
+
+.singing-max-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+
+/* Header & Controls */
+.singing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 10;
+}
+
+.singing-label {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+.singing-max-btn {
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.singing-max-btn:hover {
+  color: #ff6c00;
+  transform: scale(1.15);
+}
+
+/* Canvas Area */
+.singing-canvas-container {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.singing-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background-color: transparent;
+}
+
+/* Large Background Note Overlay */
+.singing-note-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  font-weight: 800;
+  color: #ff6c00;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 1;
+  transition: font-size 0.3s, opacity 0.3s, color 0.2s;
+  font-family: 'Outfit', sans-serif;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Info overlay for current frequency/note in small view */
+.singing-info-overlay {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  font-size: 9px;
+  color: #aaa;
+  z-index: 5;
+  pointer-events: none;
+  font-weight: 500;
+}
+
+/* Maximized State CSS */
+#ug-singing-tracker.maximized {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(10, 10, 12, 0.4);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 9999999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  box-sizing: border-box;
+  opacity: 1;
+  border: none;
+  border-radius: 0;
+  bottom: 0 !important;
+  right: 0 !important;
+  box-shadow: none;
+}
+
+#ug-singing-tracker.maximized .singing-max-content {
+  width: 100%;
+  max-width: 1100px;
+  height: 100%;
+  max-height: 750px;
+  background-color: rgba(18, 17, 24, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  animation: modal-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modal-enter {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+#ug-singing-tracker.maximized .singing-header {
+  margin-bottom: 0;
+}
+
+#ug-singing-tracker.maximized .singing-label {
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: #fff;
+}
+
+#ug-singing-tracker.maximized .singing-note-bg {
+  font-size: 180px;
+  opacity: 0.06;
+  color: #ff9f1c;
+}
+
+#ug-singing-tracker.maximized .singing-canvas-container {
+  background-color: rgba(12, 11, 15, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+#ug-singing-tracker.maximized .singing-info-overlay {
+  font-size: 14px;
+  bottom: 12px;
+  left: 16px;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+

@@ -32,7 +32,8 @@
         "widgets/tuner.js",
         "widgets/chordDetector.js",
         "widgets/repertoireDrawer.js",
-        "widgets/youtubeController.js"
+        "widgets/youtubeController.js",
+        "widgets/singingTracker.js"
       ]
     }
   ],
