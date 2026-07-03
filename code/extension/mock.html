@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mock Tablature Page - Rockstar Companion</title>
+  <link rel="stylesheet" href="content.css">
+  
+  <script>
+    class MockSpeechRecognition {
+      constructor() {
+        this.continuous = false;
+        this.interimResults = false;
+        this.lang = 'fr-FR';
+        this.onstart = null;
+        this.onend = null;
+        this.onresult = null;
+        this.onerror = null;
+        this._isListening = false;
+        window.mockSpeechRecognition = this;
+      }
+      start() {
+        if (this._isListening) return;
+        this._isListening = true;
+        console.log("[MockSpeechRecognition] start called");
+        setTimeout(() => {
+          if (this.onstart) this.onstart();
+        }, 10);
+      }
+      stop() {
+        if (!this._isListening) return;
+        this._isListening = false;
+        console.log("[MockSpeechRecognition] stop called");
+        setTimeout(() => {
+          if (this.onend) this.onend();
+        }, 10);
+      }
+      simulateResult(text, isFinal = true) {
+        if (!this._isListening) {
+          console.warn("[MockSpeechRecognition] Cannot simulate result: Not listening");
+          return;
+        }
+        const resultAlternative = {
+          transcript: text,
+          confidence: 0.99
+        };
+        const resultList = [resultAlternative];
+        resultList.isFinal = isFinal;
+        const event = {
+          resultIndex: 0,
+          results: [resultList]
+        };
+        if (this.onresult) {
+          this.onresult(event);
+        }
+      }
+    }
+    try {
+      delete window.SpeechRecognition;
+      delete window.webkitSpeechRecognition;
+      window.SpeechRecognition = MockSpeechRecognition;
+      window.webkitSpeechRecognition = MockSpeechRecognition;
+      console.log("[Mock] SpeechRecognition mocked successfully via delete.");
+    } catch (e) {
+      console.error("[Mock] Failed to define SpeechRecognition mock:", e);
+    }
+  </script>
+
+  <script src="storageService.js"></script>
+  <script src="core.js"></script>
+  <script src="voiceEngine.js"></script>
+  <script src="widgets/floatingBar.js"></script>
+  <script src="widgets/scroll.js"></script>
+  <script src="widgets/metronome.js"></script>
+  <script src="widgets/tuner.js"></script>
+  <script src="widgets/chordDetector.js"></script>
+  <script src="widgets/repertoireDrawer.js"></script>
+  <script src="widgets/youtubeController.js"></script>
+  <script src="testRunner.js"></script>
+</head>
+<body style="background-color: #1a1a1a; color: #eee; font-family: sans-serif; margin: 0; padding: 20px;">
+  <h1>Mock Tablature Page - Rockstar Companion</h1>
+  <p>Cette page simule le chargement de l'extension modulaire dans le navigateur pour des tests d'intégration.</p>
+  
+  <div style="margin: 40px 0; border: 1px dashed #666; padding: 20px; border-radius: 8px; max-width: 600px;">
+    <h2>Chansons & Accords</h2>
+    <p>Accords détectés simulés : [G] [C] [D] [Em]</p>
+    <p>Défilez vers le bas pour tester l'auto-scroll.</p>
+  </div>
+
+  <div style="height: 3000px;">
+    <!-- Pour permettre le scroll -->
+    <p>Section de scroll...</p>
+  </div>
+</body>
+</html>

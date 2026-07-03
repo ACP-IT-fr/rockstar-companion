@@ -16,7 +16,18 @@
     {
       "matches": ["http://*/*", "https://*/*"],
       "css": ["content.css"],
-      "js": ["storageService.js", "content.js"]
+      "js": [
+        "storageService.js",
+        "core.js",
+        "voiceEngine.js",
+        "widgets/floatingBar.js",
+        "widgets/scroll.js",
+        "widgets/metronome.js",
+        "widgets/tuner.js",
+        "widgets/chordDetector.js",
+        "widgets/repertoireDrawer.js",
+        "widgets/youtubeController.js"
+      ]
     }
   ],
   "action": {

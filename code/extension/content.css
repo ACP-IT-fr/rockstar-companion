@@ -254,7 +254,7 @@
 
 #ug-metronome {
   position: fixed;
-  bottom: 270px;
+  bottom: 300px;
   right: 20px;
   background-color: rgba(18, 17, 24, 0.95);
   backdrop-filter: blur(15px);
