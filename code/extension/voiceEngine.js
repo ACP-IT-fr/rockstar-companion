@@ -176,8 +176,14 @@
     if (!window.RockstarCore.isListening) {
       try {
         window.RockstarCore.isListening = true;
-        recognition.start();
         resetInactivityTimer();
+        
+        if (document.hidden) {
+          window.RockstarCore.isSuspendedByVisibility = true;
+          console.log("[RockstarVoice] Tab is hidden, suspending speech recognition startup.");
+        } else {
+          recognition.start();
+        }
         
         if (!auto) {
           wakeUp(Math.max(15000, wakeActiveDuration * 1000), true);
@@ -356,9 +362,9 @@
     };
 
     recognition.onend = () => {
-      if (window.RockstarCore.isListening && !window.RockstarCore.isSuspendedByVisibility) {
+      if (window.RockstarCore.isListening && !window.RockstarCore.isSuspendedByVisibility && !document.hidden) {
         setTimeout(() => {
-          if (window.RockstarCore.isListening && !window.RockstarCore.isSuspendedByVisibility) {
+          if (window.RockstarCore.isListening && !window.RockstarCore.isSuspendedByVisibility && !document.hidden) {
             try {
               recognition.start();
             } catch (e) {

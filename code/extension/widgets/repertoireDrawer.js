@@ -956,15 +956,107 @@
     }
   });
 
+  let isNumberingInitialized = false;
+  function initSearchPageNumbering() {
+    if (isNumberingInitialized) return;
+    const activeConfig = window.RockstarCore.activeConfig;
+    if (!activeConfig) return;
+    
+    isNumberingInitialized = true;
+
+    function numberSearchResults() {
+      if (!activeConfig.isSearchPage()) return;
+
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (attempts > 30) {
+          clearInterval(interval);
+          return;
+        }
+
+        const tabLinks = activeConfig.getLinks();
+        if (tabLinks.length === 0) return;
+
+        clearInterval(interval);
+        console.log("[Rockstar] Found links for numbering:", tabLinks.length);
+
+        // Remove existing badges to avoid duplicates on re-render
+        document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());
+
+        window.ugSearchResultLinks = {};
+        let counter = 1;
+        const processedUrls = new Set();
+
+        tabLinks.forEach(link => {
+          const url = normalizeUrl(link.href);
+          if (!processedUrls.has(url)) {
+            processedUrls.add(url);
+            window.ugSearchResultLinks[counter] = link.href;
+
+            const badge = document.createElement('span');
+            badge.className = 'ug-result-badge';
+            badge.innerText = counter;
+            badge.style.display = 'inline-block';
+            badge.style.backgroundColor = '#f6921e';
+            badge.style.color = '#fff';
+            badge.style.fontSize = '11px';
+            badge.style.fontWeight = 'bold';
+            badge.style.padding = '1px 5px';
+            badge.style.borderRadius = '3px';
+            badge.style.marginRight = '6px';
+            badge.style.verticalAlign = 'middle';
+            
+            link.insertBefore(badge, link.firstChild);
+            counter++;
+          }
+        });
+      }, 200);
+    }
+
+    // Run immediately
+    numberSearchResults();
+
+    // Mutation observer to handle SPA routing / dynamic DOM updates on search pages
+    let lastUrl = window.location.href;
+    const searchObserver = new MutationObserver(() => {
+      const currentUrl = window.location.href;
+      const isSearchPage = activeConfig.isSearchPage();
+      
+      if (isSearchPage) {
+        if (currentUrl !== lastUrl) {
+          lastUrl = currentUrl;
+          numberSearchResults();
+        } else {
+          // Check if there are unnumbered links in the DOM
+          const tabLinks = activeConfig.getLinks();
+          const hasUnnumbered = tabLinks.some(link => !link.querySelector('.ug-result-badge'));
+          if (hasUnnumbered && tabLinks.length > 0) {
+            numberSearchResults();
+          }
+        }
+      } else {
+        lastUrl = currentUrl;
+      }
+    });
+    
+    searchObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  }
+
   // Init Drawer
   window.RockstarCore.registerInit(() => {
     if (isUG) {
       initializeDrawer();
+      initSearchPageNumbering();
     } else {
       window.RockstarCore.onSettingsChanged((settings) => {
         const status = settings.allowedDomains[window.RockstarCore.currentDomain];
         if (status === true) {
           initializeDrawer();
+          initSearchPageNumbering();
         }
       });
     }
