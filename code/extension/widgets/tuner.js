@@ -205,16 +205,7 @@
 
   // Handle listening state changes to clean up or auto-init
   window.RockstarCore.onListeningChanged((isListening) => {
-    if (!isListening) {
-      tunerActive = false;
-      if (tunerContainer) tunerContainer.classList.remove('visible');
-      const audioContext = window.RockstarCore.getAudioContext();
-      if (audioContext && audioContext.state === 'running') {
-        audioContext.suspend();
-      }
-    } else {
-      initTuner();
-    }
+    // Keep tuner active even when voice control is off
   });
 
   // Init tuner UI
@@ -234,9 +225,7 @@
     tunerStringEl = tunerContainer.querySelector('.tuner-string');
 
     // Synchronisation de l'état initial
-    if (window.RockstarCore.isListening) {
-      initTuner();
-    }
+    initTuner();
   });
 
   // Expose init methods

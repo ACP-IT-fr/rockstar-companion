@@ -9,6 +9,7 @@
   let commandsPanel = null;
   let feedbackContainer = null;
   let liveTextContainer = null;
+  let songSummaryBar = null;
   let speedContainer = null;
   let bannerEl = null;
   let commandsWrapper = null;
@@ -285,6 +286,160 @@
       <button id="ug-voice-settings-btn" title="Paramètres Vox Roddy" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s;">⚙️</button>
     `;
     document.body.appendChild(liveTextContainer);
+
+    // 2b. Summary Bar
+    songSummaryBar = document.createElement('div');
+    songSummaryBar.id = 'ug-song-summary-bar';
+    songSummaryBar.innerHTML = `
+      <div class="summary-section">
+        <span class="summary-label">Clé:</span>
+        <span class="summary-value" id="summary-key">-</span>
+      </div>
+      <div class="summary-section">
+        <span class="summary-label">Capo:</span>
+        <span class="summary-value" id="summary-capo">-</span>
+      </div>
+      <div class="summary-section">
+        <span class="summary-label">Trans:</span>
+        <span class="summary-value" id="summary-transpose">-</span>
+      </div>
+      <div class="summary-section clickable" id="summary-notes-trigger">
+        <span class="summary-label">Notes:</span>
+        <span class="summary-value" id="summary-notes-text">-</span>
+        <div class="summary-dropdown" id="summary-notes-dropdown">
+          <div class="summary-dropdown-header">Notes d'interprétation</div>
+          <div class="summary-dropdown-content" id="summary-notes-full">Aucune note</div>
+        </div>
+      </div>
+      <div class="summary-section clickable" id="summary-tips-trigger">
+        <span class="summary-label">Astuces:</span>
+        <span class="summary-value" id="summary-tips-text">-</span>
+        <div class="summary-dropdown" id="summary-tips-dropdown">
+          <div class="summary-dropdown-header">Astuces de jeu</div>
+          <div class="summary-dropdown-content" id="summary-tips-full">Aucune astuce</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(songSummaryBar);
+
+    function normalizeSummaryUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname.includes('youtube.com')) {
+          const videoId = urlObj.searchParams.get('v');
+          if (videoId) {
+            return `https://www.youtube.com/watch?v=${videoId}`;
+          }
+        } else if (urlObj.hostname.includes('youtu.be')) {
+          const videoId = urlObj.pathname.slice(1);
+          if (videoId) {
+            return `https://www.youtube.com/watch?v=${videoId}`;
+          }
+        }
+        return urlObj.origin + urlObj.pathname;
+      } catch (e) {
+        return url.split('?')[0].split('#')[0];
+      }
+    }
+
+    function updateSummaryBar(song) {
+      const keyEl = document.getElementById('summary-key');
+      const capoEl = document.getElementById('summary-capo');
+      const transEl = document.getElementById('summary-transpose');
+      const notesTextEl = document.getElementById('summary-notes-text');
+      const notesFullEl = document.getElementById('summary-notes-full');
+      const tipsTextEl = document.getElementById('summary-tips-text');
+      const tipsFullEl = document.getElementById('summary-tips-full');
+
+      if (!song) {
+        if (keyEl) keyEl.innerText = '-';
+        if (capoEl) capoEl.innerText = '-';
+        if (transEl) transEl.innerText = '-';
+        if (notesTextEl) notesTextEl.innerText = '-';
+        if (notesFullEl) notesFullEl.innerText = 'Aucune note';
+        if (tipsTextEl) tipsTextEl.innerText = '-';
+        if (tipsFullEl) tipsFullEl.innerText = 'Aucune astuce';
+        return;
+      }
+
+      if (keyEl) keyEl.innerText = song.key || 'N/A';
+      if (capoEl) capoEl.innerText = song.capo !== undefined ? song.capo : '0';
+      if (transEl) transEl.innerText = song.transpose !== undefined ? (song.transpose > 0 ? '+' + song.transpose : song.transpose) : '0';
+      
+      const notesVal = song.notes || song.interpretationNotes || '';
+      if (notesTextEl) {
+        notesTextEl.innerText = notesVal ? (notesVal.length > 25 ? notesVal.substring(0, 25) + '...' : notesVal) : '(vide)';
+      }
+      if (notesFullEl) {
+        notesFullEl.innerText = notesVal || 'Aucune note';
+      }
+
+      const tipsVal = song.playingTips || '';
+      if (tipsTextEl) {
+        tipsTextEl.innerText = tipsVal ? (tipsVal.length > 25 ? tipsVal.substring(0, 25) + '...' : tipsVal) : '(vide)';
+      }
+      if (tipsFullEl) {
+        tipsFullEl.innerText = tipsVal || 'Aucune astuce';
+      }
+    }
+
+    function fetchAndRenderSummary() {
+      if (!window.storageService) return;
+      const url = normalizeSummaryUrl(window.location.href);
+      window.storageService.getSong(url).then(song => {
+        updateSummaryBar(song);
+      });
+    }
+
+    // Load initial song summary
+    fetchAndRenderSummary();
+
+    // Listen to updates from saveSong or options/drawer changes
+    window.addEventListener('rockstar-song-updated', (e) => {
+      const updatedSong = e.detail;
+      if (updatedSong && normalizeSummaryUrl(updatedSong.url) === normalizeSummaryUrl(window.location.href)) {
+        updateSummaryBar(updatedSong);
+      }
+    });
+
+    // Also poll/check on URL changes
+    let lastSummaryUrl = window.location.href;
+    setInterval(() => {
+      if (window.location.href !== lastSummaryUrl) {
+        lastSummaryUrl = window.location.href;
+        fetchAndRenderSummary();
+      }
+    }, 1000);
+
+    // Click triggers for dropdowns
+    const notesTrigger = document.getElementById('summary-notes-trigger');
+    const tipsTrigger = document.getElementById('summary-tips-trigger');
+
+    if (notesTrigger) {
+      notesTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (tipsTrigger) tipsTrigger.classList.remove('active');
+        notesTrigger.classList.toggle('active');
+      });
+    }
+
+    if (tipsTrigger) {
+      tipsTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (notesTrigger) notesTrigger.classList.remove('active');
+        tipsTrigger.classList.toggle('active');
+      });
+    }
+
+    // Click outside to close dropdowns
+    document.addEventListener('click', (e) => {
+      if (notesTrigger && !notesTrigger.contains(e.target)) {
+        notesTrigger.classList.remove('active');
+      }
+      if (tipsTrigger && !tipsTrigger.contains(e.target)) {
+        tipsTrigger.classList.remove('active');
+      }
+    });
 
     // Panel de réglages rapide
     settingsPanel = document.createElement('div');

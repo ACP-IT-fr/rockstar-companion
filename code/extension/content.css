@@ -1,6 +1,6 @@
 #rockstar-floating-bar {
   position: fixed;
-  bottom: 30px;
+  bottom: 60px;
   right: 20px;
   display: flex;
   align-items: center;
@@ -73,7 +73,7 @@
 
 #ug-voice-feedback {
   position: fixed;
-  bottom: 310px;
+  bottom: 340px;
   right: 20px;
   display: flex;
   flex-direction: column;
@@ -99,7 +99,7 @@
 
 #ug-voice-speed {
   position: fixed;
-  bottom: 45px;
+  bottom: 60px;
   left: 20px;
   background-color: rgba(9, 9, 11, 0.85);
   color: #fff;
@@ -161,6 +161,149 @@
   backdrop-filter: blur(8px);
 }
 
+#ug-song-summary-bar {
+  position: fixed;
+  bottom: 28px; /* Just above the bottom voice commands bar */
+  left: 0;
+  right: 0;
+  background-color: rgba(9, 9, 11, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+  color: #e4e4e7;
+  padding: 4px 20px;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  z-index: 9999998;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 20px;
+  height: 24px;
+  box-sizing: border-box;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+#ug-song-summary-bar .summary-section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+#ug-song-summary-bar .summary-section.clickable {
+  cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+}
+
+#ug-song-summary-bar .summary-label {
+  color: #a1a1aa;
+  font-weight: 600;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#ug-song-summary-bar .summary-value {
+  color: #ff9f1c;
+  font-weight: 500;
+}
+
+#ug-song-summary-bar .summary-section.clickable .summary-value {
+  color: #fff;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: bottom;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+#ug-song-summary-bar .summary-section.clickable:hover .summary-value {
+  color: #ff9f1c;
+  border-bottom: 1px dashed rgba(255, 159, 28, 0.6);
+}
+
+/* Dropdown showing upwards */
+#ug-song-summary-bar .summary-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  width: 290px;
+  background-color: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.5);
+  display: none;
+  flex-direction: column;
+  z-index: 10000000;
+  pointer-events: auto;
+}
+
+#ug-song-summary-bar .summary-section.clickable.active .summary-dropdown {
+  display: flex;
+}
+
+#ug-song-summary-bar .summary-dropdown-header {
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ff9f1c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#ug-song-summary-bar .summary-dropdown-content {
+  padding: 10px 12px;
+  font-size: 11.5px;
+  line-height: 1.42;
+  color: #e4e4e7;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+#ug-song-summary-bar #ug-drawer-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ff9f1c;
+  box-shadow: none;
+  font-size: 14px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, color 0.2s, background-color 0.2s;
+  cursor: pointer;
+  pointer-events: auto;
+  margin-right: 12px; /* Margin on the right to space from text */
+}
+
+#ug-song-summary-bar #ug-drawer-btn:hover {
+  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+#ug-song-summary-bar #ug-drawer-btn:active {
+  transform: scale(0.95);
+}
+
+#ug-song-summary-bar #ug-drawer-btn svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+
+
 .ug-voice-bar-section {
   display: flex;
   align-items: center;
@@ -206,7 +349,7 @@
 
 #ug-chord {
   position: fixed;
-  bottom: 205px;
+  bottom: 255px;
   right: 20px;
   background-color: rgba(0, 0, 0, 0.85);
   color: #fff;
@@ -241,7 +384,7 @@
 
 #ug-tuner {
   position: fixed;
-  bottom: 100px;
+  bottom: 130px;
   right: 20px;
   background-color: rgba(0, 0, 0, 0.85);
   color: #fff;
@@ -304,7 +447,7 @@
 
 #ug-metronome {
   position: fixed;
-  bottom: 415px;
+  bottom: 505px;
   right: 20px;
   background-color: rgba(18, 17, 24, 0.95);
   backdrop-filter: blur(15px);
@@ -674,7 +817,8 @@
   top: 0;
   right: 0;
   width: 380px;
-  height: 100vh;
+  height: calc(100vh - 52px);
+  bottom: 52px;
   background-color: rgba(18, 17, 24, 0.95);
   backdrop-filter: blur(15px);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
@@ -706,14 +850,37 @@
   max-width: 280px;
 }
 
-#rockstar-drawer .drawer-header-title h3 {
+#rockstar-drawer .drawer-title-input {
   font-size: 16px;
   font-weight: bold;
   margin: 0 0 4px 0;
   color: #fff;
+  background: none;
+  border: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+  width: 100%;
+  padding: 2px 0;
+  outline: none;
+  transition: border-bottom-color 0.2s;
+}
+#rockstar-drawer .drawer-title-input:focus {
+  border-bottom: 1px solid #fff;
+}
+
+#rockstar-drawer .drawer-artist-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+#rockstar-drawer .drawer-artist-label {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 #rockstar-drawer .drawer-artist-input {
@@ -1008,25 +1175,7 @@
   padding: 10px;
 }
 
-/* Magic Wand & Dictation Buttons */
-#rockstar-drawer #drawer-magic-btn {
-  background: none;
-  border: none;
-  color: #ff6c00;
-  font-size: 18px;
-  cursor: pointer;
-  outline: none;
-  transition: transform 0.2s;
-  padding: 4px;
-}
-
-#rockstar-drawer #drawer-magic-btn:hover {
-  transform: scale(1.2) rotate(-15deg);
-}
-
-#rockstar-drawer #drawer-magic-btn:active {
-  transform: scale(0.95);
-}
+/* Dictation Buttons */
 
 #rockstar-drawer .drawer-label-row {
   display: flex;
@@ -1473,7 +1622,7 @@
 .ug-voice-settings-panel {
   display: none;
   position: fixed;
-  bottom: 35px;
+  bottom: 65px;
   right: 15px;
   width: 290px;
   max-height: 420px;
@@ -1600,7 +1749,7 @@
 /* Singing Pitch Tracker Widget */
 #ug-singing-tracker {
   position: fixed;
-  bottom: 310px;
+  bottom: 380px;
   right: 20px;
   background-color: rgba(9, 9, 11, 0.5);
   backdrop-filter: blur(8px);

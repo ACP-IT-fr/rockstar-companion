@@ -68,7 +68,7 @@
     
     return {
       title: title || document.title.replace(/ Chords.*/, '').replace(/ Tab.*/, '').trim(),
-      artist: artist || "Artiste inconnu",
+      artist: artist || "",
       capo: capo
     };
   }
@@ -76,6 +76,7 @@
   function setupDrawerEventListeners() {
     if (!drawerContainer) return;
 
+    const titleInput = drawerContainer.querySelector('#drawer-title-input');
     const artistInput = drawerContainer.querySelector('#drawer-artist');
     const keyInput = drawerContainer.querySelector('#drawer-key');
     const capoInput = drawerContainer.querySelector('#drawer-capo');
@@ -84,20 +85,47 @@
     const tipsText = drawerContainer.querySelector('#drawer-tips');
 
     function saveDrawerData() {
-      if (!currentSong) return;
-      if (artistInput) {
-        currentSong.artist = artistInput.value.trim() || "Artiste inconnu";
+      if (!currentSong || !drawerContainer) return;
+      const currentTitleInput = drawerContainer.querySelector('#drawer-title-input');
+      const currentArtistInput = drawerContainer.querySelector('#drawer-artist');
+      const currentKeyInput = drawerContainer.querySelector('#drawer-key');
+      const currentCapoInput = drawerContainer.querySelector('#drawer-capo');
+      const currentTransInput = drawerContainer.querySelector('#drawer-transpose');
+      const currentNotesText = drawerContainer.querySelector('#drawer-notes');
+      const currentTipsText = drawerContainer.querySelector('#drawer-tips');
+
+      if (currentTitleInput) {
+        currentSong.title = currentTitleInput.value.trim() || "Sans titre";
       }
-      currentSong.key = keyInput.value.trim();
-      currentSong.capo = parseInt(capoInput.value, 10) || 0;
-      currentSong.transpose = parseInt(transInput.value, 10) || 0;
-      currentSong.notes = notesText.value;
-      currentSong.interpretationNotes = notesText.value;
-      currentSong.playingTips = tipsText.value;
+      if (currentArtistInput) {
+        currentSong.artist = currentArtistInput.value.trim();
+      }
+      if (currentKeyInput) {
+        currentSong.key = currentKeyInput.value.trim();
+      }
+      if (currentCapoInput) {
+        currentSong.capo = parseInt(currentCapoInput.value, 10) || 0;
+      }
+      if (currentTransInput) {
+        currentSong.transpose = parseInt(currentTransInput.value, 10) || 0;
+      }
+      if (currentNotesText) {
+        currentSong.notes = currentNotesText.value;
+        currentSong.interpretationNotes = currentNotesText.value;
+      }
+      if (currentTipsText) {
+        currentSong.playingTips = currentTipsText.value;
+      }
 
       if (window.storageService) {
         window.storageService.saveSong(currentSong);
       }
+    }
+
+    if (titleInput) {
+      const newTitleInput = titleInput.cloneNode(true);
+      titleInput.parentNode.replaceChild(newTitleInput, titleInput);
+      newTitleInput.addEventListener('blur', saveDrawerData);
     }
 
     if (artistInput) {
@@ -132,61 +160,7 @@
     newNotesText.addEventListener('input', debouncedSave);
     newTipsText.addEventListener('input', debouncedSave);
 
-    // Magic Wand
-    const magicBtn = drawerContainer.querySelector('#drawer-magic-btn');
-    if (magicBtn) {
-      const newMagicBtn = magicBtn.cloneNode(true);
-      magicBtn.parentNode.replaceChild(newMagicBtn, magicBtn);
-      newMagicBtn.addEventListener('click', () => {
-        const extracted = autoExtractMetadata();
-        let updated = false;
 
-        const currentArtistInput = drawerContainer.querySelector('#drawer-artist');
-        const currentKeyInput = drawerContainer.querySelector('#drawer-key');
-        const currentCapoInput = drawerContainer.querySelector('#drawer-capo');
-        const currentTransInput = drawerContainer.querySelector('#drawer-transpose');
-
-        if (extracted.artist && currentArtistInput) {
-          currentArtistInput.value = extracted.artist;
-          currentSong.artist = extracted.artist;
-          updated = true;
-        }
-        if (extracted.key && currentKeyInput) {
-          currentKeyInput.value = extracted.key;
-          currentSong.key = extracted.key;
-          updated = true;
-        }
-        if (extracted.capo !== undefined && extracted.capo > 0 && currentCapoInput) {
-          currentCapoInput.value = extracted.capo;
-          currentSong.capo = extracted.capo;
-          updated = true;
-        }
-        if (extracted.transpose !== undefined && extracted.transpose !== 0 && currentTransInput) {
-          currentTransInput.value = extracted.transpose;
-          currentSong.transpose = extracted.transpose;
-          updated = true;
-        }
-
-        if (updated) {
-          [currentArtistInput, currentKeyInput, currentCapoInput, currentTransInput].forEach(input => {
-            if (!input) return;
-            input.style.transition = 'background-color 0.3s';
-            input.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
-            setTimeout(() => {
-              input.style.backgroundColor = 'transparent';
-            }, 800);
-          });
-          saveDrawerData();
-          if (window.RockstarCore.showFeedback) {
-            window.RockstarCore.showFeedback("Mises à jour appliquées par la baguette magique !", true);
-          }
-        } else {
-          if (window.RockstarCore.showFeedback) {
-            window.RockstarCore.showFeedback("Aucune clé/capo/transposition/artiste trouvée à extraire.", false);
-          }
-        }
-      });
-    }
 
     // Dictation
     const dictationButtons = drawerContainer.querySelectorAll('.drawer-dictate-btn');
@@ -309,11 +283,13 @@
     drawerContainer.innerHTML = `
       <div class="drawer-header">
         <div class="drawer-header-title">
-          <h3 id="drawer-title">Chargement...</h3>
-          <input type="text" id="drawer-artist" class="drawer-artist-input" placeholder="Artiste" value="-">
+          <input type="text" id="drawer-title-input" class="drawer-title-input" placeholder="Titre">
+          <div class="drawer-artist-row">
+            <span class="drawer-artist-label">Artiste :</span>
+            <input type="text" id="drawer-artist" class="drawer-artist-input" placeholder="Artiste">
+          </div>
         </div>
         <div class="drawer-header-actions">
-          <button id="drawer-magic-btn" title="Extraire automatiquement les clés et transpositions depuis la page"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-orange);"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg></button>
           <button id="drawer-close-btn">&times;</button>
         </div>
       </div>
@@ -455,8 +431,8 @@
 
   function populateDrawerFields() {
     if (!drawerContainer) return;
-    drawerContainer.querySelector('#drawer-title').innerText = currentSong.title;
-    drawerContainer.querySelector('#drawer-artist').value = currentSong.artist;
+    drawerContainer.querySelector('#drawer-title-input').value = currentSong.title || '';
+    drawerContainer.querySelector('#drawer-artist').value = currentSong.artist || '';
     drawerContainer.querySelector('#drawer-key').value = currentSong.key || '';
     drawerContainer.querySelector('#drawer-capo').value = currentSong.capo || 0;
     drawerContainer.querySelector('#drawer-transpose').value = currentSong.transpose || 0;
@@ -611,111 +587,6 @@
           <a href="${url}" target="_blank" style="color:#d880ff; text-decoration:underline;">Ouvrir le lien externe</a>
         </div>`;
     }
-  }
-
-  function autoExtractMetadata() {
-    let key = "";
-    let transpose = 0;
-    let capo = 0;
-    let artist = "";
-
-    try {
-      const storeDiv = document.querySelector('.js-store');
-      if (storeDiv) {
-        const raw = storeDiv.getAttribute('data-content');
-        if (raw) {
-          const decoded = raw.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'");
-          const data = JSON.parse(decoded);
-          const tab = data?.store?.page?.data?.tab;
-          if (tab) {
-            if (tab.meta && tab.meta.tonality) {
-              key = tab.meta.tonality;
-            }
-            if (tab.meta && tab.meta.capo) {
-              capo = tab.meta.capo;
-            }
-            if (tab.artist_name) {
-              artist = tab.artist_name.trim();
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Erreur extraction js-store:", e);
-    }
-
-    if (!key) {
-      const elements = Array.from(document.querySelectorAll('span, div, td'));
-      for (const el of elements) {
-        const text = el.innerText.trim();
-        if (/^(key|tonalité|tonality)\s*:\s*([A-G][#b]?m?)/i.test(text)) {
-          const match = text.match(/^(key|tonalité|tonality)\s*:\s*([A-G][#b]?m?)/i);
-          key = match[2];
-          break;
-        }
-      }
-    }
-
-    const allText = document.body.innerText;
-
-    if (!capo) {
-      const capoMatch = allText.match(/capo\s*(?::|at|case|fret)?\s*(\d+)/i) || 
-                        allText.match(/capodastre\s*(?::|à|a|case)?\s*(\d+)/i) || 
-                        allText.match(/(\d+)(?:nd|rd|th)?\s*fret\s*capo/i);
-      if (capoMatch) {
-        capo = parseInt(capoMatch[1], 10);
-      }
-    }
-
-    const transposeMatch = allText.match(/transpose\s*(?::|by|at)?\s*([+-]?\d+)/i) || 
-                           allText.match(/transposition\s*(?::|de)?\s*([+-]?\d+)/i);
-    if (transposeMatch) {
-      transpose = parseInt(transposeMatch[1], 10);
-    } else {
-      const transButtons = Array.from(document.querySelectorAll('button, span, div'));
-      for (const btn of transButtons) {
-        const text = btn.innerText.trim();
-        if (/...transpose\s*([+-]\d+)/i.test(text)) {
-          const match = text.match(/...transpose\s*([+-]\d+)/i);
-          transpose = parseInt(match[1], 10);
-          break;
-        }
-        if (btn.classList.contains('transpose-value') || text.includes('transpose')) {
-          const val = parseInt(text.replace(/[^0-9+-]/g, ''), 10);
-          if (!isNaN(val)) {
-            transpose = val;
-            break;
-          }
-        }
-      }
-    }
-
-    if (!artist) {
-      const ogTitle = document.querySelector('meta[property="og:title"]');
-      if (ogTitle && ogTitle.content) {
-        const content = ogTitle.content;
-        const parts = content.split(' Chords by ');
-        if (parts.length === 2) {
-          artist = parts[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
-        } else {
-          const parts2 = content.split(' Tab by ');
-          if (parts2.length === 2) {
-            artist = parts2[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
-          }
-        }
-      }
-
-      if (!artist) {
-        const artistMatch = allText.match(/artiste?\s*:\s*([^\n\r]+)/i) || 
-                            allText.match(/artist\s*:\s*([^\n\r]+)/i) ||
-                            allText.match(/by\s+([A-Za-z0-9\s\.\&\-\'\’]+)\s+chords/i);
-        if (artistMatch) {
-          artist = artistMatch[1].trim();
-        }
-      }
-    }
-
-    return { key, capo, transpose, artist };
   }
 
   function toggleDictation(targetId, button) {
@@ -946,7 +817,14 @@
   window.RockstarCore.sendYouTubeCommand = sendYouTubeCommand;
   window.RockstarCore.getActiveDrawerPlaybackLink = () => activeDrawerPlaybackLink;
   window.RockstarCore.appendRepertoireDrawerBtn = (bar) => {
-    if (drawerBtn) bar.appendChild(drawerBtn);
+    const summaryBar = document.getElementById('ug-song-summary-bar');
+    if (drawerBtn) {
+      if (summaryBar) {
+        summaryBar.insertBefore(drawerBtn, summaryBar.firstChild);
+      } else {
+        bar.appendChild(drawerBtn);
+      }
+    }
   };
 
   // Listening state changes cleanup

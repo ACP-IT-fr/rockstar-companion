@@ -133,11 +133,7 @@
 
   // Handle listening state changes to show/hide chord UI
   window.RockstarCore.onListeningChanged((isListening) => {
-    if (!isListening) {
-      if (chordContainer) chordContainer.classList.remove('visible');
-    } else {
-      if (chordContainer) chordContainer.classList.add('visible');
-    }
+    // Keep chord UI visible even when voice control is off
   });
 
   // Init chord UI
@@ -153,9 +149,7 @@
     chordNameEl = chordContainer.querySelector('.chord-name');
 
     // Synchronisation de l'état initial
-    if (window.RockstarCore.isListening) {
-      chordContainer.classList.add('visible');
-    }
+    chordContainer.classList.add('visible');
   });
 
   // Expose the chord detection loop so tuner.js can call it

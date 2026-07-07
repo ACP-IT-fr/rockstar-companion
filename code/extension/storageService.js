@@ -60,12 +60,19 @@ const storageService = {
       };
 
       return new Promise((resolve) => {
+        const savedData = songs[song.url];
         if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
           chrome.storage.local.set({ saved_songs: songs }, () => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('rockstar-song-updated', { detail: savedData }));
+            }
             resolve();
           });
         } else {
           localStorage.setItem('saved_songs', JSON.stringify(songs));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('rockstar-song-updated', { detail: savedData }));
+          }
           resolve();
         }
       });

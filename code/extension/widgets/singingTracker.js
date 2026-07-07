@@ -136,6 +136,7 @@
 
   function toggleMaximize(e) {
     if (e) e.stopPropagation();
+    return; // Temporarily disabled
     isMaximized = !isMaximized;
     
     if (isMaximized) {
@@ -399,16 +400,7 @@
 
   // Handle listening state changes to clean up or auto-init
   window.RockstarCore.onListeningChanged((isListening) => {
-    if (!isListening) {
-      singingActive = false;
-      if (singingContainer) singingContainer.classList.remove('visible');
-      if (window.singingLoopId) {
-        cancelAnimationFrame(window.singingLoopId);
-        window.singingLoopId = null;
-      }
-    } else {
-      initSingingTracker();
-    }
+    // Keep singing tracker active even when voice control is off
   });
 
   // Init Singing tracker UI
@@ -436,8 +428,10 @@
     singingNoteBg = singingContainer.querySelector('.singing-note-bg');
     singingInfoOverlay = singingContainer.querySelector('.singing-info-overlay');
     maxBtn = singingContainer.querySelector('.singing-max-btn');
-
-    maxBtn.addEventListener('click', toggleMaximize);
+    if (maxBtn) {
+      maxBtn.style.display = 'none';
+      maxBtn.addEventListener('click', toggleMaximize);
+    }
 
     // Close maximized state with Escape key
     window.addEventListener('keydown', (e) => {
@@ -447,9 +441,7 @@
     });
 
     // Sync state
-    if (window.RockstarCore.isListening) {
-      initSingingTracker();
-    }
+    initSingingTracker();
   });
 
 })();

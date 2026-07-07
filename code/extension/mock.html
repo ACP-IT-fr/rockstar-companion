@@ -1,97 +1,650 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mock Tablature Page - Vox Roddy</title>
-  <link rel="stylesheet" href="content.css">
-  
-  <script>
-    class MockSpeechRecognition {
-      constructor() {
-        this.continuous = false;
-        this.interimResults = false;
-        this.lang = 'fr-FR';
-        this.onstart = null;
-        this.onend = null;
-        this.onresult = null;
-        this.onerror = null;
-        this._isListening = false;
-        window.mockSpeechRecognition = this;
-      }
-      start() {
-        if (this._isListening) return;
-        this._isListening = true;
-        console.log("[MockSpeechRecognition] start called");
-        setTimeout(() => {
-          if (this.onstart) this.onstart();
-        }, 10);
-      }
-      stop() {
-        if (!this._isListening) return;
-        this._isListening = false;
-        console.log("[MockSpeechRecognition] stop called");
-        setTimeout(() => {
-          if (this.onend) this.onend();
-        }, 10);
-      }
-      simulateResult(text, isFinal = true) {
-        if (!this._isListening) {
-          console.warn("[MockSpeechRecognition] Cannot simulate result: Not listening");
-          return;
-        }
-        const resultAlternative = {
-          transcript: text,
-          confidence: 0.99
-        };
-        const resultList = [resultAlternative];
-        resultList.isFinal = isFinal;
-        const event = {
-          resultIndex: 0,
-          results: [resultList]
-        };
-        if (this.onresult) {
-          this.onresult(event);
-        }
-      }
-    }
-    try {
-      delete window.SpeechRecognition;
-      delete window.webkitSpeechRecognition;
-      window.SpeechRecognition = MockSpeechRecognition;
-      window.webkitSpeechRecognition = MockSpeechRecognition;
-      console.log("[Mock] SpeechRecognition mocked successfully via delete.");
-    } catch (e) {
-      console.error("[Mock] Failed to define SpeechRecognition mock:", e);
-    }
-  </script>
+  <title>© - Interactive Chords and Tablature</title>
 
-  <script src="storageService.js"></script>
-  <script src="core.js"></script>
-  <script src="voiceEngine.js"></script>
-  <script src="widgets/floatingBar.js"></script>
-  <script src="widgets/scroll.js"></script>
-  <script src="widgets/metronome.js"></script>
-  <script src="widgets/tuner.js"></script>
-  <script src="widgets/chordDetector.js"></script>
-  <script src="widgets/repertoireDrawer.js"></script>
-  <script src="widgets/youtubeController.js"></script>
-  <script src="widgets/singingTracker.js"></script>
-  <script src="testRunner.js"></script>
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --bg-card: rgba(20, 27, 45, 0.6);
+      --bg-card-hover: rgba(28, 37, 60, 0.8);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.4);
+      --chord-color: #ffd043;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --font-outfit: 'Outfit', sans-serif;
+      --font-inter: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(20, 30, 60, 0.5) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(10, 15, 30, 0.8) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: var(--font-inter);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Elegant Top Bar */
+    header {
+      background: rgba(10, 14, 23, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 24px;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-outfit);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .nav-links a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+
+    /* Main Grid Layout */
+    .container {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 32px;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Song Info Banner */
+    .song-header {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .song-title-group h1 {
+      font-family: var(--font-outfit);
+      font-weight: 800;
+      font-size: 2.2rem;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.01em;
+    }
+
+    .song-artist {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .song-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 16px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meta-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-value {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    /* Chord Diagrams Box */
+    .chords-box {
+      margin-bottom: 24px;
+    }
+
+    .chords-title {
+      font-family: var(--font-outfit);
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+    }
+
+    .chord-diagrams {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chord-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 70px;
+      transition: transform 0.2s, border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .chord-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 208, 67, 0.4);
+    }
+
+    .chord-name {
+      font-weight: 700;
+      color: var(--chord-color);
+      margin-bottom: 6px;
+    }
+
+    .chord-visual {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      line-height: 1.1;
+      text-align: center;
+    }
+
+    /* Sheet Content / Lyrics & Chords */
+    .tab-sheet {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    .tab-section {
+      margin-bottom: 28px;
+    }
+
+    .tab-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-title {
+      font-family: var(--font-outfit);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+      padding-bottom: 4px;
+      display: inline-block;
+    }
+
+    .lyric-line {
+      font-family: var(--font-inter);
+      font-size: 1rem;
+      line-height: 1.8;
+      margin-bottom: 8px;
+      white-space: pre-wrap;
+      position: relative;
+    }
+
+    .chord-bracket {
+      color: var(--chord-color);
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+      padding: 1px 3px;
+      background: rgba(255, 208, 67, 0.05);
+      border-radius: 4px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .chord-bracket:hover {
+      background: rgba(255, 208, 67, 0.2);
+      color: #fff;
+    }
+
+    /* ASCII Tablature */
+    .ascii-tab {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      line-height: 1.3;
+      color: #a7f3d0;
+      border-left: 3px solid #10b981;
+      margin: 12px 0;
+      white-space: pre;
+    }
+
+    /* Sidebar Instructions & Guide */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .sidebar-widget {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .widget-title {
+      font-family: var(--font-outfit);
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Generic site tools styling */
+    .tool-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-size: 0.9rem;
+    }
+
+    .tool-label {
+      color: var(--text-muted);
+    }
+
+    .tool-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.85rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .tool-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .similar-songs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .similar-song-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .similar-song-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .similar-song-title {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .similar-song-artist {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .similar-song-rating {
+      color: var(--chord-color);
+      font-size: 0.8rem;
+    }
+  </style>
 </head>
-<body style="background-color: #1a1a1a; color: #eee; font-family: sans-serif; margin: 0; padding: 20px;">
-  <h1>Mock Tablature Page - Vox Roddy</h1>
-  <p>Cette page simule le chargement de l'extension modulaire dans le navigateur pour des tests d'intégration.</p>
-  
-  <div style="margin: 40px 0; border: 1px dashed #666; padding: 20px; border-radius: 8px; max-width: 600px;">
-    <h2>Chansons & Accords</h2>
-    <p>Accords détectés simulés : [G] [C] [D] [Em]</p>
-    <p>Défilez vers le bas pour tester l'auto-scroll.</p>
+
+<body>
+
+  <header>
+    <div class="header-container">
+      <div class="brand">
+        🎸 <span>AnyTabSite.com</span>
+        <div class="badge">Tablature Library</div>
+      </div>
+      <nav class="nav-links">
+        <a href="#">Songs</a>
+        <a href="#">Artists</a>
+        <a href="#">Community</a>
+        <a href="#">Tuning Tools</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Left Column: Tab Sheet & Song Info -->
+    <main>
+
+      <!-- Song Header Card -->
+      <section class="song-header">
+        <div class="song-title-group">
+          <h1>Midnight Whisper</h1>
+          <div class="song-artist">by Silent Echoes</div>
+        </div>
+
+        <div class="song-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Key</span>
+            <span class="meta-value">Am</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Tempo</span>
+            <span class="meta-value">120 BPM</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Capo</span>
+            <span class="meta-value">2nd Fret</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Tuning</span>
+            <span class="meta-value">Standard (E A D G B E)</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Difficulty</span>
+            <span class="meta-value" style="color: #10b981;">Easy</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chord Reference Section -->
+      <section class="chords-box">
+        <div class="chords-title">Chords Used</div>
+        <div class="chord-diagrams">
+          <div class="chord-card">
+            <span class="chord-name">Am</span>
+            <span class="chord-visual">x02210</span>
+          </div>
+          <div class="chord-card">
+            <span class="chord-name">C</span>
+            <span class="chord-visual">x32010</span>
+          </div>
+          <div class="chord-card">
+            <span class="chord-name">D</span>
+            <span class="chord-visual">xx0232</span>
+          </div>
+          <div class="chord-card">
+            <span class="chord-name">F</span>
+            <span class="chord-visual">133211</span>
+          </div>
+          <div class="chord-card">
+            <span class="chord-name">G</span>
+            <span class="chord-visual">320003</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- The Lyrics & Chords Sheet -->
+      <section class="tab-sheet">
+
+        <div class="tab-section">
+          <div class="section-title">Intro</div>
+          <div class="ascii-tab">
+            e|-------0-----------0-----------2-----------1-------|
+            B|---------1-----------1-----------3-----------1-----|
+            G|-----2-----2-----0-----0-----2-----2-----2-----2---|
+            D|---2-----------2-----------0-----------3-----------|
+            A|-0-----------3-------------------------------------|
+            E|---------------------------------------------------|</div>
+        </div>
+
+        <div class="tab-section">
+          <div class="section-title">Verse 1</div>
+          <div class="lyric-line"><span class="chord-bracket">Am</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">We are walking through the dark of night,</div>
+          <div class="lyric-line"><span class="chord-bracket">D</span> <span class="chord-bracket">F</span></div>
+          <div class="lyric-line">With the silver moon as our only light.</div>
+          <div class="lyric-line"><span class="chord-bracket">Am</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Strings are ringing, thoughts align,</div>
+          <div class="lyric-line"><span class="chord-bracket">G</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">Echoes of silence, one step at a time.</div>
+        </div>
+
+        <div class="tab-section">
+          <div class="section-title">Chorus</div>
+          <div class="lyric-line"><span class="chord-bracket">F</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Oh, let the whispers float high in the air,</div>
+          <div class="lyric-line"><span class="chord-bracket">G</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">Carried by currents that take us anywhere.</div>
+          <div class="lyric-line"><span class="chord-bracket">F</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Hands on strings, we play through the night,</div>
+          <div class="lyric-line"><span class="chord-bracket">D</span> <span class="chord-bracket">G</span></div>
+          <div class="lyric-line">Guiding the rhythm till the morning light.</div>
+        </div>
+
+        <div class="tab-section">
+          <div class="section-title">Verse 2</div>
+          <div class="lyric-line"><span class="chord-bracket">Am</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Shadows dance upon the wooden floor,</div>
+          <div class="lyric-line"><span class="chord-bracket">D</span> <span class="chord-bracket">F</span></div>
+          <div class="lyric-line">Searching for notes we haven't played before.</div>
+          <div class="lyric-line"><span class="chord-bracket">Am</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">A simple progression, a steady beat,</div>
+          <div class="lyric-line"><span class="chord-bracket">G</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">Finding a sanctuary in this sound retreat.</div>
+        </div>
+
+        <div class="tab-section">
+          <div class="section-title">Chorus</div>
+          <div class="lyric-line"><span class="chord-bracket">F</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Oh, let the whispers float high in the air,</div>
+          <div class="lyric-line"><span class="chord-bracket">G</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">Carried by currents that take us anywhere.</div>
+          <div class="lyric-line"><span class="chord-bracket">F</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Hands on strings, we play through the night,</div>
+          <div class="lyric-line"><span class="chord-bracket">D</span> <span class="chord-bracket">G</span></div>
+          <div class="lyric-line">Guiding the rhythm till the morning light.</div>
+        </div>
+
+        <div class="tab-section">
+          <div class="section-title">Bridge</div>
+          <div class="lyric-line"><span class="chord-bracket">Dm</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">And when the morning starts to break,</div>
+          <div class="lyric-line"><span class="chord-bracket">C</span> <span class="chord-bracket">G</span></div>
+          <div class="lyric-line">We will remember the songs we make.</div>
+          <div class="lyric-line"><span class="chord-bracket">Dm</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">No words are needed, no strings attached,</div>
+          <div class="lyric-line"><span class="chord-bracket">F</span> <span class="chord-bracket">G</span></div>
+          <div class="lyric-line">A perfect harmony that cannot be matched.</div>
+        </div>
+
+        <div class="tab-section">
+          <div class="section-title">Chorus</div>
+          <div class="lyric-line"><span class="chord-bracket">F</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Oh, let the whispers float high in the air,</div>
+          <div class="lyric-line"><span class="chord-bracket">G</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">Carried by currents that take us anywhere.</div>
+          <div class="lyric-line"><span class="chord-bracket">F</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Hands on strings, we play through the night,</div>
+          <div class="lyric-line"><span class="chord-bracket">D</span> <span class="chord-bracket">G</span></div>
+          <div class="lyric-line">Guiding the rhythm till the morning light.</div>
+        </div>
+
+        <div class="tab-section">
+          <div class="section-title">Outro</div>
+          <div class="lyric-line"><span class="chord-bracket">Am</span> <span class="chord-bracket">C</span></div>
+          <div class="lyric-line">Fading out, the melody is clear.</div>
+          <div class="lyric-line"><span class="chord-bracket">D</span> <span class="chord-bracket">Am</span></div>
+          <div class="lyric-line">A silent echo is all we hear.</div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Right Column: Generic Website Utilities -->
+    <aside class="sidebar">
+
+      <div class="sidebar-widget">
+        <div class="widget-title">⚙️ Tab Player Options</div>
+
+        <div class="tool-row">
+          <span class="tool-label">Transpose</span>
+          <div class="tool-actions">
+            <button class="tool-btn">-1</button>
+            <button class="tool-btn active">0</button>
+            <button class="tool-btn">+1</button>
+          </div>
+        </div>
+
+        <div class="tool-row">
+          <span class="tool-label">Font Size</span>
+          <div class="tool-actions">
+            <button class="tool-btn">A-</button>
+            <button class="tool-btn">A+</button>
+          </div>
+        </div>
+
+        <div class="tool-row">
+          <span class="tool-label">Autoscroll</span>
+          <div class="tool-actions">
+            <button class="tool-btn">Start</button>
+          </div>
+        </div>
+
+        <div class="tool-row" style="margin-bottom: 0;">
+          <span class="tool-label">Text Wrap</span>
+          <div class="tool-actions">
+            <button class="tool-btn active">On</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-widget">
+        <div class="widget-title">🎵 Similar Songs</div>
+        <div class="similar-songs-list">
+          <a href="#" class="similar-song-item">
+            <div>
+              <div class="similar-song-title">Summer Breeze</div>
+              <div class="similar-song-artist">by Silent Echoes</div>
+            </div>
+            <div class="similar-song-rating">★★★★★</div>
+          </a>
+          <a href="#" class="similar-song-item">
+            <div>
+              <div class="similar-song-title">Ocean Tide</div>
+              <div class="similar-song-artist">by The Blue Waves</div>
+            </div>
+            <div class="similar-song-rating">★★★★☆</div>
+          </a>
+          <a href="#" class="similar-song-item">
+            <div>
+              <div class="similar-song-title">Coding in Minor</div>
+              <div class="similar-song-artist">by Syntax Error</div>
+            </div>
+            <div class="similar-song-rating">★★★★★</div>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+
   </div>
 
-  <div style="height: 3000px;">
-    <!-- Pour permettre le scroll -->
-    <p>Section de scroll...</p>
-  </div>
 </body>
+
 </html>

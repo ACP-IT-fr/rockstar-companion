@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary Meta Tags -->
+  <title>Vox Roddy — L'assistant vocal ultime pour musiciens</title>
+  <meta name="title" content="Vox Roddy — L'assistant vocal ultime pour musiciens">
+  <meta name="description" content="Contrôlez vos tutoriels YouTube, faites défiler vos tablatures et pilotez des outils indispensables pour guitare et piano à la voix. Progressez sans lâcher votre instrument.">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Vox Roddy — L'assistant vocal pour musiciens">
+  <meta property="og:description" content="Contrôlez vos tablatures et vos vidéos YouTube à la voix. Un assistant mains libres complet avec accordeur, métronome et détecteur d'accords.">
+  <meta property="og:image" content="assets/icon128.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/icon16.png">
+</head>
+<body>
+
+  <!-- Background decorations -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-container">
+      <a href="#" class="logo">
+        <img src="assets/icon128.png" alt="Vox Roddy Logo">
+        <span class="logo-text">Vox Roddy</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features" data-lang-fr="Fonctionnalités" data-lang-en="Features">Fonctionnalités</a>
+        <a href="#widgets" data-lang-fr="Outils intégrés" data-lang-en="Built-in Tools">Outils intégrés</a>
+        <a href="#privacy" data-lang-fr="Vie Privée" data-lang-en="Privacy">Vie Privée</a>
+        <a href="#install" data-lang-fr="Installation" data-lang-en="Install">Installation</a>
+        <button id="lang-toggle" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">EN</button>
+      </nav>
+      <div>
+        <a href="#install" class="btn btn-primary" data-lang-fr="Télécharger" data-lang-en="Get Extension">Télécharger</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container hero-content">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          <span data-lang-fr="Assistant vocal intelligent" data-lang-en="Intelligent voice assistant">Assistant vocal intelligent</span>
+        </div>
+        
+        <h1 id="hero-title">
+          <span data-lang-fr="Libérez vos mains." data-lang-en="Free your hands.">Libérez vos mains.</span><br>
+          <span style="background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;" data-lang-fr="Jouez sans interruption." data-lang-en="Play without limits.">Jouez sans interruption.</span>
+        </h1>
+        
+        <p class="hero-subtitle" data-lang-fr="Vox Roddy est l'assistant vocal ultime pour les musiciens. Utilisez votre voix pour contrôler YouTube, faire défiler vos tablatures et piloter des outils de précision sans jamais lâcher votre manche ou votre clavier." data-lang-en="Vox Roddy is the ultimate voice assistant for musicians. Use your voice to control YouTube, scroll through your tabs, and command precision tools without ever letting go of your instrument neck or keyboard.">
+          Vox Roddy est l'assistant vocal ultime pour les musiciens. Utilisez votre voix pour contrôler YouTube, faire défiler vos tablatures et piloter des outils de précision sans jamais lâcher votre manche ou votre clavier.
+        </p>
+
+        <div class="hero-cta">
+          <a href="#install" class="btn btn-primary" data-lang-fr="Installer Vox Roddy" data-lang-en="Install Vox Roddy">Installer Vox Roddy</a>
+          <a href="#features" class="btn btn-secondary" data-lang-fr="Voir les commandes" data-lang-en="Explore Commands">Voir les commandes</a>
+        </div>
+
+        <!-- Interactive Voice Visualizer Widget -->
+        <div class="visualizer-box">
+          <div class="visualizer-header">
+            <div class="window-dots">
+              <span class="window-dot red"></span>
+              <span class="window-dot yellow"></span>
+              <span class="window-dot green"></span>
+            </div>
+            <div class="status-badge">
+              <span class="pulse-circle"></span>
+              <span data-lang-fr="RODDY EST À L'ÉCOUTE" data-lang-en="RODDY IS LISTENING">RODDY EST À L'ÉCOUTE</span>
+            </div>
+          </div>
+          <div class="voice-wave-container" id="visualizer-waves">
+            <!-- JavaScript will populate dynamically or CSS will animate -->
+            <div class="wave-bar" style="height: 20px;"></div>
+            <div class="wave-bar" style="height: 40px;"></div>
+            <div class="wave-bar" style="height: 15px;"></div>
+            <div class="wave-bar" style="height: 60px;"></div>
+            <div class="wave-bar" style="height: 75px;"></div>
+            <div class="wave-bar" style="height: 50px;"></div>
+            <div class="wave-bar" style="height: 30px;"></div>
+            <div class="wave-bar" style="height: 85px;"></div>
+            <div class="wave-bar" style="height: 40px;"></div>
+            <div class="wave-bar" style="height: 20px;"></div>
+          </div>
+          <div class="command-display">
+            <span class="command-trigger">"Roddy, </span><span id="typing-command" class="command-text">play"</span>
+          </div>
+          <p class="visualizer-hint" data-lang-fr="Dites simplement le mot déclencheur suivi de votre commande pour commencer." data-lang-en="Simply say the trigger word followed by your command to start.">Dites simplement le mot déclencheur suivi de votre commande pour commencer.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features">
+      <div class="container">
+        <div class="section-header">
+          <h2 data-lang-fr="Prenez le contrôle à la voix" data-lang-en="Control Everything with Your Voice">Prenez le contrôle à la voix</h2>
+          <p class="section-subtitle" data-lang-fr="Des commandes simples et naturelles conçues pour le flux de travail des musiciens." data-lang-en="Simple and natural commands designed specifically for a musician's workflow.">Des commandes simples et naturelles conçues pour le flux de travail des musiciens.</p>
+        </div>
+
+        <div class="features-grid">
+          <!-- YouTube Control -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">📺</div>
+            <h3 data-lang-fr="Tutoriels YouTube" data-lang-en="YouTube Tutorials">Tutoriels YouTube</h3>
+            <p data-lang-fr="Naviguez et contrôlez vos cours vidéo préférés de manière transparente sans toucher la souris." data-lang-en="Seamlessly navigate and control your video lessons without touching the mouse.">Naviguez et contrôlez vos cours vidéo préférés de manière transparente sans toucher la souris.</p>
+            <ul class="command-list">
+              <li class="command-item"><code data-lang-fr="Roddy, play / pause" data-lang-en="Roddy, play / pause">Roddy, play / pause</code></li>
+              <li class="command-item"><code data-lang-fr="Roddy, Encore" data-lang-en="Roddy, Encore">Roddy, Encore</code> <span style="font-size: 0.8rem; color: var(--text-secondary);" data-lang-fr="(retour au dernier repère)" data-lang-en="(loops last cue)">(retour au dernier repère)</span></li>
+            </ul>
+          </div>
+
+          <!-- Tab Scrolling -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">📜</div>
+            <h3 data-lang-fr="Défilement Automatique" data-lang-en="Auto Scrolling">Défilement Automatique</h3>
+            <p data-lang-fr="Faites défiler vos tablatures (Ultimate Guitar, etc.) en gardant les mains sur votre instrument." data-lang-en="Scroll through your tabs (Ultimate Guitar, etc.) while keeping both hands on your instrument.">Faites défiler vos tablatures (Ultimate Guitar, etc.) en gardant les mains sur votre instrument.</p>
+            <ul class="command-list">
+              <li class="command-item"><code data-lang-fr="Roddy, c'est parti !" data-lang-en="Roddy, c'est parti !">Roddy, c'est parti !</code></li>
+              <li class="command-item"><code data-lang-fr="Roddy, plus / moins vite" data-lang-en="Roddy, plus / moins vite">Roddy, plus / moins vite</code></li>
+              <li class="command-item"><code data-lang-fr="Roddy, vitesse 4" data-lang-en="Roddy, vitesse 4">Roddy, vitesse 4</code></li>
+            </ul>
+          </div>
+
+          <!-- Ultra-fast Search -->
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">🔍</div>
+            <h3 data-lang-fr="Recherche Ultra-Rapide" data-lang-en="Ultra-Fast Search">Recherche Ultra-Rapide</h3>
+            <p data-lang-fr="Recherchez instantanément sur YouTube, Google ou Ultimate Guitar avec votre voix." data-lang-en="Instantly search across YouTube, Google, or Ultimate Guitar with your voice.">Recherchez instantanément sur YouTube, Google ou Ultimate Guitar avec votre voix.</p>
+            <ul class="command-list">
+              <li class="command-item"><code data-lang-fr="Roddy, cherche [morceau]" data-lang-en="Roddy, cherche [morceau]">Roddy, cherche [morceau]</code></li>
+              <li class="command-item"><code data-lang-fr="Roddy, ouvre 3" data-lang-en="Roddy, ouvre 3">Roddy, ouvre 3</code></li>
+              <li class="command-item"><code data-lang-fr="Roddy, cherche [artiste] sur YouTube" data-lang-en="Roddy, cherche [artist] sur YouTube">Roddy, cherche [artiste] sur YouTube</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Built-in Widgets Section -->
+    <section id="widgets" class="widgets-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 data-lang-fr="Outils essentiels intégrés" data-lang-en="Essential Built-in Tools">Outils essentiels intégrés</h2>
+          <p class="section-subtitle" data-lang-fr="En plus des commandes vocales, accédez à des widgets superposés directement sur vos pages web." data-lang-en="In addition to voice control, access helper widgets overlaid directly onto your web pages.">En plus des commandes vocales, accédez à des widgets superposés directement sur vos pages web.</p>
+        </div>
+
+        <div class="widgets-grid">
+          <!-- Metronome -->
+          <div class="widget-card">
+            <h3 data-lang-fr="Métronome" data-lang-en="Metronome">Métronome</h3>
+            <p data-lang-fr="Indicateur visuel et sonore précis pour perfectionner votre tempo." data-lang-en="Precise visual and audio tick to keep your timing pixel-perfect.">Indicateur visuel et sonore précis pour perfectionner votre tempo.</p>
+            <div class="widget-preview">
+              <div class="metronome-visual" id="metro-preview">
+                <span class="metro-dot active"></span>
+                <span class="metro-dot"></span>
+                <span class="metro-dot"></span>
+                <span class="metro-dot"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tuner -->
+          <div class="widget-card">
+            <h3 data-lang-fr="Accordeur de précision" data-lang-en="Precision Tuner">Accordeur de précision</h3>
+            <p data-lang-fr="Accordez votre guitare ou basse rapidement avec une grande précision." data-lang-en="Tune your guitar or bass quickly with pitch-perfect accuracy.">Accordez votre guitare ou basse rapidement avec une grande précision.</p>
+            <div class="widget-preview">
+              <div class="tuner-visual">
+                <div class="tuner-needle-container">
+                  <div class="tuner-center"></div>
+                  <div class="tuner-needle"></div>
+                </div>
+                <div class="tuner-note">E</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pitch Chart -->
+          <div class="widget-card">
+            <h3 data-lang-fr="Hauteur de note" data-lang-en="Pitch Chart">Hauteur de note</h3>
+            <p data-lang-fr="Graphique en temps réel idéal pour travailler votre chant et votre justesse." data-lang-en="Real-time timeline tracking your vocal pitch, ideal for singing practice.">Graphique en temps réel idéal pour travailler votre chant et votre justesse.</p>
+            <div class="widget-preview" style="align-items: center;">
+              <div class="pitch-visual" id="pitch-preview">
+                <div class="pitch-bar" style="height: 30%"></div>
+                <div class="pitch-bar" style="height: 45%"></div>
+                <div class="pitch-bar" style="height: 60%"></div>
+                <div class="pitch-bar" style="height: 55%"></div>
+                <div class="pitch-bar" style="height: 40%"></div>
+                <div class="pitch-bar" style="height: 65%"></div>
+                <div class="pitch-bar" style="height: 80%"></div>
+                <div class="pitch-bar" style="height: 70%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chord Detector -->
+          <div class="widget-card">
+            <h3 data-lang-fr="Détecteur d'accords" data-lang-en="Chord Detector">Détecteur d'accords</h3>
+            <p data-lang-fr="Écoute et affiche les accords en temps réel grâce au micro." data-lang-en="Listens and extracts chords in real-time using your microphone.">Écoute et affiche les accords en temps réel grâce au micro.</p>
+            <div class="widget-preview">
+              <div class="chord-box" id="chord-preview">Cmaj7</div>
+            </div>
+          </div>
+
+          <!-- Personalization Settings -->
+          <div class="widget-card">
+            <h3 data-lang-fr="Personnalisation" data-lang-en="Customization">Personnalisation</h3>
+            <p data-lang-fr="Configurez votre mot déclencheur personnalisé et ajustez les sensibilités." data-lang-en="Configure your custom wake word and adjust sensitivities.">Configurez votre mot déclencheur personnalisé et ajustez les sensibilités.</p>
+            <div class="widget-preview">
+              <div class="settings-preview-box">
+                <div class="settings-preview-row">
+                  <span data-lang-fr="Mot déclencheur" data-lang-en="Wake Word">Mot déclencheur</span>
+                  <span class="settings-badge">"Roddy"</span>
+                </div>
+                <div class="settings-preview-row">
+                  <span data-lang-fr="Micro auto-off" data-lang-en="Mic auto-off">Micro auto-off</span>
+                  <span class="settings-value" data-lang-fr="30 sec" data-lang-en="30 sec">30 sec</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Repertoire Drawer / Song Book -->
+          <div class="widget-card">
+            <h3 data-lang-fr="Carnet de chants" data-lang-en="Repertoire Drawer">Carnet de chants</h3>
+            <p data-lang-fr="Sauvegardez vos capos, transpositions et notes personnalisées par chanson." data-lang-en="Save your capos, transpositions, and custom notes per song.">Sauvegardez vos capos, transpositions et notes personnalisées par chanson.</p>
+            <div class="widget-preview">
+              <div class="drawer-preview-box">
+                <div class="drawer-preview-line"><span data-lang-fr="Capodastre" data-lang-en="Capo">Capodastre</span> <span class="highlight" data-lang-fr="Frette 2" data-lang-en="Fret 2">Frette 2</span></div>
+                <div class="drawer-preview-line"><span data-lang-fr="Transposition" data-lang-en="Transposition">Transposition</span> <span class="highlight" data-lang-fr="-1 demi-ton" data-lang-en="-1 semitone">-1 demi-ton</span></div>
+                <div class="drawer-preview-line"><span data-lang-fr="Notes" data-lang-en="Notes">Notes</span> <span class="note-snippet" data-lang-fr="Chanter un octave plus bas" data-lang-en="Sing one octave lower">Chanter un octave plus bas</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy Section -->
+    <section id="privacy">
+      <div class="container">
+        <div class="privacy-box">
+          <div class="privacy-icon">🔒</div>
+          <div class="privacy-content">
+            <h3 data-lang-fr="Respect total de votre vie privée" data-lang-en="100% Secure & Private">Respect total de votre vie privée</h3>
+            <p style="margin-bottom: 0;" data-lang-fr="Le traitement des commandes vocales est exclusivement géré en local par votre navigateur internet. Aucun flux ou enregistrement audio n'est envoyé au créateur de l'extension ni à des serveurs tiers. Tout reste sur votre machine." data-lang-en="Voice command processing is handled entirely inside your local web browser. No audio streams, files, or recordings are sent to the extension developers or any third-party servers. Your audio stays yours.">
+              Le traitement des commandes vocales est exclusivement géré en local par votre navigateur internet. Aucun flux ou enregistrement audio n'est envoyé au créateur de l'extension ni à des serveurs tiers. Tout reste sur votre machine.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation / CTA Section -->
+    <section id="install">
+      <div class="container">
+        <div class="section-header">
+          <h2 data-lang-fr="Installez Vox Roddy en quelques secondes" data-lang-en="Get Started with Vox Roddy">Installez Vox Roddy en quelques secondes</h2>
+          <p class="section-subtitle" data-lang-fr="Commencez à progresser les mains libres." data-lang-en="Start practicing hands-free today.">Commencez à progresser les mains libres.</p>
+        </div>
+
+        <div class="steps-container">
+          <div class="step-item">
+            <span class="step-number">1</span>
+            <h3 data-lang-fr="Ajouter à Chrome" data-lang-en="Add to Chrome">Ajouter à Chrome</h3>
+            <p style="font-size: 0.95rem;" data-lang-fr="Téléchargez l'extension depuis le Chrome Web Store." data-lang-en="Download the extension directly from the Chrome Web Store.">Téléchargez l'extension depuis le Chrome Web Store.</p>
+          </div>
+          <div class="step-item">
+            <span class="step-number">2</span>
+            <h3 data-lang-fr="Autoriser le micro" data-lang-en="Allow Microphone">Autoriser le micro</h3>
+            <p style="font-size: 0.95rem;" data-lang-fr="Acceptez l'accès au microphone pour permettre l'écoute des commandes." data-lang-en="Grant permission to use your microphone when prompted.">Acceptez l'accès au microphone pour permettre l'écoute des commandes.</p>
+          </div>
+          <div class="step-item">
+            <span class="step-number">3</span>
+            <h3 data-lang-fr="Prononcer 'Roddy'" data-lang-en="Say 'Roddy'">Prononcer "Roddy"</h3>
+            <p style="font-size: 0.95rem;" data-lang-fr="Dites simplement le mot magique suivi de votre commande !" data-lang-en="Say the trigger name followed by your command to play!">Dites simplement le mot magique suivi de votre commande !</p>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 4rem;">
+          <a href="#" class="btn btn-primary btn-large" style="padding: 1rem 2.5rem; font-size: 1.1rem;" data-lang-fr="Ajouter à Chrome (Gratuit)" data-lang-en="Add to Chrome (Free)">Ajouter à Chrome (Gratuit)</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h4 class="logo" style="margin-bottom: 0.5rem;">
+            <img src="assets/icon128.png" alt="Vox Roddy Logo">
+            <span class="logo-text">Vox Roddy</span>
+          </h4>
+          <p style="font-size: 0.9rem;" data-lang-fr="L'assistant vocal ultime pour les musiciens. Conçu pour le contrôle de YouTube et le défilement des tablatures." data-lang-en="The ultimate voice assistant for musicians. Built for YouTube control and tab scrolling.">
+            L'assistant vocal ultime pour les musiciens. Conçu pour le contrôle de YouTube et le défilement des tablatures.
+          </p>
+        </div>
+        <div class="footer-links">
+          <h4 data-lang-fr="Liens" data-lang-en="Links">Liens</h4>
+          <ul>
+            <li><a href="#features" data-lang-fr="Fonctionnalités" data-lang-en="Features">Fonctionnalités</a></li>
+            <li><a href="#widgets" data-lang-fr="Outils" data-lang-en="Tools">Outils</a></li>
+            <li><a href="#privacy" data-lang-fr="Vie Privée" data-lang-en="Privacy">Vie Privée</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4 data-lang-fr="Support" data-lang-en="Support">Support</h4>
+          <ul>
+            <li><a href="#" data-lang-fr="Documentation" data-lang-en="Documentation">Documentation</a></li>
+            <li><a href="#" data-lang-fr="Nous contacter" data-lang-en="Contact Us">Nous contacter</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p style="margin: 0; font-size: 0.85rem;">&copy; 2026 Vox Roddy. Tous droits réservés / All rights reserved.</p>
+        <p style="margin: 0; font-size: 0.85rem;" data-lang-fr="Développé avec passion pour les guitaristes et pianistes" data-lang-en="Built with passion for guitarists and pianists">Développé avec passion pour les guitaristes et pianistes</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JS Interactions -->
+  <script src="script.js"></script>
+</body>
+</html>

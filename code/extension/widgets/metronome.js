@@ -352,20 +352,7 @@
 
   // State changes listener
   window.RockstarCore.onListeningChanged((isListening) => {
-    if (!isListening) {
-      if (metronomeContainer) {
-        metronomeContainer.classList.remove('visible', 'flash-active', 'flash-accent');
-        stopMetronome();
-      }
-      removeScreenFlashOverlay();
-    } else {
-      if (metronomeContainer) {
-        metronomeContainer.classList.add('visible');
-      }
-      if (metronomeFlashScreen) {
-        createScreenFlashOverlay();
-      }
-    }
+    // Keep metronome visible and active even when voice control is off
   });
 
   // Init metronome UI
@@ -474,8 +461,9 @@
     });
 
     // Synchronisation de l'état initial
-    if (window.RockstarCore.isListening) {
-      metronomeContainer.classList.add('visible');
+    metronomeContainer.classList.add('visible');
+    if (metronomeFlashScreen) {
+      createScreenFlashOverlay();
     }
   });
 

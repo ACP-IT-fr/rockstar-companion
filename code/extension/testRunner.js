@@ -1,6 +1,10 @@
 // testRunner.js
 (function() {
   window.addEventListener('load', () => {
+    if (new URLSearchParams(window.location.search).get('test') !== 'true') {
+      console.log("[TEST] Autostart of integration tests disabled. Add ?test=true to URL to run tests.");
+      return;
+    }
     setTimeout(async () => {
       const resultsDiv = document.createElement('div');
       resultsDiv.id = 'test-results';
