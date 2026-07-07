@@ -224,9 +224,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Inject Assistant dynamic scripts via activeTab
+  // Inject Assistant dynamic scripts via activeTab (or Deactivate if already active)
   const injectBtn = document.getElementById('inject-assistant-btn');
+  let isCoreActiveOnTab = false;
+
   if (injectBtn) {
+    // Check if Rockstar is already active on the current tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0]) {
+        const tabId = tabs[0].id;
+        chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          func: () => {
+            return typeof window.RockstarCore !== 'undefined' && window.RockstarCore.isInitialized === true;
+          }
+        }).then((results) => {
+          if (results && results[0] && results[0].result === true) {
+            isCoreActiveOnTab = true;
+            injectBtn.innerText = "🛑 Désactiver sur cet onglet";
+            injectBtn.style.background = "#ef4444";
+          }
+        }).catch(err => {
+          console.log("Could not check Rockstar status on tab:", err);
+        });
+      }
+    });
+
     injectBtn.addEventListener('click', () => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (!tabs || !tabs[0]) {
@@ -234,73 +257,130 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         const tabId = tabs[0].id;
-        
-        console.log("Starting script injection on tab: ", tabId);
-        injectBtn.innerText = "⏳ Injection...";
-        
-        // 1. Ingestion CSS
-        chrome.scripting.insertCSS({
-          target: { tabId: tabId },
-          files: ["content.css"]
-        }).then(() => {
-          console.log("CSS injected successfully, setting progress flag...");
-          // Définir le flag pour indiquer qu'une injection dynamique est en cours
-          return chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            func: () => { window.__rockstarDynamicInjectionInProgress = true; }
-          });
-        }).then(() => {
-          // 2. Sequential JS Injections to respect dependencies (storageService -> core -> others)
-          const jsFiles = [
-            "storageService.js",
-            "core.js",
-            "voiceEngine.js",
-            "widgets/floatingBar.js",
-            "widgets/scroll.js",
-            "widgets/metronome.js",
-            "widgets/tuner.js",
-            "widgets/chordDetector.js",
-            "widgets/repertoireDrawer.js",
-            "widgets/youtubeController.js",
-            "widgets/singingTracker.js"
-          ];
-          
-          // Helper to chain promises sequentially
-          return jsFiles.reduce((promise, file) => {
-            return promise.then(() => {
-              console.log(`Injecting ${file}...`);
-              return chrome.scripting.executeScript({
-                target: { tabId: tabId },
-                files: [file]
-              });
-            });
-          }, Promise.resolve());
-        }).then(() => {
-          console.log("All scripts injected successfully, running initialize...");
-          return chrome.scripting.executeScript({
+
+        if (isCoreActiveOnTab) {
+          // DEACTIVATION
+          injectBtn.innerText = "⏳ Désactivation...";
+          chrome.scripting.executeScript({
             target: { tabId: tabId },
             func: () => {
-              // Nettoyer le flag temporaire
-              delete window.__rockstarDynamicInjectionInProgress;
-              if (window.RockstarCore && typeof window.RockstarCore.initialize === 'function') {
-                window.RockstarCore.initialize();
-              } else {
-                console.error("[RockstarPopup] RockstarCore not found on active tab.");
+              if (window.RockstarCore) {
+                // Stop listening
+                if (typeof window.RockstarCore.stopListening === 'function') {
+                  window.RockstarCore.stopListening();
+                }
+                // Close/suspend audio context if any
+                if (typeof window.RockstarCore.getAudioContext === 'function') {
+                  try {
+                    const ctx = window.RockstarCore.getAudioContext();
+                    if (ctx && typeof ctx.close === 'function') {
+                      ctx.close().catch(() => {});
+                    }
+                  } catch (e) {}
+                }
               }
+
+              // List of DOM elements to remove
+              const elementsToRemove = [
+                'rockstar-floating-bar',
+                'ug-chord',
+                'ug-tuner',
+                'ug-singing-tracker',
+                'ug-metronome',
+                'ug-metronome-screen-overlay',
+                'rockstar-drawer',
+                'ug-drawer-btn',
+                'rockstar-banner'
+              ];
+
+              elementsToRemove.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.remove();
+              });
+
+              // Delete global RockstarCore object
+              delete window.RockstarCore;
             }
+          }).then(() => {
+            console.log("Deactivation completed successfully");
+            injectBtn.innerText = "🎙️ Activer sur cet onglet";
+            injectBtn.style.background = "var(--accent-gradient)";
+            isCoreActiveOnTab = false;
+          }).catch(err => {
+            console.error("Deactivation failed: ", err);
+            injectBtn.innerText = "❌ Échec de désactivation";
+            injectBtn.style.background = "#ef4444";
           });
-        }).then(() => {
-          console.log("Initialization triggered successfully");
-          injectBtn.innerText = "✅ Activé !";
-          injectBtn.style.background = "#10b981";
-          setTimeout(() => {
-            window.close(); // Close the popup
-          }, 800);
-        }).catch(err => {
-          console.error("Injection failed entirely: ", err);
-          injectBtn.innerText = "❌ Échec (" + (err.message || "erreur") + ")";
-          injectBtn.style.background = "#ef4444";
-        });
+        } else {
+          // ACTIVATION
+          console.log("Starting script injection on tab: ", tabId);
+          injectBtn.innerText = "⏳ Injection...";
+          
+          // 1. Ingestion CSS
+          chrome.scripting.insertCSS({
+            target: { tabId: tabId },
+            files: ["content.css"]
+          }).then(() => {
+            console.log("CSS injected successfully, setting progress flag...");
+            // Définir le flag pour indiquer qu'une injection dynamique est en cours
+            return chrome.scripting.executeScript({
+              target: { tabId: tabId },
+              func: () => { window.__rockstarDynamicInjectionInProgress = true; }
+            });
+          }).then(() => {
+            // 2. Sequential JS Injections to respect dependencies (storageService -> core -> others)
+            const jsFiles = [
+              "storageService.js",
+              "core.js",
+              "voiceEngine.js",
+              "widgets/floatingBar.js",
+              "widgets/scroll.js",
+              "widgets/metronome.js",
+              "widgets/tuner.js",
+              "widgets/chordDetector.js",
+              "widgets/repertoireDrawer.js",
+              "widgets/youtubeController.js",
+              "widgets/singingTracker.js"
+            ];
+            
+            // Helper to chain promises sequentially
+            return jsFiles.reduce((promise, file) => {
+              return promise.then(() => {
+                console.log(`Injecting ${file}...`);
+                return chrome.scripting.executeScript({
+                  target: { tabId: tabId },
+                  files: [file]
+                });
+              });
+            }, Promise.resolve());
+          }).then(() => {
+            console.log("All scripts injected successfully, running initialize...");
+            return chrome.scripting.executeScript({
+              target: { tabId: tabId },
+              func: () => {
+                // Nettoyer le flag temporaire
+                delete window.__rockstarDynamicInjectionInProgress;
+                if (window.RockstarCore && typeof window.RockstarCore.initialize === 'function') {
+                  window.RockstarCore.initialize();
+                } else {
+                  console.error("[RockstarPopup] RockstarCore not found on active tab.");
+                }
+              }
+            });
+          }).then(() => {
+            console.log("Initialization triggered successfully");
+            injectBtn.innerText = "✅ Activé !";
+            injectBtn.style.background = "#10b981";
+            isCoreActiveOnTab = true;
+            setTimeout(() => {
+              window.close(); // Close the popup
+            }, 800);
+          }).catch(err => {
+            console.error("Injection failed entirely: ", err);
+            injectBtn.innerText = "❌ Échec (" + (err.message || "erreur") + ")";
+            injectBtn.style.background = "#ef4444";
+          });
+        }
       });
     });
   }

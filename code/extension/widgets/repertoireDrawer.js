@@ -686,7 +686,13 @@
     if (window.RockstarCore.stopListening) {
       window.RockstarCore.stopListening();
     }
-    window.location.href = url;
+    if (window.RockstarCore.safeStorageSet) {
+      window.RockstarCore.safeStorageSet({ rockstar_wake_on_load: true }, () => {
+        window.location.href = url;
+      });
+    } else {
+      window.location.href = url;
+    }
   }
 
   function performSearch(query, siteKey) {
@@ -721,7 +727,13 @@
     if (window.RockstarCore.stopListening) {
       window.RockstarCore.stopListening();
     }
-    window.location.href = url;
+    if (window.RockstarCore.safeStorageSet) {
+      window.RockstarCore.safeStorageSet({ rockstar_wake_on_load: true }, () => {
+        window.location.href = url;
+      });
+    } else {
+      window.location.href = url;
+    }
   }
 
   function initializeDrawer() {
@@ -802,7 +814,13 @@
         if (window.RockstarCore.stopListening) {
           window.RockstarCore.stopListening();
         }
-        window.location.href = window.ugSearchResultLinks[num];
+        if (window.RockstarCore.safeStorageSet) {
+          window.RockstarCore.safeStorageSet({ rockstar_wake_on_load: true }, () => {
+            window.location.href = window.ugSearchResultLinks[num];
+          });
+        } else {
+          window.location.href = window.ugSearchResultLinks[num];
+        }
         return { success: true, action: `Ouverture du résultat #${num}` };
       }
       return { success: false, action: `Résultat #${num || match[1]} non trouvé` };

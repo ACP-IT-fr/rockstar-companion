@@ -188,13 +188,18 @@
         if (!auto) {
           wakeUp(Math.max(15000, wakeActiveDuration * 1000), true);
         } else {
-          window.RockstarCore.safeStorageGet('rockstar_awake_until', (res) => {
-            const now = Date.now();
-            const remaining = res.rockstar_awake_until ? (res.rockstar_awake_until - now) : 0;
-            if (remaining > 0) {
-              wakeUp(remaining, false);
+          window.RockstarCore.safeStorageGet(['rockstar_awake_until', 'rockstar_wake_on_load'], (res) => {
+            if (res && res.rockstar_wake_on_load === true) {
+              window.RockstarCore.safeStorageRemove('rockstar_wake_on_load');
+              wakeUp(Math.max(15000, wakeActiveDuration * 1000), true);
             } else {
-              goToSleep();
+              const now = Date.now();
+              const remaining = res && res.rockstar_awake_until ? (res.rockstar_awake_until - now) : 0;
+              if (remaining > 0) {
+                wakeUp(remaining, false);
+              } else {
+                goToSleep();
+              }
             }
           });
         }
