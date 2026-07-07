@@ -38,19 +38,26 @@
   window.RockstarCore.appendButtonsToFloatingBar = appendButtonsToFloatingBar;
 
   function showFeedback(text, isSuccess) {
-    // Commenté temporairement pour éviter l'empilement de notifications
-    /*
+    // N'afficher la notification visuelle que pour les échecs / commandes non reconnues
+    if (isSuccess) return;
+
     if (!feedbackContainer) return;
+
+    // Éviter l'empilement : s'il y a déjà une notification d'erreur affichée, on la retire immédiatement
+    const existing = feedbackContainer.querySelector('.ug-voice-toast');
+    if (existing) {
+      existing.remove();
+    }
+
     const toast = document.createElement('div');
-    toast.className = 'ug-voice-toast ' + (isSuccess ? 'success' : 'error');
+    toast.className = 'ug-voice-toast error';
     toast.innerText = text;
     feedbackContainer.appendChild(toast);
     
     setTimeout(() => {
       toast.classList.add('fade-out');
       setTimeout(() => toast.remove(), 500);
-    }, 3000);
-    */
+    }, 4000);
   }
 
   function showActivationBanner() {
