@@ -54,6 +54,11 @@
     toast.innerText = text;
     feedbackContainer.appendChild(toast);
     
+    // Déclencher l'animation d'entrée par glissement (slide-up)
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+    
     setTimeout(() => {
       toast.classList.add('fade-out');
       setTimeout(() => toast.remove(), 500);
