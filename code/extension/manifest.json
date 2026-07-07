@@ -17,7 +17,7 @@
       "matches": [
         "*://*.ultimate-guitar.com/*",
         "*://*.youtube.com/*",
-        "*://*.google.com/*"
+        "*://www.google.com/search*"
       ],
       "css": ["content.css"],
       "js": [

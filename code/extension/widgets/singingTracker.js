@@ -33,7 +33,6 @@
       if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
           if (audioContext.state === 'running') {
-            console.log("[RockstarSinging] AudioContext resumed on user gesture");
             window.removeEventListener('click', unlockAudioContext);
             window.removeEventListener('keydown', unlockAudioContext);
             window.removeEventListener('touchstart', unlockAudioContext);
@@ -396,7 +395,7 @@
     }
   });
 
-  window.RockstarCore.registerHelpCommand({ label: "🎤 Vocal Pitch Tracker", cmd: "chant" });
+  window.RockstarCore.registerHelpCommand({ label: "🎤 Vocal Pitch Tracker", cmd: "chant", env: "tab" });
 
   // Handle listening state changes to clean up or auto-init
   window.RockstarCore.onListeningChanged((isListening) => {

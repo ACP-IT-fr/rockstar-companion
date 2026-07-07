@@ -254,6 +254,10 @@
       if (isMatch) {
         const matchResult = def.regex ? cmd.match(def.regex) : null;
         const result = def.handler(cmd, matchResult);
+        // Si le handler indique yield:true, on continue vers le prochain handler correspondant
+        if (result.yield === true) {
+          continue;
+        }
         isSuccess = result.success;
         actionName = result.action || def.name;
         break;

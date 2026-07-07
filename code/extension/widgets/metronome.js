@@ -340,8 +340,8 @@
   });
 
   // Help Commands
-  window.RockstarCore.registerHelpCommand({ label: "⏱️ Démarrer Métronome", cmd: "démarre le métronome" });
-  window.RockstarCore.registerHelpCommand({ label: "⏱️ Arrêter Métronome", cmd: "arrête le métronome" });
+  window.RockstarCore.registerHelpCommand({ label: "⏱️ Démarrer Métronome", cmd: "démarre le métronome", env: "tab" });
+  window.RockstarCore.registerHelpCommand({ label: "⏱️ Arrêter Métronome", cmd: "arrête le métronome", env: "tab" });
 
   // Settings sync listener
   window.RockstarCore.onSettingsChanged((settings) => {

@@ -122,7 +122,6 @@
       }
       
       if (window.RockstarCore.isListening) {
-        console.log(`[RockstarVoice] Stopping listening due to ${inactivityDelay} min inactivity`);
         stopListening();
         if (window.RockstarCore.showFeedback) {
           window.RockstarCore.showFeedback(`🎤 Micro fermé par inactivité (${inactivityDelay} min)`, true);
@@ -180,7 +179,6 @@
         
         if (document.hidden) {
           window.RockstarCore.isSuspendedByVisibility = true;
-          console.log("[RockstarVoice] Tab is hidden, suspending speech recognition startup.");
         } else {
           recognition.start();
         }
@@ -265,7 +263,6 @@
           clearTimeout(interimFinalizeTimeout);
           lastInterimTranscript = '';
           let finalTranscript = activeText;
-          console.log("Voice Command Recognized:", finalTranscript);
 
           // Add raw transcript to speech history
           addRawSentence(transcript);
@@ -341,7 +338,6 @@
 
       if (window.RockstarCore.isAwake && lastInterimTranscript.trim() !== '') {
         interimFinalizeTimeout = setTimeout(() => {
-          console.log("[RockstarVoice] Auto-finalizing interim speech:", lastInterimTranscript);
           const transcriptToExecute = lastInterimTranscript;
           lastInterimTranscript = '';
           

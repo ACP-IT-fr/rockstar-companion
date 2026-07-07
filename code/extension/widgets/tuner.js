@@ -27,7 +27,6 @@
       if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
           if (audioContext.state === 'running') {
-            console.log("[RockstarTuner] AudioContext resumed on user gesture");
             window.removeEventListener('click', unlockAudioContext);
             window.removeEventListener('keydown', unlockAudioContext);
             window.removeEventListener('touchstart', unlockAudioContext);
@@ -201,7 +200,7 @@
   });
 
   // Help Panel Command
-  window.RockstarCore.registerHelpCommand({ label: "🎸 Accordeur", cmd: "accordeur" });
+  window.RockstarCore.registerHelpCommand({ label: "🎸 Accordeur", cmd: "accordeur", env: "tab" });
 
   // Handle listening state changes to clean up or auto-init
   window.RockstarCore.onListeningChanged((isListening) => {

@@ -901,7 +901,6 @@
         if (tabLinks.length === 0) return;
 
         clearInterval(interval);
-        console.log("[Rockstar] Found links for numbering:", tabLinks.length);
 
         // Remove existing badges to avoid duplicates on re-render
         document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());

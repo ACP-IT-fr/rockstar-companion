@@ -199,6 +199,10 @@
     name: 'Set Speed',
     regex: speedSetRegex,
     handler: (cmdText, match) => {
+      // Sur YouTube, "vitesse 1/2/..." contrôle la vitesse de lecture vidéo, pas le défilement
+      if (window.location.hostname.includes('youtube.com')) {
+        return { yield: true };
+      }
       const val = textToNum[match[1].toLowerCase()];
       if (val) {
         setSpeed(val);
@@ -212,6 +216,10 @@
     name: 'Increase Speed',
     variants: speedUpVariants,
     handler: () => {
+      // Sur YouTube, ces commandes contrôlent la vitesse de lecture vidéo, pas le défilement
+      if (window.location.hostname.includes('youtube.com')) {
+        return { yield: true };
+      }
       adjustSpeed(1);
       return { success: true, action: `Plus vite (Vitesse ${window.RockstarCore.scrollSpeed})` };
     }
@@ -221,6 +229,10 @@
     name: 'Decrease Speed',
     variants: slowDownVariants,
     handler: () => {
+      // Sur YouTube, ces commandes contrôlent la vitesse de lecture vidéo, pas le défilement
+      if (window.location.hostname.includes('youtube.com')) {
+        return { yield: true };
+      }
       adjustSpeed(-1);
       return { success: true, action: `Moins vite (Vitesse ${window.RockstarCore.scrollSpeed})` };
     }

@@ -93,6 +93,8 @@
     return null;
   }
 
+  let lastProgressBarRef = null; // WeakRef pour détecter la recréation du DOM par YouTube
+
   function drawVisualMarkers(force = false) {
     const video = window.RockstarCore.getActiveVideo();
     if (!video || !video.duration) return;
@@ -101,12 +103,20 @@
     if (!progressBar) return;
 
     const currentVideoId = getCurrentYouTubeVideoId();
-    if (currentVideoId !== lastDrawnVideoId || force) {
-      progressBar.querySelectorAll('.rockstar-marker').forEach(m => m.remove());
-      lastDrawnVideoId = currentVideoId;
-    } else if (progressBar.querySelector('.rockstar-marker')) {
-      return;
+
+    // Détecter si YouTube a recréé la progressBar (navigation SPA, refresh DOM)
+    const progressBarChanged = lastProgressBarRef !== progressBar;
+    if (progressBarChanged) {
+      lastProgressBarRef = progressBar;
     }
+
+    // Redessiner si : vidéo changée, progressBar recréée, forcé explicitement, ou aucun marker présent
+    const needsRedraw = force || progressBarChanged || currentVideoId !== lastDrawnVideoId || !progressBar.querySelector('.rockstar-marker');
+    if (!needsRedraw) return;
+
+    // Nettoyer les anciens markers
+    progressBar.querySelectorAll('.rockstar-marker').forEach(m => m.remove());
+    lastDrawnVideoId = currentVideoId;
 
     const key = getBookmarksStorageKey();
     window.RockstarCore.safeStorageGet(key, (res) => {
@@ -114,8 +124,13 @@
       const entries = Object.entries(bookmarks);
       entries.sort((a, b) => a[1] - b[1]);
 
+      // Re-vérifier la progressBar au moment du callback (async)
+      const currentBar = document.querySelector('.ytp-progress-bar');
+      const currentDuration = video.duration;
+      if (!currentBar || !currentDuration) return;
+
       entries.forEach(([name, time], idx) => {
-        const pct = (time / video.duration) * 100;
+        const pct = (time / currentDuration) * 100;
         
         const marker = document.createElement('div');
         marker.className = 'rockstar-marker';
@@ -144,7 +159,7 @@
           }
         });
         
-        progressBar.appendChild(marker);
+        currentBar.appendChild(marker);
       });
     });
   }
@@ -203,13 +218,39 @@
     const isForced = localStorage.getItem('rockstar_always_show_controls') === 'true';
     toggleForceControls.checked = isForced;
     
+    let forceControlsInterval = null;
+
+    function startForceControlsHover() {
+      if (forceControlsInterval) return;
+      forceControlsInterval = setInterval(() => {
+        const player = document.querySelector('.html5-video-player');
+        if (!player) return;
+        // Simuler mouseenter pour maintenir les contrôles visibles sans perturber le player
+        player.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      }, 1500);
+    }
+
+    function stopForceControlsHover() {
+      if (forceControlsInterval) {
+        clearInterval(forceControlsInterval);
+        forceControlsInterval = null;
+      }
+    }
+
+    if (isForced) startForceControlsHover();
+
     toggleForceControls.addEventListener('change', () => {
       const active = toggleForceControls.checked;
       localStorage.setItem('rockstar_always_show_controls', active);
-      
-      const player = document.querySelector('.html5-video-player');
-      if (player) {
-        player.classList.toggle('rockstar-force-controls-visible', active);
+      if (active) {
+        startForceControlsHover();
+      } else {
+        stopForceControlsHover();
+        // Laisser YouTube reprendre son comportement normal
+        const player = document.querySelector('.html5-video-player');
+        if (player) {
+          player.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+        }
       }
     });
 
@@ -471,18 +512,26 @@
     }
   });
 
-  const rewindRegex = /^(?:recule[s]?|retourne[s]?|rewind|back|arrière|arriere)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
+  const rewindRegex = /^(?:recule(?:r)?|retourne[s]?|rewind|back|arrière|arriere)\s*(?:de\s+)?(\d+(?:[.,]\d+)?|trente|vingt(?:-cinq)?|quinze|dix|neuf|huit|sept|six|cinq|quatre|trois|deux|un)?\s*(?:seconde|secondes|seconds|second)?$/i;
   window.RockstarCore.registerCommand({
     name: 'Rewind Video',
     regex: rewindRegex,
     handler: (cmdText, match) => {
-      const rawNum = match[1];
+      const rawNum = match && match[1];
+      const extraTextToNum = {
+        'trente': 30, 'vingt-cinq': 25, 'vingt': 20, 'quinze': 15,
+        'dix': 10, 'neuf': 9, 'huit': 8, 'sept': 7, 'six': 6,
+        'cinq': 5, 'quatre': 4, 'trois': 3, 'deux': 2, 'un': 1,
+        ...textToNum
+      };
       let seconds = 10;
       if (rawNum) {
-        if (textToNum[rawNum.toLowerCase()] !== undefined) {
-          seconds = textToNum[rawNum.toLowerCase()];
-        } else if (!isNaN(parseInt(rawNum, 10))) {
-          seconds = parseInt(rawNum, 10);
+        const numLower = rawNum.toLowerCase().replace(',', '.');
+        if (extraTextToNum[numLower] !== undefined) {
+          seconds = extraTextToNum[numLower];
+        } else {
+          const parsed = parseFloat(numLower);
+          if (!isNaN(parsed)) seconds = parsed;
         }
       }
       const ytPlayer = getYTPlayer();
@@ -494,26 +543,31 @@
       } else if (video) {
         video.currentTime = Math.max(0, video.currentTime - seconds);
         return { success: true, action: `Reculé de ${seconds}s` };
-      } else if (window.RockstarCore.sendYouTubeCommand) {
-        window.RockstarCore.sendYouTubeCommand('seekTo', [0, true]);
-        return { success: true, action: 'Remis au début (lecteur tiroir)' };
       }
       return { success: false, action: 'Aucun lecteur actif pour reculer' };
     }
   });
 
-  const forwardRegex = /^(?:avance[s]?|forward|skip)\s*(?:de\s+)?(\d+|dix|dis|ten|neuf|nine|huit|oui|eight|sept|set|seven|six|sis|cinq|sync|five|quatre|cat|four|for|trois|toi|three|tree|deux|de|two|to|un|in|one)?\s*(?:seconde|secondes|seconds|second)?$/i;
+  const forwardRegex = /^(?:avance(?:r)?|forward|skip)\s*(?:de\s+)?(\d+(?:[.,]\d+)?|trente|vingt(?:-cinq)?|quinze|dix|neuf|huit|sept|six|cinq|quatre|trois|deux|un)?\s*(?:seconde|secondes|seconds|second)?$/i;
   window.RockstarCore.registerCommand({
     name: 'Forward Video',
     regex: forwardRegex,
     handler: (cmdText, match) => {
-      const rawNum = match[1];
+      const rawNum = match && match[1];
+      const extraTextToNum = {
+        'trente': 30, 'vingt-cinq': 25, 'vingt': 20, 'quinze': 15,
+        'dix': 10, 'neuf': 9, 'huit': 8, 'sept': 7, 'six': 6,
+        'cinq': 5, 'quatre': 4, 'trois': 3, 'deux': 2, 'un': 1,
+        ...textToNum
+      };
       let seconds = 10;
       if (rawNum) {
-        if (textToNum[rawNum.toLowerCase()] !== undefined) {
-          seconds = textToNum[rawNum.toLowerCase()];
-        } else if (!isNaN(parseInt(rawNum, 10))) {
-          seconds = parseInt(rawNum, 10);
+        const numLower = rawNum.toLowerCase().replace(',', '.');
+        if (extraTextToNum[numLower] !== undefined) {
+          seconds = extraTextToNum[numLower];
+        } else {
+          const parsed = parseFloat(numLower);
+          if (!isNaN(parsed)) seconds = parsed;
         }
       }
       const ytPlayer = getYTPlayer();
@@ -603,15 +657,24 @@
     }
   });
 
-  const videoSpeedRegex = /^(?:vitesse|playback speed|playbackrate)\s*(?:de\s+)?(\d+(?:[.,]\d+)?|normale|normal)$/i;
+  // Vitesse de lecture — valeurs fixes (vocal + panel)
+  // Supporte : vitesse 1, vitesse 2, vitesse demi, vitesse un quart, vitesse normale
+  // et leurs équivalents anglais : speed 1, half speed, quarter speed, normal speed
+  const videoSpeedRegex = /^(?:vitesse|speed|playback speed|playbackrate)\s*(?:de\s+)?(\d+(?:[.,]\d+)?|normale?|normal|demi|half|un quart|quarter|deux|two|un|one)$/i;
   window.RockstarCore.registerCommand({
     name: 'Set Video Playback Rate',
     regex: videoSpeedRegex,
     handler: (cmdText, match) => {
-      let speedStr = match[1].replace(',', '.');
+      let speedStr = match[1].toLowerCase().replace(',', '.');
       let targetRate = 1.0;
-      if (speedStr === 'normale' || speedStr === 'normal') {
-        targetRate = 1.0;
+      const rateMap = {
+        'normale': 1.0, 'normal': 1.0, 'un': 1.0, 'one': 1.0,
+        'deux': 2.0, 'two': 2.0,
+        'demi': 0.5, 'half': 0.5,
+        'un quart': 0.25, 'quarter': 0.25
+      };
+      if (rateMap[speedStr] !== undefined) {
+        targetRate = rateMap[speedStr];
       } else {
         const parsed = parseFloat(speedStr);
         if (!isNaN(parsed)) {
@@ -620,61 +683,14 @@
       }
       const ytPlayer = getYTPlayer();
       const video = window.RockstarCore.getActiveVideo();
-      if (video) {
-        video.playbackRate = targetRate;
-      }
+      if (video) video.playbackRate = targetRate;
       if (ytPlayer && typeof ytPlayer.setPlaybackRate === 'function') {
         ytPlayer.setPlaybackRate(targetRate);
       }
       if (window.RockstarCore.sendYouTubeCommand) {
         window.RockstarCore.sendYouTubeCommand('setPlaybackRate', [targetRate]);
       }
-      return { success: true, action: `Vitesse de lecture réglée à ${targetRate}x` };
-    }
-  });
-
-  const speedUpVariants = ['plus vite', 'faster', 'accélère', 'accelere', 'go faster', 'speed up'];
-  const slowDownVariants = ['moins vite', 'slower', 'ralentis', 'go slower', 'speed down'];
-
-  window.RockstarCore.registerCommand({
-    name: 'Increase Video Speed',
-    variants: [],
-    regex: new RegExp("vitesse.*(" + speedUpVariants.join('|') + "|augmenter|rapide)", "i"),
-    handler: () => {
-      const ytPlayer = getYTPlayer();
-      const video = window.RockstarCore.getActiveVideo();
-      if (ytPlayer && typeof ytPlayer.setPlaybackRate === 'function' && typeof ytPlayer.getPlaybackRate === 'function') {
-        const currentRate = ytPlayer.getPlaybackRate();
-        const targetRate = Math.min(4.0, currentRate + 0.1);
-        ytPlayer.setPlaybackRate(targetRate);
-        if (video) video.playbackRate = targetRate;
-        return { success: true, action: `Vitesse augmentée à ${targetRate.toFixed(2)}x` };
-      } else if (video) {
-        video.playbackRate = Math.min(4.0, video.playbackRate + 0.1);
-        return { success: true, action: `Vitesse augmentée à ${video.playbackRate.toFixed(2)}x` };
-      }
-      return { success: false, action: 'Aucun lecteur pour accélérer' };
-    }
-  });
-
-  window.RockstarCore.registerCommand({
-    name: 'Decrease Video Speed',
-    variants: [],
-    regex: new RegExp("vitesse.*(" + slowDownVariants.join('|') + "|diminuer|lent)", "i"),
-    handler: () => {
-      const ytPlayer = getYTPlayer();
-      const video = window.RockstarCore.getActiveVideo();
-      if (ytPlayer && typeof ytPlayer.setPlaybackRate === 'function' && typeof ytPlayer.getPlaybackRate === 'function') {
-        const currentRate = ytPlayer.getPlaybackRate();
-        const targetRate = Math.max(0.25, currentRate - 0.1);
-        ytPlayer.setPlaybackRate(targetRate);
-        if (video) video.playbackRate = targetRate;
-        return { success: true, action: `Vitesse diminuée à ${targetRate.toFixed(2)}x` };
-      } else if (video) {
-        video.playbackRate = Math.max(0.25, video.playbackRate - 0.1);
-        return { success: true, action: `Vitesse diminuée à ${video.playbackRate.toFixed(2)}x` };
-      }
-      return { success: false, action: 'Aucun lecteur pour ralentir' };
+      return { success: true, action: `Vitesse réglée à ${targetRate}` };
     }
   });
 
@@ -683,9 +699,13 @@
   window.RockstarCore.registerHelpCommand({ label: "⏸️ Pause / Stop", cmd: "pause", env: "youtube" });
   window.RockstarCore.registerHelpCommand({ label: "↩️ Reculer 10s", cmd: "recule", env: "youtube" });
   window.RockstarCore.registerHelpCommand({ label: "↪️ Avancer 10s", cmd: "avance", env: "youtube" });
+  window.RockstarCore.registerHelpCommand({ label: "↩️ Reculer 30s", cmd: "recule de 30 secondes", env: "youtube" });
+  window.RockstarCore.registerHelpCommand({ label: "↪️ Avancer 30s", cmd: "avance de 30 secondes", env: "youtube" });
   window.RockstarCore.registerHelpCommand({ label: "🔄 Recommencer", cmd: "recommence", env: "youtube" });
-  window.RockstarCore.registerHelpCommand({ label: "⚡ Vitesse 0.75x", cmd: "vitesse 0.75", env: "youtube" });
-  window.RockstarCore.registerHelpCommand({ label: "⚡ Vitesse Normale", cmd: "vitesse normale", env: "youtube" });
+  window.RockstarCore.registerHelpCommand({ label: "🐢 Vitesse un quart", cmd: "vitesse un quart", env: "youtube" });
+  window.RockstarCore.registerHelpCommand({ label: "🐢 Vitesse demi", cmd: "vitesse demi", env: "youtube" });
+  window.RockstarCore.registerHelpCommand({ label: "🕵️ Vitesse 1", cmd: "vitesse 1", env: "youtube" });
+  window.RockstarCore.registerHelpCommand({ label: "⚡ Vitesse 2", cmd: "vitesse 2", env: "youtube" });
   window.RockstarCore.registerHelpCommand({ label: "📍 Poser Repère 1", cmd: "enregistre le repère 1", env: "youtube" });
   window.RockstarCore.registerHelpCommand({ label: "➡️ Aller Repère 1", cmd: "retourne au repère 1", env: "youtube" });
 
@@ -698,18 +718,11 @@
       setInterval(() => {
         const currentVideoId = getCurrentYouTubeVideoId();
         const progressBar = document.querySelector('.ytp-progress-bar');
-        const hasIdChanged = currentVideoId !== lastDrawnVideoId;
-        if (progressBar && (!progressBar.querySelector('.rockstar-marker') || hasIdChanged)) {
+        if (progressBar) {
           drawVisualMarkers();
         }
-        if (hasIdChanged && markersPanel && markersPanel.classList.contains('visible')) {
+        if (currentVideoId !== lastDrawnVideoId && markersPanel && markersPanel.classList.contains('visible')) {
           updateMarkersPanelList();
-        }
-
-        const isForced = localStorage.getItem('rockstar_always_show_controls') === 'true';
-        const player = document.querySelector('.html5-video-player');
-        if (player) {
-          player.classList.toggle('rockstar-force-controls-visible', isForced);
         }
       }, 2000);
     }

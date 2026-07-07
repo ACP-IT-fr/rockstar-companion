@@ -56,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
               // Vérifier si le script dynamique est déjà enregistré, sinon le réenregistrer
               chrome.scripting.getRegisteredContentScripts({ ids: [scriptId] }, (registered) => {
                 if (!registered || registered.length === 0) {
-                  console.log(`Re-registering dynamic content scripts for ${currentDomain}...`);
                   chrome.scripting.registerContentScripts([{
                     id: scriptId,
                     matches: [originPattern1, originPattern2],
@@ -168,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
             css: ["content.css"],
             runAt: "document_idle"
           }]).then(() => {
-            console.log(`Successfully registered dynamic content scripts for ${currentDomain}`);
           }).catch(err => {
             console.error(`Failed to register dynamic content scripts for ${currentDomain}:`, err);
           });
@@ -188,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Désenregistrer le script dynamique
       chrome.scripting.unregisterContentScripts({ ids: [scriptId] })
         .then(() => {
-          console.log(`Successfully unregistered dynamic content scripts for ${currentDomain}`);
         })
         .catch(err => {
           console.warn(`Unregistering scripts for ${currentDomain} failed or none was active:`, err);
@@ -245,7 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
             injectBtn.style.background = "#ef4444";
           }
         }).catch(err => {
-          console.log("Could not check Rockstar status on tab:", err);
         });
       }
     });
@@ -302,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
               delete window.RockstarCore;
             }
           }).then(() => {
-            console.log("Deactivation completed successfully");
             injectBtn.innerText = "🎙️ Activer sur cet onglet";
             injectBtn.style.background = "var(--accent-gradient)";
             isCoreActiveOnTab = false;
@@ -313,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         } else {
           // ACTIVATION
-          console.log("Starting script injection on tab: ", tabId);
           injectBtn.innerText = "⏳ Injection...";
           
           // 1. Ingestion CSS
@@ -321,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
             target: { tabId: tabId },
             files: ["content.css"]
           }).then(() => {
-            console.log("CSS injected successfully, setting progress flag...");
             // Définir le flag pour indiquer qu'une injection dynamique est en cours
             return chrome.scripting.executeScript({
               target: { tabId: tabId },
@@ -346,7 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Helper to chain promises sequentially
             return jsFiles.reduce((promise, file) => {
               return promise.then(() => {
-                console.log(`Injecting ${file}...`);
                 return chrome.scripting.executeScript({
                   target: { tabId: tabId },
                   files: [file]
@@ -354,7 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
               });
             }, Promise.resolve());
           }).then(() => {
-            console.log("All scripts injected successfully, running initialize...");
             return chrome.scripting.executeScript({
               target: { tabId: tabId },
               func: () => {
@@ -368,7 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             });
           }).then(() => {
-            console.log("Initialization triggered successfully");
             injectBtn.innerText = "✅ Activé !";
             injectBtn.style.background = "#10b981";
             isCoreActiveOnTab = true;
