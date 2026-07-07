@@ -53,6 +53,7 @@ const storageService = {
         key: song.key !== undefined ? song.key : (existing.key || ""),
         capo: song.capo !== undefined ? parseInt(song.capo, 10) : (existing.capo !== undefined ? existing.capo : 0),
         transpose: song.transpose !== undefined ? parseInt(song.transpose, 10) : (existing.transpose !== undefined ? existing.transpose : 0),
+        scrollSpeed: song.scrollSpeed !== undefined ? parseInt(song.scrollSpeed, 10) : (existing.scrollSpeed !== undefined ? existing.scrollSpeed : 1),
         interpretationNotes: song.interpretationNotes !== undefined ? song.interpretationNotes : (existing.interpretationNotes || ""),
         playingTips: song.playingTips !== undefined ? song.playingTips : (existing.playingTips || ""),
         links: song.links || existing.links || [],

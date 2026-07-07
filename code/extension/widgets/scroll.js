@@ -37,9 +37,12 @@
     stopScrolling();
     currentDirection = direction;
     accumulatedScroll = 0;
+    window.RockstarCore.isScrolling = true;
     
     const speedContainer = document.getElementById('ug-voice-speed');
     if (speedContainer) speedContainer.classList.add('visible');
+    
+    window.dispatchEvent(new CustomEvent('rockstar-scroll-state-changed', { detail: { isScrolling: true } }));
     
     scrollInterval = setInterval(() => {
       accumulatedScroll += currentDirection * (window.RockstarCore.scrollSpeed / 10);
@@ -55,8 +58,10 @@
     if (scrollInterval) {
       clearInterval(scrollInterval);
       scrollInterval = null;
+      window.RockstarCore.isScrolling = false;
       const speedContainer = document.getElementById('ug-voice-speed');
       if (speedContainer) speedContainer.classList.remove('visible');
+      window.dispatchEvent(new CustomEvent('rockstar-scroll-state-changed', { detail: { isScrolling: false } }));
     }
   }
 
@@ -80,6 +85,19 @@
     const newSpeed = Math.max(1, Math.min(val, 10));
     window.RockstarCore.scrollSpeed = newSpeed;
     localStorage.setItem(storageKey, newSpeed);
+    // Persist to current song in storage
+    if (window.storageService) {
+      const { normalizeUrl } = window;
+      const url = (normalizeUrl ? normalizeUrl(window.location.href) : (window.location.origin + window.location.pathname));
+      window.storageService.getSong(url).then(song => {
+        if (song) {
+          song.scrollSpeed = newSpeed;
+          window.storageService.saveSong(song);
+        }
+      });
+    }
+    // Notify summary bar
+    window.dispatchEvent(new CustomEvent('rockstar-speed-changed', { detail: { speed: newSpeed } }));
   }
 
   function adjustSpeed(delta) {
@@ -225,6 +243,7 @@
   });
 
   // Exposer les méthodes utiles
+  window.RockstarCore.isScrolling = false;
   window.RockstarCore.stopScrolling = stopScrolling;
   window.RockstarCore.startScrolling = startScrolling;
 })();

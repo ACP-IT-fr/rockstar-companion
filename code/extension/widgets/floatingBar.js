@@ -303,6 +303,10 @@
     songSummaryBar = document.createElement('div');
     songSummaryBar.id = 'ug-song-summary-bar';
     songSummaryBar.innerHTML = `
+      <button id="summary-scroll-toggle" class="summary-scroll-toggle" title="Lancer / Arrêter le défilement automatique">
+        <svg id="summary-scroll-icon-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:block;"><polygon points="5,3 19,12 5,21"/></svg>
+        <svg id="summary-scroll-icon-stop" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
       <div class="summary-section">
         <span class="summary-label">Clé:</span>
         <span class="summary-value" id="summary-key">-</span>
@@ -314,6 +318,10 @@
       <div class="summary-section">
         <span class="summary-label">Trans:</span>
         <span class="summary-value" id="summary-transpose">-</span>
+      </div>
+      <div class="summary-section">
+        <span class="summary-label">Vitesse:</span>
+        <span class="summary-value" id="summary-speed">1</span>
       </div>
       <div class="summary-section clickable" id="summary-notes-trigger">
         <span class="summary-label">Notes:</span>
@@ -358,6 +366,7 @@
       const keyEl = document.getElementById('summary-key');
       const capoEl = document.getElementById('summary-capo');
       const transEl = document.getElementById('summary-transpose');
+      const speedEl = document.getElementById('summary-speed');
       const notesTextEl = document.getElementById('summary-notes-text');
       const notesFullEl = document.getElementById('summary-notes-full');
       const tipsTextEl = document.getElementById('summary-tips-text');
@@ -367,6 +376,7 @@
         if (keyEl) keyEl.innerText = '-';
         if (capoEl) capoEl.innerText = '-';
         if (transEl) transEl.innerText = '-';
+        if (speedEl) speedEl.innerText = window.RockstarCore.scrollSpeed || '1';
         if (notesTextEl) notesTextEl.innerText = '-';
         if (notesFullEl) notesFullEl.innerText = 'Aucune note';
         if (tipsTextEl) tipsTextEl.innerText = '-';
@@ -377,6 +387,7 @@
       if (keyEl) keyEl.innerText = song.key || 'N/A';
       if (capoEl) capoEl.innerText = song.capo !== undefined ? song.capo : '0';
       if (transEl) transEl.innerText = song.transpose !== undefined ? (song.transpose > 0 ? '+' + song.transpose : song.transpose) : '0';
+      if (speedEl) speedEl.innerText = song.scrollSpeed !== undefined ? song.scrollSpeed : (window.RockstarCore.scrollSpeed || '1');
       
       const notesVal = song.notes || song.interpretationNotes || '';
       if (notesTextEl) {
@@ -422,6 +433,50 @@
         fetchAndRenderSummary();
       }
     }, 1000);
+
+    // --- Manual scroll toggle button logic ---
+    const scrollToggleBtn = document.getElementById('summary-scroll-toggle');
+    const scrollIconPlay = document.getElementById('summary-scroll-icon-play');
+    const scrollIconStop = document.getElementById('summary-scroll-icon-stop');
+
+    function updateScrollToggleState(isScrolling) {
+      if (!scrollToggleBtn) return;
+      if (isScrolling) {
+        scrollToggleBtn.classList.add('active');
+        scrollToggleBtn.title = 'Arrêter le défilement automatique';
+        if (scrollIconPlay) scrollIconPlay.style.display = 'none';
+        if (scrollIconStop) scrollIconStop.style.display = 'block';
+      } else {
+        scrollToggleBtn.classList.remove('active');
+        scrollToggleBtn.title = 'Lancer le défilement automatique';
+        if (scrollIconPlay) scrollIconPlay.style.display = 'block';
+        if (scrollIconStop) scrollIconStop.style.display = 'none';
+      }
+    }
+
+    if (scrollToggleBtn) {
+      scrollToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.RockstarCore.isScrolling) {
+          if (window.RockstarCore.stopScrolling) window.RockstarCore.stopScrolling();
+        } else {
+          if (window.RockstarCore.startScrolling) window.RockstarCore.startScrolling(1);
+        }
+      });
+    }
+
+    // React to scroll state changes dispatched by scroll.js
+    window.addEventListener('rockstar-scroll-state-changed', (e) => {
+      updateScrollToggleState(e.detail && e.detail.isScrolling);
+    });
+
+    // React to speed changes dispatched by scroll.js (voice commands)
+    window.addEventListener('rockstar-speed-changed', (e) => {
+      const speedEl = document.getElementById('summary-speed');
+      if (speedEl && e.detail) speedEl.innerText = e.detail.speed;
+    });
+    // Sync initial state
+    updateScrollToggleState(window.RockstarCore.isScrolling || false);
 
     // Click triggers for dropdowns
     const notesTrigger = document.getElementById('summary-notes-trigger');

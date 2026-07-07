@@ -81,6 +81,7 @@
     const keyInput = drawerContainer.querySelector('#drawer-key');
     const capoInput = drawerContainer.querySelector('#drawer-capo');
     const transInput = drawerContainer.querySelector('#drawer-transpose');
+    const speedInput = drawerContainer.querySelector('#drawer-speed');
     const notesText = drawerContainer.querySelector('#drawer-notes');
     const tipsText = drawerContainer.querySelector('#drawer-tips');
 
@@ -91,6 +92,7 @@
       const currentKeyInput = drawerContainer.querySelector('#drawer-key');
       const currentCapoInput = drawerContainer.querySelector('#drawer-capo');
       const currentTransInput = drawerContainer.querySelector('#drawer-transpose');
+      const currentSpeedInput = drawerContainer.querySelector('#drawer-speed');
       const currentNotesText = drawerContainer.querySelector('#drawer-notes');
       const currentTipsText = drawerContainer.querySelector('#drawer-tips');
 
@@ -108,6 +110,12 @@
       }
       if (currentTransInput) {
         currentSong.transpose = parseInt(currentTransInput.value, 10) || 0;
+      }
+      if (currentSpeedInput) {
+        currentSong.scrollSpeed = parseInt(currentSpeedInput.value, 10) || 1;
+        if (window.RockstarCore) {
+          window.RockstarCore.scrollSpeed = currentSong.scrollSpeed;
+        }
       }
       if (currentNotesText) {
         currentSong.notes = currentNotesText.value;
@@ -145,6 +153,12 @@
     const newTransInput = transInput.cloneNode(true);
     transInput.parentNode.replaceChild(newTransInput, transInput);
     newTransInput.addEventListener('change', saveDrawerData);
+
+    if (speedInput) {
+      const newSpeedInput = speedInput.cloneNode(true);
+      speedInput.parentNode.replaceChild(newSpeedInput, speedInput);
+      newSpeedInput.addEventListener('change', saveDrawerData);
+    }
 
     const newNotesText = notesText.cloneNode(true);
     notesText.parentNode.replaceChild(newNotesText, notesText);
@@ -309,6 +323,10 @@
               <label>Trans</label>
               <input type="number" id="drawer-transpose" min="-12" max="12" value="0">
             </div>
+            <div class="drawer-input-group">
+              <label>Vitesse</label>
+              <input type="number" id="drawer-speed" min="1" max="10" value="1">
+            </div>
           </div>
         </div>
 
@@ -407,6 +425,9 @@
     window.storageService.getSong(url).then(song => {
       if (song) {
         currentSong = song;
+        if (song.scrollSpeed !== undefined) {
+          window.RockstarCore.scrollSpeed = song.scrollSpeed;
+        }
         populateDrawerFields();
       } else {
         const metadata = extractUGMetadata();
@@ -417,6 +438,7 @@
           key: "",
           capo: metadata.capo,
           transpose: 0,
+          scrollSpeed: window.RockstarCore ? window.RockstarCore.scrollSpeed : 1,
           notes: "",
           interpretationNotes: "",
           playingTips: "",
@@ -436,6 +458,10 @@
     drawerContainer.querySelector('#drawer-key').value = currentSong.key || '';
     drawerContainer.querySelector('#drawer-capo').value = currentSong.capo || 0;
     drawerContainer.querySelector('#drawer-transpose').value = currentSong.transpose || 0;
+    const speedInput = drawerContainer.querySelector('#drawer-speed');
+    if (speedInput) {
+      speedInput.value = currentSong.scrollSpeed || 1;
+    }
     drawerContainer.querySelector('#drawer-notes').value = currentSong.notes || currentSong.interpretationNotes || '';
     drawerContainer.querySelector('#drawer-tips').value = currentSong.playingTips || '';
     
