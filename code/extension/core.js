@@ -428,6 +428,8 @@
 
     // Initialisation globale
     initialize: () => {
+      if (window.RockstarCore.isInitialized) return;
+      window.RockstarCore.isInitialized = true;
       loadSettings(() => {
         // Déclencher tous les hooks d'initialisation des widgets
         initHooks.forEach(hook => {
@@ -441,11 +443,25 @@
     }
   };
 
-  // Lancement automatique de l'initialisation après le chargement de la page
-  window.addEventListener('load', () => {
-    // Laisser un temps pour que tous les scripts soient injectés et enregistrés
+  // Lancement automatique de l'initialisation après le chargement de la page (si statique/content script)
+  function autoInitialize() {
     setTimeout(() => {
-      window.RockstarCore.initialize();
+      if (window.RockstarCore && typeof window.RockstarCore.initialize === 'function') {
+        window.RockstarCore.initialize();
+      }
     }, 100);
-  });
+  }
+
+  if (window.__rockstarDynamicInjectionInProgress) {
+    // Si la page est déjà prête/complétée et qu'une injection dynamique est en cours,
+    // on n'auto-initialise pas car les scripts sont injectés dynamiquement de façon séquentielle par popup.js.
+    // L'initialisation finale sera déclenchée par popup.js à la fin de la chaîne d'injection.
+  } else {
+    // Si chargement normal (content script statique ou dynamique enregistré), on initialise.
+    if (document.readyState === 'complete') {
+      autoInitialize();
+    } else {
+      window.addEventListener('load', autoInitialize);
+    }
+  }
 })();

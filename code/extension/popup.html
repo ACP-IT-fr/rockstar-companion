@@ -171,10 +171,39 @@
     #open-dashboard-btn:active {
       transform: scale(0.98);
     }
+    #inject-assistant-btn {
+      width: 100%;
+      background: var(--accent-gradient);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 12px var(--accent-glow);
+      transition: opacity 0.2s, transform 0.1s;
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    #inject-assistant-btn:hover {
+      opacity: 0.95;
+    }
+    #inject-assistant-btn:active {
+      transform: scale(0.98);
+    }
   </style>
 </head>
 <body>
   <h2>Vox Roddy</h2>
+  
+  <button id="inject-assistant-btn">
+    🎙️ Activer sur cet onglet
+  </button>
   
   <button id="open-dashboard-btn">
     Ouvrir mon répertoire (Dashboard)

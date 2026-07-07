@@ -45,7 +45,42 @@ document.addEventListener('DOMContentLoaded', () => {
           
           chrome.storage.sync.get('allowedDomains', (result) => {
             const allowedDomains = result.allowedDomains || {};
-            domainActivationCb.checked = allowedDomains[currentDomain] === true;
+            const isChecked = allowedDomains[currentDomain] === true;
+            domainActivationCb.checked = isChecked;
+
+            if (isChecked) {
+              const originPattern1 = `http://${currentDomain}/*`;
+              const originPattern2 = `https://${currentDomain}/*`;
+              const scriptId = `rockstar-dynamic-${currentDomain.replace(/[^a-z0-9]/gi, '-')}`;
+
+              // Vérifier si le script dynamique est déjà enregistré, sinon le réenregistrer
+              chrome.scripting.getRegisteredContentScripts({ ids: [scriptId] }, (registered) => {
+                if (!registered || registered.length === 0) {
+                  console.log(`Re-registering dynamic content scripts for ${currentDomain}...`);
+                  chrome.scripting.registerContentScripts([{
+                    id: scriptId,
+                    matches: [originPattern1, originPattern2],
+                    js: [
+                      "storageService.js",
+                      "core.js",
+                      "voiceEngine.js",
+                      "widgets/floatingBar.js",
+                      "widgets/scroll.js",
+                      "widgets/metronome.js",
+                      "widgets/tuner.js",
+                      "widgets/chordDetector.js",
+                      "widgets/repertoireDrawer.js",
+                      "widgets/youtubeController.js",
+                      "widgets/singingTracker.js"
+                    ],
+                    css: ["content.css"],
+                    runAt: "document_idle"
+                  }]).catch(err => {
+                    console.error("Auto registration of dynamic content script failed:", err);
+                  });
+                }
+              });
+            }
           });
         }
       } catch (e) {
@@ -92,14 +127,78 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set({ wakeWordVariants: val });
   });
 
-  // Save domain activation setting
+  // Save domain activation setting and register/unregister dynamic content scripts
   domainActivationCb.addEventListener('change', () => {
     if (!currentDomain) return;
-    chrome.storage.sync.get('allowedDomains', (result) => {
-      const allowedDomains = result.allowedDomains || {};
-      allowedDomains[currentDomain] = domainActivationCb.checked;
-      chrome.storage.sync.set({ allowedDomains });
-    });
+
+    const originPattern1 = `http://${currentDomain}/*`;
+    const originPattern2 = `https://${currentDomain}/*`;
+    const scriptId = `rockstar-dynamic-${currentDomain.replace(/[^a-z0-9]/gi, '-')}`;
+
+    if (domainActivationCb.checked) {
+      // Demander l'autorisation pour ce domaine
+      chrome.permissions.request({
+        origins: [originPattern1, originPattern2]
+      }, (granted) => {
+        if (granted) {
+          // Enregistrer dans le stockage sync
+          chrome.storage.sync.get('allowedDomains', (result) => {
+            const allowedDomains = result.allowedDomains || {};
+            allowedDomains[currentDomain] = true;
+            chrome.storage.sync.set({ allowedDomains });
+          });
+
+          // Enregistrer dynamiquement les scripts pour ce domaine
+          chrome.scripting.registerContentScripts([{
+            id: scriptId,
+            matches: [originPattern1, originPattern2],
+            js: [
+              "storageService.js",
+              "core.js",
+              "voiceEngine.js",
+              "widgets/floatingBar.js",
+              "widgets/scroll.js",
+              "widgets/metronome.js",
+              "widgets/tuner.js",
+              "widgets/chordDetector.js",
+              "widgets/repertoireDrawer.js",
+              "widgets/youtubeController.js",
+              "widgets/singingTracker.js"
+            ],
+            css: ["content.css"],
+            runAt: "document_idle"
+          }]).then(() => {
+            console.log(`Successfully registered dynamic content scripts for ${currentDomain}`);
+          }).catch(err => {
+            console.error(`Failed to register dynamic content scripts for ${currentDomain}:`, err);
+          });
+        } else {
+          // Si l'utilisateur refuse la permission, décocher
+          domainActivationCb.checked = false;
+        }
+      });
+    } else {
+      // Retirer du stockage sync
+      chrome.storage.sync.get('allowedDomains', (result) => {
+        const allowedDomains = result.allowedDomains || {};
+        delete allowedDomains[currentDomain];
+        chrome.storage.sync.set({ allowedDomains });
+      });
+
+      // Désenregistrer le script dynamique
+      chrome.scripting.unregisterContentScripts({ ids: [scriptId] })
+        .then(() => {
+          console.log(`Successfully unregistered dynamic content scripts for ${currentDomain}`);
+        })
+        .catch(err => {
+          console.warn(`Unregistering scripts for ${currentDomain} failed or none was active:`, err);
+        });
+
+      // Retirer les permissions du domaine
+      chrome.permissions.remove({
+        origins: [originPattern1, originPattern2]
+      });
+    }
   });
 
   // Save mute settings
@@ -122,6 +221,87 @@ document.addEventListener('DOMContentLoaded', () => {
   if (openDashboardBtn) {
     openDashboardBtn.addEventListener('click', () => {
       chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+    });
+  }
+
+  // Inject Assistant dynamic scripts via activeTab
+  const injectBtn = document.getElementById('inject-assistant-btn');
+  if (injectBtn) {
+    injectBtn.addEventListener('click', () => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || !tabs[0]) {
+          console.error("No active tab found");
+          return;
+        }
+        const tabId = tabs[0].id;
+        
+        console.log("Starting script injection on tab: ", tabId);
+        injectBtn.innerText = "⏳ Injection...";
+        
+        // 1. Ingestion CSS
+        chrome.scripting.insertCSS({
+          target: { tabId: tabId },
+          files: ["content.css"]
+        }).then(() => {
+          console.log("CSS injected successfully, setting progress flag...");
+          // Définir le flag pour indiquer qu'une injection dynamique est en cours
+          return chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: () => { window.__rockstarDynamicInjectionInProgress = true; }
+          });
+        }).then(() => {
+          // 2. Sequential JS Injections to respect dependencies (storageService -> core -> others)
+          const jsFiles = [
+            "storageService.js",
+            "core.js",
+            "voiceEngine.js",
+            "widgets/floatingBar.js",
+            "widgets/scroll.js",
+            "widgets/metronome.js",
+            "widgets/tuner.js",
+            "widgets/chordDetector.js",
+            "widgets/repertoireDrawer.js",
+            "widgets/youtubeController.js",
+            "widgets/singingTracker.js"
+          ];
+          
+          // Helper to chain promises sequentially
+          return jsFiles.reduce((promise, file) => {
+            return promise.then(() => {
+              console.log(`Injecting ${file}...`);
+              return chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                files: [file]
+              });
+            });
+          }, Promise.resolve());
+        }).then(() => {
+          console.log("All scripts injected successfully, running initialize...");
+          return chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: () => {
+              // Nettoyer le flag temporaire
+              delete window.__rockstarDynamicInjectionInProgress;
+              if (window.RockstarCore && typeof window.RockstarCore.initialize === 'function') {
+                window.RockstarCore.initialize();
+              } else {
+                console.error("[RockstarPopup] RockstarCore not found on active tab.");
+              }
+            }
+          });
+        }).then(() => {
+          console.log("Initialization triggered successfully");
+          injectBtn.innerText = "✅ Activé !";
+          injectBtn.style.background = "#10b981";
+          setTimeout(() => {
+            window.close(); // Close the popup
+          }, 800);
+        }).catch(err => {
+          console.error("Injection failed entirely: ", err);
+          injectBtn.innerText = "❌ Échec (" + (err.message || "erreur") + ")";
+          injectBtn.style.background = "#ef4444";
+        });
+      });
     });
   }
 });
