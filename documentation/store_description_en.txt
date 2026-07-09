@@ -1,0 +1,27 @@
+🎸 A tuner, a metronome, a chord detector and automatic tab scrolling - all by voice, without ever letting go of your guitar or piano: the musician's Swiss Army knife in your browser, compatible with Ultimate Guitar and YouTube.
+
+🗣️ VOICE COMMANDS
+Say your assistant's name ("Roddy" by default) followed by a command. Microphone access is required.
+
+📺 HANDS-FREE YOUTUBE TUTORIALS
+- Play / pause: "Roddy, play", "Roddy, pause".
+- Smart cues: drop cues at key moments and jump between them by voice. "Roddy, Encore" snaps back to the last cue to loop a riff.
+
+📜 AUTOMATIC TAB SCROLLING (ULTIMATE GUITAR, ETC.)
+- Start scrolling: "Roddy, c'est parti!".
+- Set the tempo: "Roddy, plus vite" / "moins vite", or target "Roddy, vitesse 4".
+
+🔍 VOICE SEARCH (GOOGLE, YOUTUBE, ULTIMATE GUITAR)
+- "Roddy, cherche [song]" runs the search.
+- "Roddy, ouvre 3" opens the numbered result.
+- "Roddy, cherche [artist] sur YouTube" targets the platform.
+
+🛠️ BUILT-IN TOOLS
+- Precision tuner
+- Audio and visual metronome
+- Real-time chord detector
+- Pitch chart (ideal for singing)
+- Repertoire drawer: transpositions, capos, and per-song notes
+
+🔒 PRIVACY
+Voice processing runs in your browser. No audio recording is sent to the extension creator or any third-party server.

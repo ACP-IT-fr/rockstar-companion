@@ -1,0 +1,27 @@
+🎸 Un accordeur, un métronome, un détecteur d'accords et un défilement automatique de tablatures, le tout piloté à la voix sans lâcher votre guitare ou votre piano : le couteau suisse du musicien dans votre navigateur, compatible Ultimate Guitar et YouTube.
+
+🗣️ COMMANDES VOCALES
+Dites le nom de votre assistant (« Roddy » par défaut) suivi d'une commande. L'accès au microphone est requis.
+
+📺 TUTORIELS YOUTUBE, MAINS LIBRES
+- Lecture / pause : « Roddy, play », « Roddy, pause ».
+- Repères intelligents : placez des repères aux moments clés et sautez de l'un à l'autre à la voix. « Roddy, Encore » revient au dernier repère pour boucler un riff.
+
+📜 DÉFILEMENT AUTOMATIQUE DES TABLATURES (ULTIMATE GUITAR, ETC.)
+- Lancez le défilement : « Roddy, c'est parti ! ».
+- Réglez le tempo : « Roddy, plus vite » / « moins vite », ou visez « Roddy, vitesse 4 ».
+
+🔍 RECHERCHE VOCALE (GOOGLE, YOUTUBE, ULTIMATE GUITAR)
+- « Roddy, cherche [morceau] » lance la recherche.
+- « Roddy, ouvre 3 » ouvre le résultat numéroté.
+- « Roddy, cherche [artiste] sur YouTube » cible la plateforme.
+
+🛠️ OUTILS INTÉGRÉS
+- Accordeur de précision
+- Métronome sonore et visuel
+- Détecteur d'accords en temps réel
+- Graphique de hauteur de note (idéal pour le chant)
+- Carnet de chant : transpositions, capodastres et notes par morceau
+
+🔒 CONFIDENTIALITÉ
+Le traitement vocal est géré par votre navigateur. Aucun enregistrement audio n'est envoyé au créateur ni à un serveur tiers.
