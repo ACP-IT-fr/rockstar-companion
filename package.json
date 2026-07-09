@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Vox Roddy voice assistant extension packager",
   "scripts": {
-    "zip": "mkdir -p dist && rm -f dist/vox-roddy-extension.zip && cd code/extension && zip -r ../../dist/vox-roddy-extension.zip . -x \"mock.html\" \"testRunner.js\" \"exportService.js\" \"*.DS_Store\" \"__MACOSX/*\""
+    "zip": "mkdir -p dist && rm -f dist/vox-roddy-extension.zip && cd code/extension && zip -r ../../dist/vox-roddy-extension.zip . -x \"mock.html\" \"testRunner.js\" \"exportService.js\" \"*.DS_Store\" \"__MACOSX/*\"",
+    "dev": "npx -y live-server landing-page",
+    "deploy": "bash deploy.sh"
   },
   "keywords": [],
   "author": "",

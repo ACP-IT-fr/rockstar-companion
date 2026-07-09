@@ -73,7 +73,7 @@
     bannerEl = document.createElement('div');
     bannerEl.id = 'ug-voice-activation-banner';
     bannerEl.innerHTML = `
-      <div class="activation-banner-title">🎙️ Vox Roddy</div>
+      <div class="activation-banner-title">🎙️ Guitar Tuner & Metronome</div>
       <div style="font-size: 13px; line-height: 1.4; color: #eee; margin-top: 4px;">Activer le contrôle vocal et l'accordeur sur ce site ?</div>
       <div class="activation-banner-actions" style="margin-top: 8px;">
         <button class="activation-banner-btn secondary" id="banner-btn-refuse">Ne plus demander</button>
@@ -294,8 +294,8 @@
         <span class="ug-voice-bar-label">Dernière:</span>
         <span class="ug-voice-bar-value">-</span>
       </div>
-      <button id="ug-voice-help-btn" title="Aide & Commandes Vox Roddy" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s; margin-right: 6px;">❓</button>
-      <button id="ug-voice-settings-btn" title="Paramètres Vox Roddy" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s;">⚙️</button>
+      <button id="ug-voice-help-btn" title="Aide & Commandes Guitar Tuner & Metronome" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s; margin-right: 6px;">❓</button>
+      <button id="ug-voice-settings-btn" title="Paramètres Guitar Tuner & Metronome" style="pointer-events: auto; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 14px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s, transform 0.2s;">⚙️</button>
     `;
     document.body.appendChild(liveTextContainer);
 
@@ -514,7 +514,7 @@
     settingsPanel.className = 'ug-voice-settings-panel';
     settingsPanel.innerHTML = `
       <div class="settings-panel-header">
-        <span>⚙️ Réglages Vox Roddy</span>
+        <span>⚙️ Réglages Guitar Tuner & Metronome</span>
         <button id="ug-voice-settings-close" class="settings-panel-close">&times;</button>
       </div>
       <div class="settings-panel-body">
@@ -614,7 +614,7 @@
         <button id="ug-voice-help-close" class="settings-panel-close">&times;</button>
       </div>
       <div class="settings-panel-body" style="font-size: 12px; line-height: 1.4;">
-        <p style="margin-top: 0; color: #a1a1aa; font-size: 11px;">Prononcez le mot déclencheur (par défaut <b style="color: #f6921e;">"Roddy"</b>) suivi d'une commande.</p>
+        <p style="margin-top: 0; color: #a1a1aa; font-size: 11px;"><strong>Roddy</strong> est l'assistant vocal de <em>Guitar Tuner & Metronome</em>. Prononcez son nom (par défaut <b style="color: #f6921e;">"Roddy"</b>) suivi d'une commande.</p>
         
         <div class="settings-section">
           <div class="settings-section-title" style="color: #f6921e; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; margin-bottom: 4px; font-size: 11px; text-transform: uppercase;">🎸 Tablature</div>
