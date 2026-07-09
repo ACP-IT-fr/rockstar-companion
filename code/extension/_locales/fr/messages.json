@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Guitar Tuner, Metronome & Voice Tab Scroller",
+    "description": "The name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Accordeur, métronome, tablatures et accords à la voix : pilotez YouTube et Ultimate Guitar, mains libres.",
+    "description": "The short description of the extension."
+  }
+}
