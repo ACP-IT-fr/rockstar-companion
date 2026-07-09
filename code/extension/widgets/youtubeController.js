@@ -6,6 +6,7 @@
   let markersBtn = null;
   let markersPanel = null;
   let lastDrawnVideoId = null;
+  let lastDrawnDuration = null;
   let lastAccessedBookmarkTime = null;
   let lastAccessedBookmarkName = null;
 
@@ -93,16 +94,65 @@
     return null;
   }
 
+  function seekAndTriggerUpdate(time) {
+    const ytPlayer = getYTPlayer();
+    const video = window.RockstarCore.getActiveVideo();
+    
+    if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+      ytPlayer.seekTo(time, true);
+    } else if (video) {
+      video.currentTime = time;
+    } else if (window.RockstarCore.sendYouTubeCommand) {
+      window.RockstarCore.sendYouTubeCommand('seekTo', [time, true]);
+    }
+    
+    // Dispatch events to force YouTube controls and progress bar to redraw
+    if (video) {
+      video.dispatchEvent(new Event('timeupdate'));
+    }
+    
+    const player = document.querySelector('.html5-video-player');
+    if (player) {
+      player.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      const rect = player.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      player.dispatchEvent(new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: x,
+        clientY: y
+      }));
+      
+      const progressBar = player.querySelector('.ytp-progress-bar');
+      if (progressBar) {
+        progressBar.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      }
+    }
+  }
+
   let lastProgressBarRef = null; // WeakRef pour détecter la recréation du DOM par YouTube
 
   function drawVisualMarkers(force = false) {
     const video = window.RockstarCore.getActiveVideo();
-    if (!video || !video.duration) return;
+    if (!video) return;
+
+    if (!video._hasDurationChangeListener) {
+      video._hasDurationChangeListener = true;
+      video.addEventListener('durationchange', () => {
+        drawVisualMarkers(true);
+      });
+      video.addEventListener('loadedmetadata', () => {
+        drawVisualMarkers(true);
+      });
+    }
+
+    if (!video.duration) return;
 
     const progressBar = document.querySelector('.ytp-progress-bar');
     if (!progressBar) return;
 
     const currentVideoId = getCurrentYouTubeVideoId();
+    const currentDuration = video.duration;
 
     // Détecter si YouTube a recréé la progressBar (navigation SPA, refresh DOM)
     const progressBarChanged = lastProgressBarRef !== progressBar;
@@ -110,13 +160,16 @@
       lastProgressBarRef = progressBar;
     }
 
-    // Redessiner si : vidéo changée, progressBar recréée, forcé explicitement, ou aucun marker présent
-    const needsRedraw = force || progressBarChanged || currentVideoId !== lastDrawnVideoId || !progressBar.querySelector('.rockstar-marker');
+    const durationChanged = lastDrawnDuration !== currentDuration;
+
+    // Redessiner si : vidéo changée, durée changée, progressBar recréée, forcé explicitement, ou aucun marker présent
+    const needsRedraw = force || progressBarChanged || durationChanged || currentVideoId !== lastDrawnVideoId || !progressBar.querySelector('.rockstar-marker');
     if (!needsRedraw) return;
 
     // Nettoyer les anciens markers
     progressBar.querySelectorAll('.rockstar-marker').forEach(m => m.remove());
     lastDrawnVideoId = currentVideoId;
+    lastDrawnDuration = currentDuration;
 
     const key = getBookmarksStorageKey();
     window.RockstarCore.safeStorageGet(key, (res) => {
@@ -126,11 +179,11 @@
 
       // Re-vérifier la progressBar au moment du callback (async)
       const currentBar = document.querySelector('.ytp-progress-bar');
-      const currentDuration = video.duration;
-      if (!currentBar || !currentDuration) return;
+      const actualDuration = video.duration;
+      if (!currentBar || !actualDuration) return;
 
       entries.forEach(([name, time], idx) => {
-        const pct = (time / currentDuration) * 100;
+        const pct = (time / actualDuration) * 100;
         
         const marker = document.createElement('div');
         marker.className = 'rockstar-marker';
@@ -149,7 +202,8 @@
         
         marker.addEventListener('click', (e) => {
           e.stopPropagation();
-          video.currentTime = time;
+          seekAndTriggerUpdate(time);
+          
           lastAccessedBookmarkTime = time;
           lastAccessedBookmarkName = name;
           const minutes = Math.floor(time / 60);
@@ -225,9 +279,24 @@
       forceControlsInterval = setInterval(() => {
         const player = document.querySelector('.html5-video-player');
         if (!player) return;
-        // Simuler mouseenter pour maintenir les contrôles visibles sans perturber le player
+        
+        if (!player.classList.contains('ytp-forced-controls')) {
+          player.classList.add('ytp-forced-controls');
+        }
+        
+        // Simuler mouseenter et mousemove pour réinitialiser le minuteur d'autohide de YouTube
         player.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-      }, 1500);
+        
+        const rect = player.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        player.dispatchEvent(new MouseEvent('mousemove', {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y
+        }));
+      }, 1000);
     }
 
     function stopForceControlsHover() {
@@ -235,20 +304,37 @@
         clearInterval(forceControlsInterval);
         forceControlsInterval = null;
       }
+      const player = document.querySelector('.html5-video-player');
+      if (player) {
+        player.classList.remove('ytp-forced-controls');
+      }
     }
 
-    if (isForced) startForceControlsHover();
+    if (isForced) {
+      startForceControlsHover();
+      // S'assurer que la classe est appliquée rapidement lors de l'initialisation
+      const initClassInterval = setInterval(() => {
+        const player = document.querySelector('.html5-video-player');
+        if (player) {
+          player.classList.add('ytp-forced-controls');
+          clearInterval(initClassInterval);
+        }
+      }, 200);
+      // Sécurité pour arrêter le setInterval si trop long sans trouver le player
+      setTimeout(() => clearInterval(initClassInterval), 5000);
+    }
 
     toggleForceControls.addEventListener('change', () => {
       const active = toggleForceControls.checked;
       localStorage.setItem('rockstar_always_show_controls', active);
+      const player = document.querySelector('.html5-video-player');
       if (active) {
+        if (player) player.classList.add('ytp-forced-controls');
         startForceControlsHover();
       } else {
         stopForceControlsHover();
-        // Laisser YouTube reprendre son comportement normal
-        const player = document.querySelector('.html5-video-player');
         if (player) {
+          player.classList.remove('ytp-forced-controls');
           player.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
         }
       }
@@ -313,75 +399,120 @@
       entries.forEach(([name, time], idx) => {
         const item = document.createElement('div');
         item.className = 'rockstar-marker-item';
+        item.style.cursor = 'pointer';
 
         const numSpan = document.createElement('span');
         numSpan.className = 'rockstar-marker-num';
         numSpan.innerText = `${idx + 1}.`;
         item.appendChild(numSpan);
 
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.className = 'rockstar-marker-name-input';
-        nameInput.value = name;
-        nameInput.title = 'Cliquez pour renommer';
+        const nameContainer = document.createElement('div');
+        nameContainer.className = 'rockstar-marker-name-container';
+        nameContainer.style.flex = '1';
+        nameContainer.style.minWidth = '0';
+        nameContainer.style.display = 'flex';
+        nameContainer.style.alignItems = 'center';
 
-        const commitRename = () => {
-          const newName = nameInput.value.trim();
-          if (!newName) {
-            nameInput.value = name;
-            return;
-          }
-          if (newName === name) return;
-
-          window.RockstarCore.safeStorageGet(key, (resCurrent) => {
-            const currentBookmarks = resCurrent[key] || {};
-            const markerTime = currentBookmarks[name];
-            delete currentBookmarks[name];
-            currentBookmarks[newName] = markerTime !== undefined ? markerTime : time;
-
-            const setObj = { [key]: currentBookmarks };
-            window.RockstarCore.safeStorageSet(setObj, () => {
-              if (window.RockstarCore.showFeedback) {
-                window.RockstarCore.showFeedback(`✏️ Repère renommé en "${newName}"`, true);
-              }
-              drawVisualMarkers(true);
-              updateMarkersPanelList();
-            });
-          });
-        };
-
-        nameInput.addEventListener('blur', commitRename);
-        nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            nameInput.blur();
-          }
-        });
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'rockstar-marker-name-span';
+        nameSpan.innerText = name;
+        nameSpan.style.fontSize = '13px';
+        nameSpan.style.color = '#fff';
+        nameSpan.style.overflow = 'hidden';
+        nameSpan.style.textOverflow = 'ellipsis';
+        nameSpan.style.whiteSpace = 'nowrap';
+        nameContainer.appendChild(nameSpan);
+        item.appendChild(nameContainer);
 
         const minutes = Math.floor(time / 60);
         const seconds = Math.floor(time % 60).toString().padStart(2, '0');
-        const timeBtn = document.createElement('button');
-        timeBtn.className = 'rockstar-marker-time-btn';
-        timeBtn.innerText = `${minutes}:${seconds}`;
-        timeBtn.title = 'Aller à ce repère';
+        
+        const timeDisplay = document.createElement('span');
+        timeDisplay.className = 'rockstar-marker-time-display';
+        timeDisplay.innerText = `${minutes}:${seconds}`;
+        timeDisplay.style.fontSize = '11px';
+        timeDisplay.style.fontFamily = 'monospace';
+        timeDisplay.style.color = '#ff6c00';
+        timeDisplay.style.fontWeight = 'bold';
+        timeDisplay.style.padding = '2px 6px';
+        timeDisplay.style.backgroundColor = 'rgba(255, 108, 0, 0.1)';
+        timeDisplay.style.borderRadius = '4px';
+        timeDisplay.style.marginLeft = '6px';
+        timeDisplay.style.marginRight = '4px';
+        timeDisplay.style.whiteSpace = 'nowrap';
+        item.appendChild(timeDisplay);
 
-        timeBtn.addEventListener('click', () => {
-          const video = window.RockstarCore.getActiveVideo();
-          if (video) {
-            video.currentTime = time;
-            lastAccessedBookmarkTime = time;
-            lastAccessedBookmarkName = nameInput.value;
-            if (window.RockstarCore.showFeedback) {
-              window.RockstarCore.showFeedback(`➡️ Saut vers Repère "${nameInput.value}" (${minutes}:${seconds})`, true);
+        const editBtn = document.createElement('button');
+        editBtn.className = 'rockstar-marker-edit-btn';
+        editBtn.innerText = '✏️';
+        editBtn.title = 'Renommer le repère';
+        
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (nameContainer.querySelector('input')) return;
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'rockstar-marker-name-input';
+          input.value = nameSpan.innerText;
+          input.style.width = '100%';
+          input.style.background = 'rgba(0, 0, 0, 0.4)';
+          input.style.border = 'none';
+          input.style.borderBottom = '1px solid #ff6c00';
+          input.style.color = '#fff';
+          input.style.fontSize = '13px';
+          input.style.padding = '2px 4px';
+          input.style.outline = 'none';
+          input.style.fontFamily = '-apple-system, BlinkMacSystemFont, Arial, sans-serif';
+
+          nameContainer.innerHTML = '';
+          nameContainer.appendChild(input);
+          input.focus();
+
+          const saveEdit = () => {
+            const newName = input.value.trim();
+            if (!newName || newName === name) {
+              nameContainer.innerHTML = '';
+              nameContainer.appendChild(nameSpan);
+              return;
             }
-          }
+
+            window.RockstarCore.safeStorageGet(key, (resCurrent) => {
+              const currentBookmarks = resCurrent[key] || {};
+              const markerTime = currentBookmarks[name];
+              delete currentBookmarks[name];
+              currentBookmarks[newName] = markerTime !== undefined ? markerTime : time;
+
+              const setObj = { [key]: currentBookmarks };
+              window.RockstarCore.safeStorageSet(setObj, () => {
+                if (window.RockstarCore.showFeedback) {
+                  window.RockstarCore.showFeedback(`✏️ Repère renommé en "${newName}"`, true);
+                }
+                drawVisualMarkers(true);
+                updateMarkersPanelList();
+              });
+            });
+          };
+
+          input.addEventListener('blur', saveEdit);
+          input.addEventListener('keydown', (evt) => {
+            if (evt.key === 'Enter') {
+              input.blur();
+            } else if (evt.key === 'Escape') {
+              nameContainer.innerHTML = '';
+              nameContainer.appendChild(nameSpan);
+            }
+          });
         });
+        item.appendChild(editBtn);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'rockstar-marker-delete-btn';
         deleteBtn.innerText = '🗑️';
         deleteBtn.title = 'Supprimer le repère';
 
-        deleteBtn.addEventListener('click', () => {
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
           window.RockstarCore.safeStorageGet(key, (resCurrent) => {
             const currentBookmarks = resCurrent[key] || {};
             delete currentBookmarks[name];
@@ -396,10 +527,14 @@
             });
           });
         });
-
-        item.appendChild(nameInput);
-        item.appendChild(timeBtn);
         item.appendChild(deleteBtn);
+
+        item.addEventListener('click', () => {
+          if (window.RockstarCore.handleCommand) {
+            window.RockstarCore.handleCommand(`retourne au repère ${name}`);
+          }
+        });
+
         listContainer.appendChild(item);
       });
     });
@@ -441,25 +576,16 @@
         lastAccessedBookmarkTime = time;
         lastAccessedBookmarkName = matchedName;
         
-        const video = window.RockstarCore.getActiveVideo();
-        if (video) {
-          video.currentTime = time;
-          const minutes = Math.floor(time / 60);
-          const seconds = Math.floor(time % 60).toString().padStart(2, '0');
-          if (window.RockstarCore.showFeedback) {
-            window.RockstarCore.showFeedback(`➡️ Saut vers Repère "${matchedName}" (${minutes}:${seconds})`, true);
-          }
-        } else if (window.RockstarCore.sendYouTubeCommand) {
-          window.RockstarCore.sendYouTubeCommand('seekTo', [time, true]);
-          const minutes = Math.floor(time / 60);
-          const seconds = Math.floor(time % 60).toString().padStart(2, '0');
-          if (window.RockstarCore.showFeedback) {
-            window.RockstarCore.showFeedback(`➡️ Saut vers Repère "${matchedName}" (${minutes}:${seconds})`, true);
-          }
-        } else {
-          if (window.RockstarCore.showFeedback) {
-            window.RockstarCore.showFeedback(`❌ Aucun lecteur vidéo actif`, false);
-          }
+        seekAndTriggerUpdate(time);
+        
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+        if (window.RockstarCore.showFeedback) {
+          window.RockstarCore.showFeedback(`➡️ Saut vers Repère "${matchedName}" (${minutes}:${seconds})`, true);
+        }
+      } else {
+        if (window.RockstarCore.showFeedback) {
+          window.RockstarCore.showFeedback(`❌ Aucun lecteur vidéo actif ou repère introuvable`, false);
         }
       }
     });
@@ -640,18 +766,8 @@
     variants: repeatVariants,
     handler: () => {
       if (lastAccessedBookmarkTime !== null) {
-        const ytPlayer = getYTPlayer();
-        const video = window.RockstarCore.getActiveVideo();
-        if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
-          ytPlayer.seekTo(lastAccessedBookmarkTime, true);
-          return { success: true, action: `🔄 Encore ! Repère "${lastAccessedBookmarkName || 'Repère'}"` };
-        } else if (video) {
-          video.currentTime = lastAccessedBookmarkTime;
-          return { success: true, action: `🔄 Encore ! Repère "${lastAccessedBookmarkName || 'Repère'}"` };
-        } else if (window.RockstarCore.sendYouTubeCommand) {
-          window.RockstarCore.sendYouTubeCommand('seekTo', [lastAccessedBookmarkTime, true]);
-          return { success: true, action: `🔄 Encore (tiroir) !` };
-        }
+        seekAndTriggerUpdate(lastAccessedBookmarkTime);
+        return { success: true, action: `🔄 Encore ! Repère "${lastAccessedBookmarkName || 'Repère'}"` };
       }
       return { success: false, action: 'Aucun repère récent à répéter' };
     }

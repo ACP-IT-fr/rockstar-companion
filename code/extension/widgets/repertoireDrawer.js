@@ -816,7 +816,7 @@
     });
   });
 
-  const numPattern = "(10|dix|dis|ten|9|neuf|nine|8|huit|oui|eight|7|sept|set|seven|6|six|sis|5|cinq|sync|five|4|quatre|cat|four|for|3|trois|toi|three|tree|2|deux|de|two|to|1|un|in|one)";
+  const numPattern = "(\\d+|vingt|twenty|dix[- ]neuf|nineteen|dix[- ]huit|eighteen|dix[- ]sept|seventeen|seize|sixteen|quinze|fifteen|quatorze|fourteen|treize|thirteen|douze|twelve|onze|eleven|10|dix|dis|ten|9|neuf|nine|8|huit|oui|eight|7|sept|set|seven|6|six|sis|5|cinq|sync|five|4|quatre|cat|four|for|3|trois|toi|three|tree|2|deux|de|two|to|1|un|in|one)";
   const openNumRegex = new RegExp("^(?:ouvre|open|go to|choisis|prends|lance)?\\s*(?:le\\s+|la\\s+|the\\s+)?(?:numéro|numero|number|num|n°|#)?\\s*" + numPattern + "$", "i");
   
   window.RockstarCore.registerCommand({
@@ -824,6 +824,16 @@
     regex: openNumRegex,
     handler: (cmdText, match) => {
       const textToNum = {
+        '20': 20, 'vingt': 20, 'twenty': 20,
+        '19': 19, 'dix neuf': 19, 'dix-neuf': 19, 'nineteen': 19,
+        '18': 18, 'dix huit': 18, 'dix-huit': 18, 'eighteen': 18,
+        '17': 17, 'dix sept': 17, 'dix-sept': 17, 'seventeen': 17,
+        '16': 16, 'seize': 16, 'sixteen': 16,
+        '15': 15, 'quinze': 15, 'fifteen': 15,
+        '14': 14, 'quatorze': 14, 'fourteen': 14,
+        '13': 13, 'treize': 13, 'thirteen': 13,
+        '12': 12, 'douze': 12, 'twelve': 12,
+        '11': 11, 'onze': 11, 'eleven': 11,
         '10': 10, 'dix': 10, 'dis': 10, 'ten': 10,
         '9': 9, 'neuf': 9, 'nine': 9,
         '8': 8, 'huit': 8, 'oui': 8, 'eight': 8,
@@ -835,7 +845,8 @@
         '2': 2, 'deux': 2, 'de': 2, 'two': 2, 'to': 2,
         '1': 1, 'un': 1, 'in': 1, 'one': 1
       };
-      const num = textToNum[match[1].toLowerCase()];
+      const matchVal = match[1].toLowerCase();
+      const num = /^\d+$/.test(matchVal) ? parseInt(matchVal, 10) : textToNum[matchVal];
       if (num && window.ugSearchResultLinks && window.ugSearchResultLinks[num]) {
         if (window.RockstarCore.stopListening) {
           window.RockstarCore.stopListening();
