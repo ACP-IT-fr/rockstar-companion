@@ -117,10 +117,87 @@
         log(`13. Présence du détecteur d'accords (#ug-chord) : ${chord ? 'SUCCESS' : 'FAILED'}`, !!chord);
         log(`14. Présence du tracker de chant (#ug-singing-tracker) : ${singing ? 'SUCCESS' : 'FAILED'}`, !!singing);
 
-        log("\n--- TOUS LES TESTS D'INTÉGRATION SONT COMPLÉTÉS ---");
+        // 11. Tester le tutoriel interactif (Onboarding)
+        log("\n--- Début du test du tutoriel interactif (Onboarding) ---");
+        if (typeof core.startOnboarding !== 'function') {
+          throw new Error("RockstarCore.startOnboarding n'est pas défini");
+        }
+        
+        // Démarrer l'onboarding
+        core.startOnboarding(true);
+        await new Promise(r => setTimeout(r, 200));
+
+        const card = document.querySelector('.rockstar-onboarding-card');
+        const spotlight = document.querySelector('.rockstar-spotlight');
+        log(`15. Création de la carte d'onboarding : ${card ? 'SUCCESS' : 'FAILED'}`, !!card);
+        log(`16. Création du spotlight d'onboarding : ${spotlight ? 'SUCCESS' : 'FAILED'}`, !!spotlight);
+
+        // Vérifier Étape 1
+        const stepText1 = card.querySelector('.onboarding-card-step').textContent;
+        const isStep1 = stepText1.includes('1');
+        log(`17. Étape 1 affichée correctement : ${isStep1 ? 'SUCCESS' : 'FAILED'} (${stepText1})`, isStep1);
+
+        // Passer à l'Étape 2
+        let nextBtn = document.getElementById('tour-btn-next');
+        if (!nextBtn) throw new Error("Bouton Suivant non trouvé");
+        nextBtn.click();
+        await new Promise(r => setTimeout(r, 200));
+
+        // Re-query nextBtn from the DOM for Step 2
+        nextBtn = document.getElementById('tour-btn-next');
+
+        // Vérifier Étape 2 (Interactive)
+        const stepText2 = card.querySelector('.onboarding-card-step').textContent;
+        const isStep2 = stepText2.includes('2');
+        log(`18. Étape 2 affichée correctement : ${isStep2 ? 'SUCCESS' : 'FAILED'} (${stepText2})`, isStep2);
+        log(`19. Bouton Suivant désactivé à l'étape 2 : ${nextBtn.disabled ? 'SUCCESS' : 'FAILED'}`, nextBtn.disabled);
+
+        // Simuler le défilement
+        const simScrollBtn = document.getElementById('tour-sim-scroll');
+        if (!simScrollBtn) throw new Error("Bouton Simuler défilement non trouvé");
+        simScrollBtn.click();
+        await new Promise(r => setTimeout(r, 200));
+        log(`20. Défilement actif après simulation : ${core.isScrolling ? 'SUCCESS' : 'FAILED'}`, core.isScrolling);
+
+        // Simuler la pause
+        const simPauseBtn = document.getElementById('tour-sim-pause');
+        if (!simPauseBtn) throw new Error("Bouton Simuler pause non trouvé");
+        simPauseBtn.click();
+        await new Promise(r => setTimeout(r, 200));
+
+        // Re-query nextBtn after Step 2 interactive complete
+        nextBtn = document.getElementById('tour-btn-next');
+
+        log(`21. Défilement arrêté après simulation : ${!core.isScrolling ? 'SUCCESS' : 'FAILED'}`, !core.isScrolling);
+        log(`22. Bouton Suivant activé après réussite : ${!nextBtn.disabled ? 'SUCCESS' : 'FAILED'}`, !nextBtn.disabled);
+
+        // Passer à l'Étape 3
+        nextBtn.click();
+        await new Promise(r => setTimeout(r, 200));
+        const stepText3 = card.querySelector('.onboarding-card-step').textContent;
+        const isStep3 = stepText3.includes('3');
+        log(`23. Étape 3 affichée correctement : ${isStep3 ? 'SUCCESS' : 'FAILED'} (${stepText3})`, isStep3);
+
+        // Passer le tutoriel (Skip)
+        const skipBtn = document.getElementById('tour-btn-skip');
+        if (!skipBtn) throw new Error("Bouton Passer non trouvé");
+        skipBtn.click();
+        await new Promise(r => setTimeout(r, 200));
+
+        const cardRemoved = !document.querySelector('.rockstar-onboarding-card');
+        const spotlightRemoved = !document.querySelector('.rockstar-spotlight');
+        log(`24. Fermeture et retrait de la carte : ${cardRemoved ? 'SUCCESS' : 'FAILED'}`, cardRemoved);
+        log(`25. Retrait du spotlight de l'overlay : ${spotlightRemoved ? 'SUCCESS' : 'FAILED'}`, spotlightRemoved);
+
+        log("\n--- TOUS LES TESTS D'INTÉGRATION ET D'ONBOARDING COMPLÉTÉS ---");
       } catch (e) {
         log("Fatal error during tests: " + e.message + "\n" + e.stack, false);
       }
     }, 200);
   });
+  
+  if (document.readyState === 'complete') {
+    // Si la page est déjà chargée
+    window.dispatchEvent(new Event('load'));
+  }
 })();

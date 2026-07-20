@@ -70,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
                       "widgets/chordDetector.js",
                       "widgets/repertoireDrawer.js",
                       "widgets/youtubeController.js",
-                      "widgets/singingTracker.js"
+                      "widgets/singingTracker.js",
+                      "widgets/onboarding.js"
                     ],
                     css: ["content.css"],
                     runAt: "document_idle"
@@ -162,7 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
               "widgets/chordDetector.js",
               "widgets/repertoireDrawer.js",
               "widgets/youtubeController.js",
-              "widgets/singingTracker.js"
+              "widgets/singingTracker.js",
+              "widgets/onboarding.js"
             ],
             css: ["content.css"],
             runAt: "document_idle"
@@ -333,7 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
               "widgets/chordDetector.js",
               "widgets/repertoireDrawer.js",
               "widgets/youtubeController.js",
-              "widgets/singingTracker.js"
+              "widgets/singingTracker.js",
+              "widgets/onboarding.js"
             ];
             
             // Helper to chain promises sequentially

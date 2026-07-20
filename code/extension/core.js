@@ -267,6 +267,7 @@
     if (window.RockstarCore.showFeedback) {
       window.RockstarCore.showFeedback(`🎤 Heard: "${transcript}"\n${actionName}`, isSuccess);
     }
+    window.dispatchEvent(new CustomEvent('rockstar-voice-command', { detail: { text: transcript, success: isSuccess, action: actionName } }));
     return isSuccess;
   }
 

@@ -14,12 +14,15 @@
 
   function updateRawDisplay(currentInterim = '') {
     const rawValEl = document.querySelector('#ug-voice-live-raw .ug-voice-bar-value');
-    if (!rawValEl) return;
     let historyText = rawHistory.join(' | ');
     if (currentInterim) {
       historyText = (historyText ? historyText + ' > ' : '') + currentInterim;
     }
-    rawValEl.innerText = historyText || (window.RockstarCore.isListening ? 'Écoute...' : 'Silencieux');
+    const displayText = historyText || (window.RockstarCore.isListening ? 'Écoute...' : 'Silencieux');
+    if (rawValEl) {
+      rawValEl.innerText = displayText;
+    }
+    window.dispatchEvent(new CustomEvent('rockstar-voice-raw', { detail: { text: displayText } }));
   }
 
   function addRawSentence(sentence) {

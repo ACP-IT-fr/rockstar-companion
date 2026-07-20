@@ -577,6 +577,9 @@
             <span>Silencieux sur les autres sites</span>
           </label>
         </div>
+        <div class="settings-section" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
+          <button id="settings-replay-onboarding" style="width: 100%; background: linear-gradient(135deg, #f26419 0%, #f6921e 100%); border: none; border-radius: 8px; color: #fff; padding: 10px; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif;">📖 Recommencer le tutoriel</button>
+        </div>
       </div>
     `;
     document.body.appendChild(settingsPanel);
@@ -663,6 +666,9 @@
             <li><b>"volume [0 - 100]"</b></li>
           </ul>
         </div>
+        <div class="settings-section" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
+          <button id="help-replay-onboarding" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: var(--accent-gold); padding: 8px; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif;">📖 Rejouer le tutoriel interactif</button>
+        </div>
       </div>
     `;
     document.body.appendChild(helpPanel);
@@ -748,6 +754,28 @@
     mutAll.addEventListener('change', () => {
       window.RockstarCore.safeStorageSyncSet({ muteAllSites: mutAll.checked });
     });
+
+    const settingsReplayBtn = document.getElementById('settings-replay-onboarding');
+    if (settingsReplayBtn) {
+      settingsReplayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsPanel.style.display = 'none';
+        if (window.RockstarCore.startOnboarding) {
+          window.RockstarCore.startOnboarding(true);
+        }
+      });
+    }
+
+    const helpReplayBtn = document.getElementById('help-replay-onboarding');
+    if (helpReplayBtn) {
+      helpReplayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        helpPanel.style.display = 'none';
+        if (window.RockstarCore.startOnboarding) {
+          window.RockstarCore.startOnboarding(true);
+        }
+      });
+    }
 
     // 3. Indicateur de vitesse
     speedContainer = document.createElement('div');
