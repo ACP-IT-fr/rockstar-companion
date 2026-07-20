@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vox Roddy — Démo Live Interactive</title>
+  
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Styles de l'extension originale -->
+  <link rel="stylesheet" href="extension/content.css">
+
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --bg-card: rgba(20, 27, 45, 0.6);
+      --bg-card-hover: rgba(28, 37, 60, 0.8);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.4);
+      --chord-color: #ffd043;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --font-outfit: 'Outfit', sans-serif;
+      --font-inter: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(20, 30, 60, 0.5) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(10, 15, 30, 0.8) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: var(--font-inter);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 24px;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-outfit);
+      font-weight: 700;
+      font-size: 1.25rem;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .brand span {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge-demo {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      color: #60a5fa;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    /* Morceau Selector Tabs */
+    .song-selector-tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 8px;
+      border-radius: 30px;
+      border: 1px solid var(--border-color);
+    }
+
+    .tab-btn-song {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn-song:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .tab-btn-song.active {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+
+    /* Main Container Grid */
+    .container {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 32px;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Song Header Card */
+    .song-header {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .song-title-group h1 {
+      font-family: var(--font-outfit);
+      font-weight: 800;
+      font-size: 2.2rem;
+      margin: 0 0 6px 0;
+    }
+
+    .song-artist {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .song-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 16px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meta-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-value {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    /* Chords Section */
+    .chords-box {
+      margin-bottom: 24px;
+    }
+
+    .chords-title {
+      font-family: var(--font-outfit);
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+    }
+
+    .chord-diagrams {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chord-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 70px;
+      transition: transform 0.2s, border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .chord-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 208, 67, 0.4);
+    }
+
+    .chord-name {
+      font-weight: 700;
+      color: var(--chord-color);
+      margin-bottom: 6px;
+    }
+
+    .chord-visual {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      line-height: 1.1;
+      text-align: center;
+    }
+
+    /* Tab Sheet */
+    .tab-sheet {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    .tab-section {
+      margin-bottom: 28px;
+    }
+
+    .section-title {
+      font-family: var(--font-outfit);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+      padding-bottom: 4px;
+      display: inline-block;
+    }
+
+    .lyric-line {
+      font-family: var(--font-inter);
+      font-size: 1rem;
+      line-height: 1.8;
+      margin-bottom: 8px;
+      white-space: pre-wrap;
+    }
+
+    .chord-bracket {
+      color: var(--chord-color);
+      font-weight: 600;
+      cursor: pointer;
+      padding: 1px 3px;
+      background: rgba(255, 208, 67, 0.05);
+      border-radius: 4px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .chord-bracket:hover {
+      background: rgba(255, 208, 67, 0.2);
+      color: #fff;
+    }
+
+    .ascii-tab {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      line-height: 1.3;
+      color: #a7f3d0;
+      border-left: 3px solid #10b981;
+      margin: 12px 0;
+      white-space: pre;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .sidebar-widget {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .widget-title {
+      font-family: var(--font-outfit);
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+    }
+
+    .demo-info-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #93c5fd;
+    }
+
+    .demo-info-box strong {
+      color: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Top Bar -->
+  <header>
+    <div class="header-container">
+      <a href="index.html" class="brand">
+        🎸 <span>Vox Roddy</span>
+        <div class="badge-demo">Démo Live Extension</div>
+      </a>
+
+      <!-- Song Selector -->
+      <div class="song-selector-tabs">
+        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;">Morceau :</span>
+        <button class="tab-btn-song active" onclick="switchSong('midnight')">Midnight Whisper (Acoustic)</button>
+        <button class="tab-btn-song" onclick="switchSong('neon')">Neon Highway (Rock)</button>
+        <button class="tab-btn-song" onclick="switchSong('starlight')">Starlight Horizon (Pop)</button>
+      </div>
+
+      <nav class="nav-links">
+        <a href="index.html">← Retour au site web</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Page Content -->
+  <div class="container">
+
+    <!-- Left Column: Tab Sheet & Song Info -->
+    <main id="song-display-area">
+      <!-- Injected by JS depending on active song -->
+    </main>
+
+    <!-- Right Column: Sidebar & Demo Info -->
+    <aside class="sidebar">
+
+      <div class="sidebar-widget demo-info-box">
+        <div class="widget-title" style="margin-bottom: 8px; color: #fff;">⚡ Démo 100% Fidèle</div>
+        Vous utilisez actuellement le <strong>code exact et original</strong> des widgets de l'extension Chrome Vox Roddy !<br><br>
+        Cliquez sur les icônes de la <strong>barre flottante en bas à droite</strong> pour ouvrir l'accordeur, le métronome, le clavier ou les morceaux.
+      </div>
+
+      <div class="sidebar-widget">
+        <div class="widget-title">⚙️ Options du Player</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+          Utilisez la barre Vox Roddy en bas à droite pour utiliser l'accordeur de précision, le métronome sonore & visuel, l'autoscroll et le détecteur d'accords.
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- Intégration directe des SCRIPTS ORIGINAUX DE L'EXTENSION -->
+  <script src="extension/storageService.js"></script>
+  <script src="extension/core.js"></script>
+  <script src="extension/voiceEngine.js"></script>
+  <script src="extension/widgets/floatingBar.js"></script>
+  <script src="extension/widgets/scroll.js"></script>
+  <script src="extension/widgets/metronome.js"></script>
+  <script src="extension/widgets/tuner.js"></script>
+  <script src="extension/widgets/chordDetector.js"></script>
+  <script src="extension/widgets/repertoireDrawer.js"></script>
+  <script src="extension/widgets/singingTracker.js"></script>
+  <script src="extension/widgets/pianoKeyboard.js"></script>
+
+  <!-- Script de gestion des 3 morceaux de démo -->
+  <script>
+    const SONGS_DATA = {
+      midnight: {
+        title: "Midnight Whisper",
+        artist: "by Silent Echoes",
+        key: "Am",
+        tempo: "120 BPM",
+        capo: "2nd Fret",
+        tuning: "Standard (E A D G B E)",
+        chords: [
+          { name: "Am", visual: "x02210" },
+          { name: "C", visual: "x32010" },
+          { name: "D", visual: "xx0232" },
+          { name: "F", visual: "133211" },
+          { name: "G", visual: "320003" }
+        ],
+        asciiTab: `e|-------0-----------0-----------2-----------1-------|\nB|---------1-----------1-----------3-----------1-----|\nG|-----2-----2-----0-----0-----2-----2-----2-----2---|\nD|---2-----------2-----------0-----------3-----------|\nA|-0-----------3-------------------------------------|\nE|---------------------------------------------------|`,
+        verses: [
+          {
+            section: "Intro",
+            lines: []
+          },
+          {
+            section: "Verse 1",
+            lines: [
+              { chords: ["Am", "C"], text: "We are walking through the dark of night," },
+              { chords: ["D", "F"], text: "With the silver moon as our only light." },
+              { chords: ["Am", "C"], text: "Strings are ringing, thoughts align," },
+              { chords: ["G", "Am"], text: "Echoes of silence, one step at a time." }
+            ]
+          },
+          {
+            section: "Chorus",
+            lines: [
+              { chords: ["F", "C"], text: "Oh, let the whispers float high in the air," },
+              { chords: ["G", "Am"], text: "Carried by currents that take us anywhere." },
+              { chords: ["F", "C"], text: "Hands on strings, we play through the night," },
+              { chords: ["D", "G"], text: "Guiding the rhythm till the morning light." }
+            ]
+          }
+        ]
+      },
+      neon: {
+        title: "Neon Highway",
+        artist: "by Thunder Velocity",
+        key: "Bm",
+        tempo: "130 BPM",
+        capo: "No Capo",
+        tuning: "Standard (E A D G B E)",
+        chords: [
+          { name: "Bm", visual: "x24432" },
+          { name: "G", visual: "320003" },
+          { name: "D", visual: "xx0232" },
+          { name: "A", visual: "x02220" },
+          { name: "F#", visual: "244322" },
+          { name: "Em", visual: "022000" }
+        ],
+        asciiTab: `e|-------2-----------3-----------2-----------0-------|\nB|---------3-----------3-----------3-----------2-----|\nG|-----4-----4-----0-----0-----2-----2-----2-----2---|\nD|---4-----------0-----------0-----------2-----------|\nA|-2-----------------------------------0-------------|\nE|-------------3-------------------------------------|`,
+        verses: [
+          {
+            section: "Intro",
+            lines: []
+          },
+          {
+            section: "Verse 1",
+            lines: [
+              { chords: ["Bm", "G"], text: "Riding fast into the crimson night," },
+              { chords: ["D", "A"], text: "Electric shadows fading out of sight." },
+              { chords: ["Bm", "G"], text: "Thunder roars beneath the open sky," },
+              { chords: ["Em", "F#"], text: "We chase the fire as the minutes fly." }
+            ]
+          },
+          {
+            section: "Chorus",
+            lines: [
+              { chords: ["G", "D"], text: "Oh neon highway, break the silence now," },
+              { chords: ["A", "Bm"], text: "Spinning wild, we make a silent vow." },
+              { chords: ["G", "D"], text: "Hands on the wheel and fingers on the string," },
+              { chords: ["Em", "F#"], text: "Listen close to what the night will bring." }
+            ]
+          }
+        ]
+      },
+      starlight: {
+        title: "Starlight Horizon",
+        artist: "by Lumina Wave",
+        key: "C",
+        tempo: "105 BPM",
+        capo: "1st Fret",
+        tuning: "Standard (E A D G B E)",
+        chords: [
+          { name: "C", visual: "x32010" },
+          { name: "G", visual: "320003" },
+          { name: "Am", visual: "x02210" },
+          { name: "F", visual: "133211" },
+          { name: "Dm", visual: "xx0231" },
+          { name: "Em", visual: "022000" }
+        ],
+        asciiTab: `e|-------0-----------3-----------0-----------1-------|\nB|---------1-----------0-----------1-----------1-----|\nG|-----0-----0-----0-----0-----2-----2-----2-----2---|\nD|---2-----------0-----------2-----------3-----------|\nA|-3-----------------------0-------------------------|\nE|-------------3-----------------------1-------------|`,
+        verses: [
+          {
+            section: "Intro",
+            lines: []
+          },
+          {
+            section: "Verse 1",
+            lines: [
+              { chords: ["C", "G"], text: "Glittering stars above the city lights," },
+              { chords: ["Am", "F"], text: "We turn the pages of these golden nights." },
+              { chords: ["C", "G"], text: "A simple melody that starts to grow," },
+              { chords: ["Dm", "F"], text: "Guided by waves that only dreamers know." }
+            ]
+          },
+          {
+            section: "Chorus",
+            lines: [
+              { chords: ["F", "C"], text: "Fly to the starlight horizon, feeling so free," },
+              { chords: ["G", "Am"], text: "Echoing softly through eternity." },
+              { chords: ["F", "C"], text: "Play every rhythm, let the music rise," },
+              { chords: ["Dm", "G"], text: "Catching the spark that never truly dies." }
+            ]
+          }
+        ]
+      }
+    };
+
+    function renderSong(songKey) {
+      const data = SONGS_DATA[songKey] || SONGS_DATA.midnight;
+      const main = document.getElementById('song-display-area');
+
+      let chordsHtml = data.chords.map(c => `
+        <div class="chord-card">
+          <span class="chord-name">${c.name}</span>
+          <span class="chord-visual">${c.visual}</span>
+        </div>
+      `).join('');
+
+      let sectionsHtml = '';
+      data.verses.forEach(v => {
+        sectionsHtml += `<div class="tab-section"><div class="section-title">${v.section}</div>`;
+        if (v.section === "Intro" && data.asciiTab) {
+          sectionsHtml += `<div class="ascii-tab">${data.asciiTab}</div>`;
+        }
+        v.lines.forEach(l => {
+          sectionsHtml += `
+            <div class="lyric-line">${l.chords.map(c => `<span class="chord-bracket">${c}</span>`).join(' ')}</div>
+            <div class="lyric-line">${l.text}</div>
+          `;
+        });
+        sectionsHtml += `</div>`;
+      });
+
+      main.innerHTML = `
+        <section class="song-header">
+          <div class="song-title-group">
+            <h1>${data.title}</h1>
+            <div class="song-artist">${data.artist}</div>
+          </div>
+          <div class="song-meta-grid">
+            <div class="meta-item"><span class="meta-label">Key</span><span class="meta-value">${data.key}</span></div>
+            <div class="meta-item"><span class="meta-label">Tempo</span><span class="meta-value">${data.tempo}</span></div>
+            <div class="meta-item"><span class="meta-label">Capo</span><span class="meta-value">${data.capo}</span></div>
+            <div class="meta-item"><span class="meta-label">Tuning</span><span class="meta-value">${data.tuning}</span></div>
+          </div>
+        </section>
+
+        <section class="chords-box">
+          <div class="chords-title">Chords Used</div>
+          <div class="chord-diagrams">${chordsHtml}</div>
+        </section>
+
+        <section class="tab-sheet">
+          ${sectionsHtml}
+        </section>
+      `;
+    }
+
+    function switchSong(key) {
+      document.querySelectorAll('.tab-btn-song').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('onclick').includes(key));
+      });
+      renderSong(key);
+    }
+
+    // Initial Render
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSong('midnight');
+    });
+  </script>
+</body>
+</html>

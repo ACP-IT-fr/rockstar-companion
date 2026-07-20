@@ -2104,3 +2104,533 @@ body.ug-widgets-hidden #ug-metronome {
   visibility: visible !important;
 }
 
+/* ==========================================================================
+   ROCKSTAR PIANO & NOTE GENERATOR WIDGET STYLES
+   ========================================================================== */
+#rockstar-piano-widget {
+  position: fixed;
+  bottom: 56px;
+  left: 50%;
+  transform: translate(-50%, 120%);
+  width: 680px;
+  max-width: 95vw;
+  background: rgba(15, 17, 23, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 25px rgba(246, 146, 30, 0.2);
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #f8fafc;
+  z-index: 9999990;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  box-sizing: border-box;
+  padding: 14px;
+}
+
+#rockstar-piano-widget.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.piano-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.piano-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+
+.piano-octave-jumper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 6px;
+  padding: 3px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.jumper-label {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-right: 2px;
+}
+
+.piano-jump-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.piano-jump-btn:hover {
+  background: rgba(246, 146, 30, 0.3);
+  color: #fff;
+  border-color: #f6921e;
+}
+
+.piano-jump-btn.active {
+  background: #f6921e;
+  color: #000;
+  border-color: #f6921e;
+}
+
+.piano-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.piano-inst-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.piano-select {
+  background: rgba(30, 41, 59, 0.8);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.piano-btn-mic {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.piano-btn-mic:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.piano-btn-mic.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.piano-btn-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.piano-btn-close:hover {
+  color: #ef4444;
+}
+
+/* 88-Key Scrollable Container */
+.piano-scroll-outer {
+  position: relative;
+  margin: 8px 0 12px 0;
+  background: #090d16;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px;
+}
+
+.piano-keyboard-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  position: relative;
+  height: 145px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  padding-top: 18px; /* Space for octave markers */
+}
+
+.piano-keyboard-container.grabbing {
+  cursor: grabbing;
+}
+
+/* Custom Scrollbar Styling */
+.piano-keyboard-container::-webkit-scrollbar {
+  height: 7px;
+}
+
+.piano-keyboard-container::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 4px;
+}
+
+.piano-keyboard-container::-webkit-scrollbar-thumb {
+  background: rgba(246, 146, 30, 0.5);
+  border-radius: 4px;
+}
+
+.piano-keyboard-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(246, 146, 30, 0.8);
+}
+
+.piano-key {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, transform 0.05s, box-shadow 0.1s;
+}
+
+.white-key {
+  width: 28px;
+  height: 118px;
+  background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 100%);
+  border-radius: 0 0 5px 5px;
+  border: 1px solid #94a3b8;
+  box-shadow: inset 0 -4px 0 #64748b, 0 3px 6px rgba(0,0,0,0.25);
+  z-index: 1;
+}
+
+.white-key:active {
+  transform: translateY(2px);
+  background: #cbd5e1;
+  box-shadow: inset 0 -2px 0 #475569;
+}
+
+.black-key {
+  width: 18px;
+  height: 76px;
+  background: linear-gradient(180deg, #1e293b 0%, #020617 100%);
+  border-radius: 0 0 4px 4px;
+  border: 1px solid #020617;
+  box-shadow: inset 0 -3px 0 #334155, 0 4px 8px rgba(0,0,0,0.4);
+  z-index: 2;
+  margin-left: -9px;
+  margin-right: -9px;
+}
+
+.black-key:active {
+  transform: translateY(2px);
+  background: #334155;
+}
+
+.key-octave-badge {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(30, 41, 59, 0.85);
+  color: #f6921e;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(246, 146, 30, 0.3);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.key-octave-badge.middle-c {
+  background: #f6921e;
+  color: #000;
+  font-weight: 800;
+  border-color: #f6921e;
+  box-shadow: 0 0 6px rgba(246, 146, 30, 0.6);
+}
+
+.key-kbd-hint {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 800;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  padding: 1px 5px;
+  border-radius: 4px;
+  pointer-events: none;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s;
+}
+
+.black-key .key-kbd-hint {
+  top: 6px;
+  background: rgba(2, 6, 23, 0.95);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+.key-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 5px;
+  pointer-events: none;
+}
+
+.white-key .key-note {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.white-key .key-freq {
+  font-size: 8px;
+  color: #64748b;
+}
+
+.black-key .key-label {
+  padding-bottom: 4px;
+}
+
+.black-key .key-note {
+  font-size: 8px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.black-key .key-freq {
+  font-size: 7px;
+  color: #64748b;
+}
+
+.piano-key {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.05s, box-shadow 0.1s;
+}
+
+.white-key {
+  width: 38px;
+  height: 114px;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 0 0 6px 6px;
+  border: 1px solid #cbd5e1;
+  box-shadow: inset 0 -4px 0 #94a3b8, 0 3px 6px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.white-key:active {
+  transform: translateY(2px);
+  background: #cbd5e1;
+  box-shadow: inset 0 -2px 0 #64748b;
+}
+
+.black-key {
+  width: 24px;
+  height: 72px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 0 0 4px 4px;
+  border: 1px solid #020617;
+  box-shadow: inset 0 -3px 0 #334155, 0 4px 8px rgba(0,0,0,0.4);
+  z-index: 2;
+  margin-left: -13px;
+  margin-right: -13px;
+}
+
+.black-key:active {
+  transform: translateY(2px);
+  background: #334155;
+}
+
+.key-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 6px;
+  pointer-events: none;
+}
+
+.white-key .key-note {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.white-key .key-freq {
+  font-size: 9px;
+  color: #64748b;
+}
+
+.black-key .key-label {
+  padding-bottom: 4px;
+}
+
+.black-key .key-note {
+  font-size: 9px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.black-key .key-freq {
+  font-size: 8px;
+  color: #64748b;
+}
+
+/* Key Active Highlights */
+.piano-key.target-active {
+  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.9), inset 0 -2px 0 #b45309 !important;
+}
+
+.piano-key.target-active .key-note,
+.piano-key.target-active .key-freq {
+  color: #fff !important;
+}
+
+.piano-key.sung-active {
+  background: linear-gradient(180deg, #06b6d4 0%, #0284c7 100%) !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.9), inset 0 -2px 0 #0369a1 !important;
+}
+
+.piano-key.sung-active .key-note,
+.piano-key.sung-active .key-freq {
+  color: #fff !important;
+}
+
+.piano-key.target-active.sung-active {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 1.0), inset 0 -2px 0 #047857 !important;
+}
+
+/* Status Panel & Cents Meter */
+.piano-status-panel {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.piano-info-card {
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.target-card {
+  border-left: 3px solid #f59e0b;
+}
+
+.sung-card {
+  border-left: 3px solid #06b6d4;
+}
+
+.card-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  margin-bottom: 1px;
+}
+
+.card-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+
+.card-sub {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.piano-cents-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cents-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+.cents-val-text {
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.cents-bar-wrapper {
+  position: relative;
+  height: 6px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cents-bar-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateX(-50%);
+}
+
+.cents-bar-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  border-radius: 2.5px;
+  background: #10b981;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: left 0.1s ease-out, background-color 0.15s;
+}
+
+

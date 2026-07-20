@@ -32,7 +32,8 @@
         "widgets/chordDetector.js",
         "widgets/repertoireDrawer.js",
         "widgets/youtubeController.js",
-        "widgets/singingTracker.js"
+        "widgets/singingTracker.js",
+        "widgets/pianoKeyboard.js"
       ],
       "run_at": "document_idle"
     }

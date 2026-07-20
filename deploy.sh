@@ -8,8 +8,8 @@ echo "🚀 Début du déploiement de Vox Roddy..."
 echo "📂 Source : $LOCAL_DIR"
 echo "🌐 Destination : $REMOTE_TARGET"
 
-# Exécuter rsync
-rsync -avz --delete "$LOCAL_DIR" "$REMOTE_TARGET"
+# Exécuter rsync (avec -L pour déréférencer les liens symboliques comme landing-page/extension)
+rsync -avzL --delete "$LOCAL_DIR" "$REMOTE_TARGET"
 
 if [ $? -eq 0 ]; then
   echo "✅ Déploiement terminé avec succès !"

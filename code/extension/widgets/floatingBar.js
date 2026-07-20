@@ -34,6 +34,9 @@
     if (window.RockstarCore.appendRepertoireDrawerBtn) {
       window.RockstarCore.appendRepertoireDrawerBtn(bar);
     }
+    if (window.RockstarCore.appendPianoBtnToFloatingBar) {
+      window.RockstarCore.appendPianoBtnToFloatingBar(bar);
+    }
   }
   window.RockstarCore.appendButtonsToFloatingBar = appendButtonsToFloatingBar;
 
@@ -73,7 +76,7 @@
     bannerEl = document.createElement('div');
     bannerEl.id = 'ug-voice-activation-banner';
     bannerEl.innerHTML = `
-      <div class="activation-banner-title">🎙️ Guitar Tuner & Metronome</div>
+      <div class="activation-banner-title">🎙️ Guitar Tuner & Metronome <span class="dev-badge">DEV</span></div>
       <div style="font-size: 13px; line-height: 1.4; color: #eee; margin-top: 4px;">Activer le contrôle vocal et l'accordeur sur ce site ?</div>
       <div class="activation-banner-actions" style="margin-top: 8px;">
         <button class="activation-banner-btn secondary" id="banner-btn-refuse">Ne plus demander</button>
@@ -341,6 +344,9 @@
       </div>
     `;
     document.body.appendChild(songSummaryBar);
+    if (window.RockstarCore.appendButtonsToFloatingBar) {
+      window.RockstarCore.appendButtonsToFloatingBar();
+    }
 
     function normalizeSummaryUrl(url) {
       try {

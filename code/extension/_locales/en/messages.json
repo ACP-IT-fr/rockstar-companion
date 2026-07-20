@@ -1,10 +1,14 @@
 {
   "extensionName": {
-    "message": "Guitar Tuner, Metronome & Voice Tab Scroller",
+    "message": "[DEV] Guitar Tuner, Metronome & Voice Tab Scroller",
     "description": "The name of the extension."
   },
   "extensionDescription": {
     "message": "Guitar tuner, metronome, tabs & chords by voice. Control YouTube and Ultimate Guitar hands-free.",
     "description": "The short description of the extension."
+  },
+  "pianoWidgetTitle": {
+    "message": "Piano & Note Generator",
+    "description": "Title for the piano note generator widget."
   }
 }
