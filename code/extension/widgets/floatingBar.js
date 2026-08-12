@@ -27,7 +27,8 @@
       window.RockstarCore.appendMarkersBtn(bar);
     }
     
-    if (btn) bar.appendChild(btn);
+    // Le bouton micro (#ug-voice-btn) reste un overlay fixe dans le coin
+    // inférieur droit, il n'est PAS accroché à la barre (qui peut changer de bord).
     
     // Si d'autres modules (comme le repertoireDrawer) enregistrent leurs boutons,
     // ils pourront aussi s'ajouter à la barre flottante. Nous déclenchons un hook.
@@ -174,6 +175,146 @@
     });
   }
 
+  // Positionne la barre sur le bord choisi (top / bottom).
+  // La barre reste toujours visible (fixée au bord) et la page
+  // réserve la place nécessaire : le contenu n'est jamais masqué.
+  function applyBarPosition(position) {
+    const valid = ['top', 'bottom'];
+    const pos = valid.indexOf(position) !== -1 ? position : 'top';
+    document.body.classList.remove('rockstar-bar-top', 'rockstar-bar-bottom', 'rockstar-bar-left', 'rockstar-bar-right');
+    document.body.classList.add('rockstar-bar-' + pos);
+  }
+  window.RockstarCore.applyBarPosition = applyBarPosition;
+
+  // ------------------------------------------------------------------
+  // Détection automatique d'une barre flottante déjà présente en bas de
+  // page (ex. Ultimate Guitar). La barre de l'extension (et le bouton
+  // micro) se décale alors au-dessus de celle-ci via --rockstar-bar-offset.
+  // ------------------------------------------------------------------
+  // Sélecteurs de nos propres widgets. Leur décalage ne doit JAMAIS être
+  // traité comme une barre tierce (sinon boucle : offset -> déplacement ->
+  // nouveau scan -> offset plus grand...).
+  const EXTERNAL_OWN_SELECTORS = [
+    '#rockstar-floating-bar', '#ug-voice-live-text', '#ug-song-summary-bar',
+    '#ug-voice-btn', '#ug-voice-status', '#ug-voice-feedback', '#ug-voice-speed',
+    '#ug-widgets-toggle-btn', '.ug-voice-settings-panel', '.ug-voice-help-panel',
+    '#ug-commands-panel', '#ug-voice-activation-banner',
+    '#ug-chord', '#ug-tuner', '#ug-metronome', '#ug-metronome-screen-overlay',
+    '#ug-singing-tracker', '#rockstar-piano-widget', '#rockstar-drawer',
+    '.rockstar-onboarding-card', '.rockstar-spotlight'
+  ].join(',');
+  const externalBarCandidates = new Set();
+  let externalBarOffset = 0;
+  let offsetUpdatePending = false;
+
+  function isOwnBarElement(el) {
+    if (!el || el.nodeType !== 1) return true;
+    try { return !!el.closest(EXTERNAL_OWN_SELECTORS); } catch (e) { return true; }
+  }
+
+  function evaluateExternalBar(el) {
+    if (isOwnBarElement(el) || !el.isConnected) { externalBarCandidates.delete(el); return; }
+    let cs;
+    try { cs = getComputedStyle(el); } catch (e) { externalBarCandidates.delete(el); return; }
+    if (cs.position !== 'fixed') { externalBarCandidates.delete(el); return; }
+    // Tous nos overlays fixes ont un z-index >= 999999 : protection de secours.
+    try {
+      const z = parseFloat(cs.zIndex);
+      if (!isNaN(z) && z >= 900000) { externalBarCandidates.delete(el); return; }
+    } catch (e) { externalBarCandidates.delete(el); return; }
+    const b = parseFloat(cs.bottom);
+    if (isNaN(b) || b < -2 || b > 200) { externalBarCandidates.delete(el); return; }
+    const rect = el.getBoundingClientRect();
+    if (rect.height <= 0 || rect.width < 150) { externalBarCandidates.delete(el); return; }
+    if (rect.left >= window.innerWidth - 2 || rect.right <= 2) { externalBarCandidates.delete(el); return; }
+    if (rect.bottom < -2 || rect.bottom > window.innerHeight + 2) { externalBarCandidates.delete(el); return; }
+    externalBarCandidates.add(el);
+  }
+
+  function recomputeExternalBarOffset() {
+    let mx = 0;
+    Array.from(externalBarCandidates).forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.height <= 0) return;
+      const topFromBottom = window.innerHeight - rect.top;
+      if (topFromBottom > mx) mx = Math.ceil(topFromBottom);
+    });
+    // Garde-fou : une barre tierce peut couvrir au pire 40% du viewport.
+    // Le décalage ne peut donc jamais pousser notre barre hors de l'écran.
+    const cap = Math.max(0, Math.round(window.innerHeight * 0.4));
+    if (mx > cap) mx = cap;
+    if (mx !== externalBarOffset) {
+      externalBarOffset = mx;
+      document.documentElement.style.setProperty('--rockstar-bar-offset', mx + 'px');
+    }
+  }
+
+  function scheduleOffsetUpdate() {
+    if (offsetUpdatePending) return;
+    offsetUpdatePending = true;
+    setTimeout(() => {
+      offsetUpdatePending = false;
+      recomputeExternalBarOffset();
+    }, 150);
+  }
+
+  function scanExternalBars(root) {
+    const nodes = root.querySelectorAll('*');
+    for (let i = 0; i < nodes.length; i++) evaluateExternalBar(nodes[i]);
+  }
+
+  function initExternalBarDetection() {
+    if (!document.body) return;
+    scanExternalBars(document);
+    recomputeExternalBarOffset();
+
+    window.addEventListener('resize', () => {
+      Array.from(externalBarCandidates).forEach(evaluateExternalBar);
+      recomputeExternalBarOffset();
+    });
+
+    if (window.MutationObserver) {
+      const mo = new MutationObserver(records => {
+        let changed = false;
+        records.forEach(rec => {
+          if (rec.type === 'attributes' && rec.target && rec.target.nodeType === 1) {
+            evaluateExternalBar(rec.target);
+            changed = true;
+          } else if (rec.type === 'childList') {
+            rec.addedNodes.forEach(n => {
+              if (n.nodeType === 1) {
+                evaluateExternalBar(n);
+                scanExternalBars(n);
+                changed = true;
+              }
+            });
+            rec.removedNodes.forEach(n => {
+              if (n.nodeType === 1) {
+                externalBarCandidates.delete(n);
+                scanExternalBars(n);
+                changed = true;
+              }
+            });
+          }
+        });
+        if (changed) scheduleOffsetUpdate();
+      });
+      mo.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style']
+      });
+    }
+
+    // Certains sites ajoutent leur barre après un délai : on rescanne une fois.
+    setTimeout(() => {
+      scanExternalBars(document);
+      recomputeExternalBarOffset();
+    }, 1500);
+  }
+  initExternalBarDetection();
+
   // Enregistrement des hooks et utilitaires sur RockstarCore
   window.RockstarCore.showFeedback = showFeedback;
   window.RockstarCore.showActivationBanner = showActivationBanner;
@@ -239,6 +380,7 @@
   });
 
   window.RockstarCore.onSettingsChanged((settings) => {
+    applyBarPosition(settings.barPosition);
     if (btn && !window.RockstarCore.isAwake && window.RockstarCore.isListening) {
       btn.title = `Listening for "${settings.wakeWord}"... Click to turn off`;
       if (statusSpan) {
@@ -263,6 +405,10 @@
     btn.appendChild(iconSpan);
     btn.appendChild(statusSpan);
     btn.title = 'Voice control OFF. Click to enable';
+
+    // Le bouton micro est attaché directement au body : overlay fixe dans le
+    // coin inférieur droit, indépendant de la position de la barre.
+    document.body.appendChild(btn);
 
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -577,6 +723,16 @@
             <span>Silencieux sur les autres sites</span>
           </label>
         </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Position de la barre</div>
+          <p class="settings-barposition-hint">La barre est placée sous ou au-dessus de la page : le contenu du site reste visible. Le bouton micro reste toujours en overlay en bas à droite.</p>
+          <div class="settings-barposition-row" id="settings-barposition-row">
+            <button data-pos="bottom" class="bar-position-btn active" title="Barre en bas de l'écran">⬇️ Bas</button>
+            <button data-pos="top" class="bar-position-btn" title="Barre en haut de l'écran">⬆️ Haut</button>
+          </div>
+        </div>
+
         <div class="settings-section" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
           <button id="settings-replay-onboarding" style="width: 100%; background: linear-gradient(135deg, #f26419 0%, #f6921e 100%); border: none; border-radius: 8px; color: #fff; padding: 10px; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif;">📖 Recommencer le tutoriel</button>
         </div>
@@ -719,6 +875,10 @@
       if (idSelect) idSelect.value = s.inactivityDelay !== undefined ? s.inactivityDelay : '1';
       if (wadSelect) wadSelect.value = s.wakeActiveDuration !== undefined ? s.wakeActiveDuration : '10';
       if (mutAll) mutAll.checked = s.muteAllSites || false;
+      const barposBtns = document.querySelectorAll('.bar-position-btn');
+      barposBtns.forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-pos') === s.barPosition);
+      });
     }
 
     // Réagir aux changements dans RockstarCore
@@ -754,6 +914,21 @@
     mutAll.addEventListener('change', () => {
       window.RockstarCore.safeStorageSyncSet({ muteAllSites: mutAll.checked });
     });
+
+    const barposRow = document.getElementById('settings-barposition-row');
+    if (barposRow) {
+      barposRow.querySelectorAll('.bar-position-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pos = btn.getAttribute('data-pos');
+          if (window.RockstarCore.applyBarPosition) {
+            window.RockstarCore.applyBarPosition(pos);
+          }
+          window.RockstarCore.safeStorageSyncSet({ barPosition: pos });
+          populatePanelFields(window.RockstarCore.settings);
+        });
+      });
+    }
 
     const settingsReplayBtn = document.getElementById('settings-replay-onboarding');
     if (settingsReplayBtn) {

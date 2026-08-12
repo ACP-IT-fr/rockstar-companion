@@ -1,15 +1,26 @@
 #rockstar-floating-bar {
   position: fixed;
-  bottom: 60px;
-  right: 20px;
+  bottom: calc(var(--rockstar-bar-offset, 0px) + 52px);
+  left: 0;
+  right: 0;
   display: flex;
+  width: auto;
+  box-sizing: border-box;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
+  padding: 4px 20px;
   z-index: 999999;
-  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: 0;
+  pointer-events: none;
+}
+
+#rockstar-floating-bar > * {
+  pointer-events: auto;
 }
 
 #rockstar-floating-bar.banner-active {
+  justify-content: flex-start;
   right: 290px;
 }
 
@@ -32,6 +43,15 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Le bouton micro reste un overlay fixe dans le coin inférieur droit,
+   il ne bouge pas avec la barre (position haut/bas). */
+#ug-voice-btn {
+  position: fixed;
+  right: 20px;
+  bottom: calc(var(--rockstar-bar-offset, 0px) + 60px);
+  z-index: 999999;
 }
 
 #ug-voice-status {
@@ -76,7 +96,7 @@
 
 #ug-voice-feedback {
   position: fixed;
-  bottom: 60px; /* Positionné juste au-dessus des barres d'état inférieures */
+  bottom: calc(var(--rockstar-bar-offset, 0px) + 60px); /* Positionné juste au-dessus des barres d'état inférieures */
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -110,7 +130,7 @@
 
 #ug-voice-speed {
   position: fixed;
-  bottom: 60px;
+  bottom: calc(var(--rockstar-bar-offset, 0px) + 112px);
   left: 20px;
   background-color: rgba(9, 9, 11, 0.85);
   color: #fff;
@@ -156,32 +176,33 @@
 
 #ug-voice-live-text {
   position: fixed;
-  bottom: 0;
+  bottom: var(--rockstar-bar-offset, 0px);
   left: 0;
   right: 0;
-  background-color: rgba(9, 9, 11, 0.95);
+  display: flex;
+  box-sizing: border-box;
+  background-color: rgba(0, 0, 0, 0.55);
   border-top: 1px solid var(--border-color);
   color: #f4f4f5;
-  padding: 6px 20px;
+  padding: 0 20px;
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 11.5px;
   z-index: 9999999;
-  display: flex;
   justify-content: space-between;
   align-items: center;
-  pointer-events: none;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
   height: 28px;
-  box-sizing: border-box;
-  backdrop-filter: blur(8px);
+  pointer-events: none;
 }
 
 #ug-song-summary-bar {
   position: fixed;
-  bottom: 28px; /* Just above the bottom voice commands bar */
+  bottom: calc(var(--rockstar-bar-offset, 0px) + 28px);
   left: 0;
   right: 0;
-  background-color: rgba(9, 9, 11, 0.96);
+  display: flex;
+  box-sizing: border-box;
+  background-color: rgba(0, 0, 0, 0.55);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(0, 0, 0, 0.3);
   color: #e4e4e7;
@@ -189,13 +210,10 @@
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 11px;
   z-index: 9999998;
-  display: flex;
   justify-content: flex-start;
   align-items: center;
   gap: 16px;
   height: 24px;
-  box-sizing: border-box;
-  backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
@@ -2814,6 +2832,124 @@ body.ug-widgets-hidden #ug-metronome {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* --------------------------------------------------------------
+   Position de la barre (bas / haut)
+   La barre est toujours visible (fixée au bord choisi) et la page
+   réserve la place nécessaire sur ce bord : le contenu peut donc
+   toujours défiler AU-DESSUS / EN-DESSOUS de la barre sans être
+   masqué. Le bouton micro (#ug-voice-btn) reste un overlay fixe
+   dans le coin inférieur droit, indépendant de la position.
+   -------------------------------------------------------------- */
+
+/* --- Bas (défaut) : la page réserve la place en bas --- */
+body.rockstar-bar-bottom {
+  padding-bottom: calc(var(--rockstar-bar-offset, 0px) + 112px);
+}
+
+/* --- Haut : la page réserve la place en haut --- */
+body.rockstar-bar-top {
+  padding-top: 112px;
+}
+
+body.rockstar-bar-top #ug-voice-live-text {
+  top: 0;
+  bottom: auto;
+  border-top: none;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+body.rockstar-bar-top #ug-song-summary-bar {
+  top: 28px;
+  bottom: auto;
+  border-top: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+body.rockstar-bar-top #rockstar-floating-bar {
+  top: 52px;
+  bottom: auto;
+}
+
+body.rockstar-bar-top #ug-voice-feedback {
+  top: 60px;
+  bottom: auto;
+}
+
+body.rockstar-bar-top #ug-voice-speed {
+  top: 112px;
+  bottom: auto;
+  transform: translateY(-10px);
+}
+
+body.rockstar-bar-top #ug-voice-speed.visible {
+  transform: translateY(0);
+}
+
+body.rockstar-bar-top #ug-commands-panel {
+  top: 65px;
+  bottom: auto;
+  transform: translateY(-10px);
+}
+
+body.rockstar-bar-top #ug-commands-panel.visible {
+  transform: translateY(0);
+}
+
+body.rockstar-bar-top .ug-voice-settings-panel {
+  top: 65px;
+  bottom: auto;
+}
+
+body.rockstar-bar-top #ug-song-summary-bar .summary-dropdown {
+  top: 100%;
+  bottom: auto;
+  margin-top: 6px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Options de position dans le menu Paramètres --- */
+.settings-barposition-hint {
+  font-size: 10px;
+  color: #a1a1aa;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.settings-barposition-row {
+  display: flex;
+  gap: 6px;
+}
+
+.bar-position-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #d4d4d8;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+}
+
+.bar-position-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.bar-position-btn.active {
+  background: linear-gradient(135deg, #f26419 0%, #f6921e 100%);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
 }
 
 

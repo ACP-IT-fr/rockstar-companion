@@ -281,6 +281,9 @@ document.addEventListener('DOMContentLoaded', () => {
               // List of DOM elements to remove
               const elementsToRemove = [
                 'rockstar-floating-bar',
+                'ug-voice-btn',
+                'ug-voice-live-text',
+                'ug-song-summary-bar',
                 'ug-chord',
                 'ug-tuner',
                 'ug-singing-tracker',
@@ -298,6 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
               // Delete global RockstarCore object
               delete window.RockstarCore;
+
+              // Retirer la classe de position de la barre (haut/bas)
+              document.body.classList.remove('rockstar-bar-top', 'rockstar-bar-bottom', 'rockstar-bar-left', 'rockstar-bar-right');
             }
           }).then(() => {
             injectBtn.innerText = "🎙️ Activer sur cet onglet";

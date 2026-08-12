@@ -293,7 +293,8 @@
     allowedDomains: {},
     muteAllSites: false,
     inactivityDelay: 1,
-    wakeActiveDuration: 10
+    wakeActiveDuration: 10,
+    barPosition: 'top'
   };
 
   function updateSettings(newSettings) {
@@ -311,7 +312,7 @@
   }
 
   function loadSettings(callback) {
-    safeStorageSyncGet(['chord7th', 'chordSus', 'wakeWord', 'wakeWordVariants', 'allowedDomains', 'muteAllSites', 'inactivityDelay', 'wakeActiveDuration'], (result) => {
+    safeStorageSyncGet(['chord7th', 'chordSus', 'wakeWord', 'wakeWordVariants', 'allowedDomains', 'muteAllSites', 'inactivityDelay', 'wakeActiveDuration', 'barPosition'], (result) => {
       const chord7th = result.chord7th || false;
       const chordSus = result.chordSus || false;
       const wakeWord = result.wakeWord !== undefined && result.wakeWord !== null ? (String(result.wakeWord).trim() || 'Roddy') : 'Roddy';
@@ -320,8 +321,9 @@
       const muteAllSites = result.muteAllSites || false;
       const inactivityDelay = result.inactivityDelay !== undefined && result.inactivityDelay !== null ? parseInt(result.inactivityDelay, 10) : 1;
       const wakeActiveDuration = result.wakeActiveDuration !== undefined && result.wakeActiveDuration !== null ? parseInt(result.wakeActiveDuration, 10) : 10;
+      const barPosition = ['top', 'bottom'].indexOf(result.barPosition) !== -1 ? result.barPosition : 'top';
       
-      updateSettings({ chord7th, chordSus, wakeWord, wakeWordVariants, allowedDomains, muteAllSites, inactivityDelay, wakeActiveDuration });
+      updateSettings({ chord7th, chordSus, wakeWord, wakeWordVariants, allowedDomains, muteAllSites, inactivityDelay, wakeActiveDuration, barPosition });
       settingsLoaded = true;
       if (callback) callback();
     });
