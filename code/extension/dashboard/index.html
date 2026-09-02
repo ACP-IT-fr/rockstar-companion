@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rockstar Audio Tools — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Piano widget styles (from extension content.css) -->
+  <link rel="stylesheet" href="../content.css">
+  <style>
+    :root {
+      --bg-dark: #09090b;
+      --bg-card: #18181b;
+      --bg-cell: rgba(18, 17, 24, 0.6);
+      --border-color: rgba(255, 255, 255, 0.06);
+      --accent-orange: #f26419;
+      --accent-gold: #f6921e;
+      --accent-gradient: linear-gradient(135deg, #f26419 0%, #f6921e 100%);
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --accent-glow: rgba(242, 100, 25, 0.15);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(20, 30, 60, 0.3) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(10, 15, 30, 0.5) 0px, transparent 50%);
+      color: var(--text-primary);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .dashboard-header {
+      background: rgba(10, 14, 23, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 1000000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-icon { font-size: 1.6rem; }
+
+    .brand-text {
+      background: linear-gradient(135deg, #f6921e, #f26419);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-mic-master {
+      background: var(--accent-gradient);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px var(--accent-glow);
+      transition: opacity 0.2s, transform 0.1s;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn-mic-master:hover { opacity: 0.95; }
+    .btn-mic-master:active { transform: scale(0.97); }
+    .btn-mic-master.active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .btn-settings {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-secondary);
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn-settings:hover {
+      background: rgba(255,255,255,0.12);
+      color: var(--text-primary);
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      display: none;
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      width: 320px;
+      background: rgba(12, 12, 16, 0.96);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      z-index: 1000001;
+      padding: 20px;
+    }
+
+    .settings-panel.open { display: block; }
+
+    .settings-panel h3 {
+      margin: 0 0 16px 0;
+      color: var(--accent-gold);
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #eee;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 10px;
+    }
+
+    .setting-row input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--accent-orange);
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      padding: 8px 32px;
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #6b7280;
+      transition: background-color 0.3s;
+    }
+
+    .status-dot.active { background-color: #10b981; box-shadow: 0 0 6px #10b981; }
+    .status-dot.error { background-color: #ef4444; }
+    .status-dot.loading { background-color: #f59e0b; animation: pulse-dot 1s infinite; }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Widget Grid */
+    .widget-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 20px;
+      padding: 24px 32px 40px 32px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* Widget Card Container */
+    .widget-card {
+      background: var(--bg-cell);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 200px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .widget-card:hover {
+      border-color: rgba(246, 146, 30, 0.3);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .widget-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .widget-card-title {
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent-gold);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .widget-card-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(246, 146, 30, 0.15);
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    .widget-card-body {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    /* Repositioned widgets: override fixed positioning */
+    .widget-card-body > * {
+      position: relative !important;
+      bottom: auto !important;
+      right: auto !important;
+      top: auto !important;
+      left: auto !important;
+      width: 100% !important;
+      height: 100% !important;
+      transform: none !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      border-radius: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Specific widget overrides for grid display */
+    .widget-card-body #ug-metronome {
+      flex-direction: column;
+      padding: 16px;
+      gap: 10px;
+      background: transparent;
+      backdrop-filter: none;
+    }
+
+    .widget-card-body #ug-tuner,
+    .widget-card-body #ug-chord {
+      flex-direction: column;
+      padding: 16px;
+      background: transparent;
+      backdrop-filter: none;
+    }
+
+    .widget-card-body #ug-singing-tracker {
+      flex-direction: column;
+      padding: 12px;
+      background: transparent;
+      backdrop-filter: none;
+      height: 200px !important;
+    }
+
+    .widget-card-body #ug-singing-tracker .singing-canvas-container {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .widget-card-body #ug-singing-tracker.maximized {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
+      z-index: 9999999 !important;
+    }
+
+    .widget-card-body #rockstar-piano-widget {
+      height: 420px !important;
+      position: relative !important;
+      padding: 0 !important;
+      flex-direction: column;
+    }
+
+    .widget-card-body #rockstar-piano-widget .piano-scroll-outer {
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Loading overlay */
+    .widget-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 120px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent-orange);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error state */
+    .widget-error {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 120px;
+      color: #ef4444;
+      font-size: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .widget-grid {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+      .dashboard-header { padding: 12px 16px; }
+      .status-bar { padding: 6px 16px; }
+    }
+
+    /* Hide metronome screen overlay in dashboard context */
+    #ug-metronome-screen-overlay {
+      display: none !important;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+
+  <header class="dashboard-header">
+    <div class="brand">
+      <span class="brand-icon">🎸</span>
+      <span class="brand-text">Rockstar Audio Tools</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-mic-master" id="btn-mic-master" title="Activer le microphone pour tous les widgets audio">
+        🎙️ Micro
+      </button>
+      <button class="btn-settings" id="btn-settings" title="Paramètres">⚙️</button>
+    </div>
+  </header>
+
+  <div class="status-bar" id="status-bar">
+    <div class="status-indicator">
+      <div class="status-dot loading" id="status-dot"></div>
+      <span id="status-text">Chargement des widgets...</span>
+    </div>
+    <div class="status-indicator">
+      <span>🔊 AudioContext: <strong id="status-audio">—</strong></span>
+    </div>
+    <div class="status-indicator">
+      <span>🎤 Micro: <strong id="status-mic">—</strong></span>
+    </div>
+  </div>
+
+  <div class="settings-panel" id="settings-panel">
+    <h3>⚙️ Paramètres</h3>
+    <label class="setting-row">
+      <input type="checkbox" id="set-chord-7th">
+      <span>Accords de 7ème (7, maj7, m7)</span>
+    </label>
+    <label class="setting-row">
+      <input type="checkbox" id="set-chord-sus">
+      <span>Accords suspendus (sus2, sus4)</span>
+    </label>
+    <div style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+      <button class="btn-mic-master" id="settings-replay-onboarding" style="width: 100%; justify-content: center;">
+        📖 Rejouer le tutoriel
+      </button>
+    </div>
+  </div>
+
+  <main class="widget-grid" id="widget-grid">
+
+    <div class="widget-card" id="card-metronome">
+      <div class="widget-card-header">
+        <span class="widget-card-title">⏱️ Métronome</span>
+        <span class="widget-card-badge">Audio</span>
+      </div>
+      <div class="widget-card-body">
+        <div class="widget-loading"><div class="spinner"></div><span>Chargement...</span></div>
+      </div>
+    </div>
+
+    <div class="widget-card" id="card-tuner">
+      <div class="widget-card-header">
+        <span class="widget-card-title">🎸 Accordeur</span>
+        <span class="widget-card-badge">Micro</span>
+      </div>
+      <div class="widget-card-body">
+        <div class="widget-loading"><div class="spinner"></div><span>Chargement...</span></div>
+      </div>
+    </div>
+
+    <div class="widget-card" id="card-chord">
+      <div class="widget-card-header">
+        <span class="widget-card-title">🎵 Détecteur d'Accords</span>
+        <span class="widget-card-badge">Micro</span>
+      </div>
+      <div class="widget-card-body">
+        <div class="widget-loading"><div class="spinner"></div><span>Chargement...</span></div>
+      </div>
+    </div>
+
+    <div class="widget-card" id="card-singing">
+      <div class="widget-card-header">
+        <span class="widget-card-title">🎤 Vocal Pitch Tracker</span>
+        <span class="widget-card-badge">Micro</span>
+      </div>
+      <div class="widget-card-body">
+        <div class="widget-loading"><div class="spinner"></div><span>Chargement...</span></div>
+      </div>
+    </div>
+
+    <div class="widget-card" id="card-piano" style="grid-column: span 2;">
+      <div class="widget-card-header">
+        <span class="widget-card-title">🎹 Piano Concert 88 Touches</span>
+        <span class="widget-card-badge">Clavier / Souris</span>
+      </div>
+      <div class="widget-card-body">
+        <div class="widget-loading"><div class="spinner"></div><span>Chargement...</span></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- RockstarCore shim: provides minimal APIs needed by widgets -->
+  <script>
+  (function() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const initHooks = [];
+    const settingsListeners = [];
+    const settings = {
+      chord7th: false,
+      chordSus: false,
+      wakeWord: 'Roddy',
+      wakeWordLower: 'roddy',
+      wakeWordVariants: 'roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi',
+      barPosition: 'top'
+    };
+
+    let audioContext = null;
+    let analyser = null;
+
+    function getAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioContext;
+    }
+
+    function getAnalyser() { return analyser; }
+    function setAnalyser(a) { analyser = a; }
+
+    function updateSettings(newSettings) {
+      Object.assign(settings, newSettings);
+      if (settings.wakeWord) settings.wakeWordLower = settings.wakeWord.toLowerCase().trim();
+      settingsListeners.forEach(fn => {
+        try { fn(settings); } catch(e) { console.error(e); }
+      });
+    }
+
+    // Charger les paramètres depuis localStorage
+    try {
+      const saved = localStorage.getItem('rockstar_dashboard_settings');
+      if (saved) updateSettings(JSON.parse(saved));
+    } catch(e) {}
+
+    function saveSettings() {
+      try {
+        localStorage.setItem('rockstar_dashboard_settings', JSON.stringify({
+          chord7th: settings.chord7th,
+          chordSus: settings.chordSus,
+          wakeWord: settings.wakeWord,
+          barPosition: settings.barPosition
+        }));
+      } catch(e) {}
+    }
+
+    window.RockstarCore = {
+      registerCommand: () => {},
+      registerInit: (fn) => initHooks.push(fn),
+      registerInitHook: (fn) => initHooks.push(fn),
+      registerHelpCommand: () => {},
+      registerVisibilityHandler: () => {},
+      getHelpCommands: () => [],
+      getRegisteredCommands: () => [],
+      safeStorageGet: (key, cb) => {
+        try {
+          const val = localStorage.getItem(key);
+          const parsed = val ? JSON.parse(val) : null;
+          cb({ [key]: parsed });
+        } catch(e) { cb({ [key]: null }); }
+      },
+      safeStorageSet: (obj, cb) => {
+        try {
+          for (const [k,v] of Object.entries(obj)) localStorage.setItem(k, JSON.stringify(v));
+        } catch(e) {}
+        if (cb) cb();
+      },
+      safeStorageRemove: (key, cb) => {
+        try { localStorage.removeItem(key); } catch(e) {}
+        if (cb) cb();
+      },
+      safeStorageSyncGet: (keys, cb) => {
+        const res = {};
+        (Array.isArray(keys) ? keys : [keys]).forEach(k => {
+          try {
+            const val = localStorage.getItem('sync_' + k);
+            res[k] = val ? JSON.parse(val) : null;
+          } catch(e) { res[k] = null; }
+        });
+        cb(res);
+      },
+      safeStorageSyncSet: (obj, cb) => {
+        try {
+          for (const [k,v] of Object.entries(obj)) localStorage.setItem('sync_' + k, JSON.stringify(v));
+        } catch(e) {}
+        saveSettings();
+        if (cb) cb();
+      },
+      getAudioContext,
+      getAnalyser,
+      setAnalyser,
+      getActiveVideo: () => null,
+      getOrCreateFloatingBar: () => document.querySelector('#card-piano .widget-card-body'),
+      handleCommand: () => true,
+      showFeedback: () => {},
+      startMetronome: null,
+      stopMetronome: null,
+      initTuner: null,
+      detectChord: null,
+      startOnboarding: () => {},
+      appendPianoBtnToFloatingBar: () => {},
+      appendButtonsToFloatingBar: () => {},
+      showActivationBanner: () => {},
+      removeActivationBanner: () => {},
+      scrollSpeed: 1,
+      isScrolling: false,
+      isListening: false,
+      isAwake: false,
+      isAutoStart: false,
+      isSuspendedByVisibility: false,
+      currentDomain: window.location.hostname,
+      activeSiteKey: 'default',
+      activeConfig: {},
+      get settings() { return settings; },
+      onSettingsChanged: (fn) => {
+        settingsListeners.push(fn);
+        fn(settings);
+      },
+      onListeningChanged: () => {},
+      onAwakeChanged: () => {},
+      initialize: () => {
+        initHooks.forEach(fn => {
+          try { fn(); } catch(e) { console.error('[RockstarCore] init hook error:', e); }
+        });
+      },
+      pianoWidget: null
+    };
+  })();
+  </script>
+
+  <!-- Widget scripts (order matters: metronome, tuner, chordDetector, singingTracker, pianoKeyboard) -->
+  <script src="../widgets/metronome.js"></script>
+  <script src="../widgets/tuner.js"></script>
+  <script src="../widgets/chordDetector.js"></script>
+  <script src="../widgets/singingTracker.js"></script>
+  <script src="../widgets/pianoKeyboard.js"></script>
+
+  <!-- Dashboard logic: initialize + mount widgets -->
+  <script src="dashboard.js"></script>
+
+</body>
+</html>
