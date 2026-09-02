@@ -4,7 +4,7 @@ set -euo pipefail
 # Deploy script for Rockstar Audio Dashboard
 # Target: massive-hoster:/domains/music-dashboard.flat-spaces.com/public_html
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 DASHBOARD_DIR="$REPO_ROOT/code/extension/dashboard"
 STAGING_DIR="/tmp/rockstar-dashboard-deploy-$$"
 
