@@ -221,7 +221,7 @@
     pill.querySelector('#rfp-repertoire-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       if (chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ type: 'rockstar:open-panel', kind: 'open', tab: 'repertoire' });
+        chrome.runtime.sendMessage({ type: 'rockstar:open-panel', kind: 'open', tab: 'song' });
       }
     });
 
