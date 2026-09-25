@@ -15,7 +15,7 @@
     "message": "Say \"$WAKEWORD$\" before your command",
     "description": "Shown when the wake word session ends, to remind how to wake Roddy.",
     "placeholders": {
-      "wake_word": {
+      "wakeword": {
         "content": "$1",
         "example": "Roddy"
       }
