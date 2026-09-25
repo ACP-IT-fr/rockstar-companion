@@ -123,20 +123,20 @@
         try { await ctx.resume(); } catch (e) { /* ignore */ }
       }
 
-      if (window.RockstarCore.getAnalyser()) {
-        // Micro déjà autorisé : le re-toucher réinitialise juste l'état visuel
-        btn.classList.add('active');
-        btn.textContent = '🎙️ Micro ON';
-        return;
+      // Les widgets ont pu créer un analyser "orphelin" au chargement (avant
+      // tout geste utilisateur, leur getUserMedia est refusé) : il faut lui
+      // brancher le flux, pas considérer le micro comme déjà actif.
+      let analyser = window.RockstarCore.getAnalyser();
+      if (!analyser) {
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 16384;
+        window.RockstarCore.setAnalyser(analyser);
       }
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 16384;
         source.connect(analyser);
-        window.RockstarCore.setAnalyser(analyser);
 
         // Redémarre les widgets micro avec l'analyser partagé
         if (typeof window.RockstarCore.initTuner === 'function') {

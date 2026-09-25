@@ -42,7 +42,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-gap);
-  padding: 12px 16px;
+  padding: 8px 12px;
   background: rgba(10, 14, 23, 0.7);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--sp-border-color);
@@ -124,7 +124,7 @@ html, body {
   background: rgba(255, 255, 255, 0.02);
   border: none;
   color: var(--sp-text-primary);
-  padding: 12px 16px;
+  padding: 9px 12px;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -155,7 +155,7 @@ html, body {
   display: none;
   flex-direction: column;
   gap: var(--sp-gap);
-  padding: 0 var(--sp-gap) var(--sp-gap);
+  padding: 0 8px 8px;
 }
 
 .sp-acc.open .sp-acc-body {
@@ -165,7 +165,7 @@ html, body {
 /* Content */
 .sp-content {
   flex: 1;
-  padding: var(--sp-gap) 16px 20px;
+  padding: var(--sp-gap) 12px 16px;
   display: flex;
   flex-direction: column;
   gap: var(--sp-gap);
@@ -202,14 +202,14 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--sp-border-color);
   background: rgba(255, 255, 255, 0.02);
 }
 
 .widget-card-title {
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--sp-accent-gold);
@@ -253,18 +253,18 @@ html, body {
 .widget-card-body #ug-tuner,
 .widget-card-body #ug-chord {
   flex-direction: column;
-  padding: 16px;
-  gap: 10px;
+  padding: 12px;
+  gap: 8px;
   background: transparent;
   backdrop-filter: none;
 }
 
 .widget-card-body #ug-singing-tracker {
   flex-direction: column;
-  padding: 12px;
+  padding: 8px;
   background: transparent;
   backdrop-filter: none;
-  height: 200px !important;
+  height: 160px !important;
 }
 
 .widget-card-body #ug-singing-tracker .singing-canvas-container {
@@ -282,7 +282,7 @@ html, body {
 }
 
 .widget-card-body #rockstar-piano-widget {
-  height: 420px !important;
+  height: 360px !important;
   position: relative !important;
   padding: 0 !important;
   flex-direction: column;
@@ -326,13 +326,13 @@ html, body {
 .sp-cmd {
   appearance: none;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--sp-text-primary);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--sp-border-color);
-  border-radius: 10px;
-  padding: 8px 16px;
+  border-radius: 8px;
+  padding: 6px 12px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s, transform 0.1s;
 }
