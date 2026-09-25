@@ -1136,6 +1136,47 @@
   }
   setupUrlWatch();
 
+  // --- Synchronisation entre contextes (onglet <-> panneau) -------------------
+  // Chaque contexte garde currentSong en mémoire : sans écoute, une édition
+  // dans le panneau n'apparaît pas dans le tiroir de l'onglet, et inversement.
+  // chrome.storage.onChanged est la source de vérité commune (layout song:<url>).
+  function isUserTypingInDrawer() {
+    try {
+      return drawerContainer && drawerContainer.contains(document.activeElement) &&
+        ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setupStorageSyncListener() {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.onChanged) return;
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local' || !currentSong || !isDrawerInitialized) return;
+      const key = 'song:' + currentSong.url;
+      if (!(key in changes) || !changes[key].newValue) return;
+
+      const incoming = changes[key].newValue;
+      // Boucle locale : notre propre saveSong a déjà mis à jour currentSong
+      // (savedAt identique) — rien à faire.
+      if (incoming.savedAt === currentSong.savedAt && incoming.notes === currentSong.notes) return;
+
+      // Autre contexte a modifié la fiche : adopter la nouvelle valeur.
+      currentSong = incoming;
+      notifySongChanged();
+      // Ne pas écraser les champs pendant que l'utilisateur tape dans ce
+      // contexte (sinon perte du curseur) : la resaisie déclenchera une
+      // sauvegarde qui réalignera le stockage de toute façon.
+      if (!isUserTypingInDrawer()) {
+        populateDrawerFields();
+      }
+      if (incoming.scrollSpeed !== undefined && window.RockstarCore) {
+        window.RockstarCore.scrollSpeed = incoming.scrollSpeed;
+      }
+    });
+  }
+  setupStorageSyncListener();
+
   // Exposé pour les tests (normalizeUrl est la clé de répartition du stockage)
   window.RockstarCore.normalizeUrl = normalizeUrl;
 })();
