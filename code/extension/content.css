@@ -152,42 +152,40 @@
   color: #ff9f1c;
 }
 
-#rfp-transcript {
-  position: fixed;
-  right: 16px;
-  bottom: calc(16px + 190px);
-  max-width: min(420px, calc(100vw - 32px));
-  box-sizing: border-box;
-  padding: 6px 12px;
-  background: rgba(9, 9, 11, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  color: #f4f4f5;
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 12px;
-  z-index: 999998;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.25s, transform 0.25s;
-  pointer-events: none;
-}
-
-#rfp-transcript.has-content {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-#rfp-transcript.error {
-  border-color: rgba(239, 68, 68, 0.5);
-}
-
-#rfp-transcript .rfp-transcript-label {
+.rfp-transcript {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
   color: #a1a1aa;
-  margin-right: 6px;
-  text-transform: uppercase;
   font-size: 10px;
+}
+
+.rfp-transcript.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+#rfp-transcript-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e4e4e7;
+}
+
+.rfp-transcript.error #rfp-transcript-text {
+  color: #fca5a5;
+}
+
+.rfp-transcript-label {
+  color: #a1a1aa;
+  text-transform: uppercase;
+  font-size: 9px;
   letter-spacing: 0.8px;
+  flex-shrink: 0;
 }
 
 #rockstar-floating-bar.banner-active {

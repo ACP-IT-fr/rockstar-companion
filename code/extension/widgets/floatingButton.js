@@ -38,13 +38,14 @@
     `;
     document.body.appendChild(pill);
 
+    // Transcript intégré au pill (une ligne, sous les puces)
     const transcript = document.createElement('div');
-    transcript.id = 'rfp-transcript';
+    transcript.className = 'rfp-transcript';
     transcript.innerHTML = `
       <span class="rfp-transcript-label">Micro :</span>
       <span id="rfp-transcript-text">—</span>
     `;
-    document.body.appendChild(transcript);
+    pill.appendChild(transcript);
     const transcriptText = transcript.querySelector('#rfp-transcript-text');
 
     // --- Position (persistée) -------------------------------------------------
