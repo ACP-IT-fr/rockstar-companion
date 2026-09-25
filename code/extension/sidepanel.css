@@ -337,10 +337,17 @@ html, body {
 }
 
 .widget-card-body #rockstar-piano-widget.sp-piano-compact .piano-scroll-outer {
-  max-width: 204px; /* 7 touches blanches de 28px */
   height: 118px;
   overflow: hidden;
-  margin: 0 auto;
+  margin: 0;
+}
+
+/* La boîte interne du widget piano double la carte : on la rend
+   transparente (la carte "Piano 88 touches" suffit). */
+.widget-card-body #rockstar-piano-widget {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .widget-card-body #rockstar-piano-widget.sp-piano-compact .piano-status-panel {
