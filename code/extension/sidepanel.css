@@ -1,0 +1,120 @@
+/* sidepanel.css — habillage du side panel (les widgets gardent leurs styles
+   d'origine via content.css). Utilise les variables du thème de l'hôte. */
+
+:root {
+  --sp-gap: 10px;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--foreground, #e6e6e6);
+  font-family: inherit;
+}
+
+#sidepanel-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+.sp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-gap);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border, #333);
+}
+
+.sp-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.sp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted-foreground, #999);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sp-toggle input {
+  accent-color: var(--accent, #f60);
+}
+
+/* Tabs */
+.sp-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--border, #333);
+}
+
+.sp-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--muted-foreground, #999);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+}
+
+.sp-tab.active {
+  color: var(--foreground, #fff);
+  background: var(--card, #1c1c1c);
+  border-color: var(--border, #444);
+  transform: translateY(1px);
+}
+
+/* Content */
+.sp-content {
+  flex: 1;
+  padding: var(--sp-gap) 12px 16px;
+  box-sizing: border-box;
+}
+
+.sp-tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: var(--sp-gap);
+}
+
+.sp-tab-panel.active {
+  display: flex;
+}
+
+.sp-card {
+  border: 1px solid var(--border, #333);
+  background: var(--card, #1c1c1c);
+  border-radius: 10px;
+  padding: 8px 10px 10px;
+  min-width: 0;
+}
+
+.sp-card-title {
+  margin: 2px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted-foreground, #999);
+}
+
+.sp-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted-foreground, #aaa);
+  padding: 12px;
+  border: 1px dashed var(--border, #444);
+  border-radius: 10px;
+}

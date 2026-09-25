@@ -404,6 +404,7 @@
 
   // Init Singing tracker UI
   window.RockstarCore.registerInit(() => {
+    if (window.RockstarCore.shouldMountInPage && !window.RockstarCore.shouldMountInPage()) return;
     singingContainer = document.createElement('div');
     singingContainer.id = 'ug-singing-tracker';
     

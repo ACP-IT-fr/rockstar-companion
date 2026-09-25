@@ -138,6 +138,7 @@
 
   // Init chord UI
   window.RockstarCore.registerInit(() => {
+    if (window.RockstarCore.shouldMountInPage && !window.RockstarCore.shouldMountInPage()) return;
     chordContainer = document.createElement('div');
     chordContainer.id = 'ug-chord';
     chordContainer.innerHTML = `

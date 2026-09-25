@@ -20,6 +20,7 @@
 
   function appendButtonsToFloatingBar() {
     const bar = window.RockstarCore.getOrCreateFloatingBar();
+    ensureOpenPanelBtn(bar);
     if (commandsWrapper) bar.appendChild(commandsWrapper);
     else if (commandsBtn) bar.appendChild(commandsBtn);
     
@@ -40,6 +41,30 @@
     }
   }
   window.RockstarCore.appendButtonsToFloatingBar = appendButtonsToFloatingBar;
+
+  /**
+   * Bouton "panneau latéral" : ouvre le side panel (background.js fait le
+   * pont vers chrome.sidePanel.open). Toujours présent, quel que soit le mode.
+   */
+  function ensureOpenPanelBtn(bar) {
+    if (!bar) return;
+    let panelBtn = document.getElementById('ug-open-panel-btn');
+    if (!panelBtn) {
+      panelBtn = document.createElement('button');
+      panelBtn.id = 'ug-open-panel-btn';
+      panelBtn.className = 'summary-scroll-toggle';
+      panelBtn.title = 'Ouvrir le panneau latéral';
+      panelBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>`;
+      panelBtn.addEventListener('click', () => {
+        if (chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ type: 'rockstar:open-panel' });
+        }
+      });
+    }
+    if (!bar.contains(panelBtn)) {
+      bar.insertBefore(panelBtn, bar.firstChild);
+    }
+  }
 
   function showFeedback(text, isSuccess) {
     // N'afficher la notification visuelle que pour les échecs / commandes non reconnues

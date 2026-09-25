@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vox Roddy — Panneau</title>
+  <link rel="stylesheet" href="content.css">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div id="sidepanel-app">
+    <header class="sp-header">
+      <span class="sp-title">Vox Roddy</span>
+      <label class="sp-toggle" title="Quand cette option est active, les widgets ne s'affichent plus sur la page web (recharger la page pour appliquer)">
+        <input type="checkbox" id="sp-mode-panel" checked>
+        <span>Widgets dans le panneau</span>
+      </label>
+    </header>
+
+    <nav class="sp-tabs" id="sp-tabs">
+      <button class="sp-tab active" data-tab="practice">Studio</button>
+      <button class="sp-tab" data-tab="piano">Piano</button>
+    </nav>
+
+    <main class="sp-content">
+      <section id="sp-tab-practice" class="sp-tab-panel active">
+        <div class="sp-card" id="sp-card-metronome">
+          <h3 class="sp-card-title">Métronome</h3>
+        </div>
+        <div class="sp-card" id="sp-card-tuner">
+          <h3 class="sp-card-title">Accordeur</h3>
+        </div>
+        <div class="sp-card" id="sp-card-chord">
+          <h3 class="sp-card-title">Accord détecté</h3>
+        </div>
+        <div class="sp-card" id="sp-card-singing">
+          <h3 class="sp-card-title">Vocal Pitch</h3>
+        </div>
+      </section>
+
+      <section id="sp-tab-piano" class="sp-tab-panel">
+        <div class="sp-card" id="sp-card-piano">
+          <h3 class="sp-card-title">Piano 88 touches</h3>
+        </div>
+      </section>
+
+      <div id="sp-disabled-note" class="sp-note" hidden>
+        Les widgets sont actuellement affichés sur la page web. Active
+        « Widgets dans le panneau » ci-dessus, puis recharge la page.
+      </div>
+    </main>
+  </div>
+
+  <!-- Même montage que le dashboard : core + widgets originaux -->
+  <script src="storageService.js"></script>
+  <script src="core.js"></script>
+  <script src="widgets/metronome.js"></script>
+  <script src="widgets/tuner.js"></script>
+  <script src="widgets/chordDetector.js"></script>
+  <script src="widgets/singingTracker.js"></script>
+  <script src="widgets/pianoKeyboard.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
