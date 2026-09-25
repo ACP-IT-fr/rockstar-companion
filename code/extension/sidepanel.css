@@ -118,3 +118,43 @@ html, body {
   border: 1px dashed var(--border, #444);
   border-radius: 10px;
 }
+
+/* Transport / commandes vers la page */
+.sp-transport,
+.sp-transport-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sp-transport {
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.sp-cmd {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--foreground, #eee);
+  background: var(--background, transparent);
+  border: 1px solid var(--border, #444);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.sp-cmd:hover:not(:disabled) {
+  border-color: var(--accent, #f60);
+}
+
+.sp-cmd:disabled {
+  opacity: 0.5;
+}
+
+.sp-cmd-primary {
+  background: var(--accent, #f60);
+  border-color: var(--accent, #f60);
+  color: #111;
+  font-weight: 600;
+}

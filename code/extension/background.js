@@ -51,11 +51,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: false, error: 'no-active-tab' });
           return;
         }
-        chrome.tabs.sendMessage(tab.id, { type: 'rockstar:tab-action', payload: msg.payload }, () => {
-          // La dernière erreur est ignorée : l'onglet peut ne pas avoir le
-          // content script (ex. page interne). sendResponse est optionnel.
-          void chrome.runtime.lastError;
-          sendResponse({ ok: true });
+        chrome.tabs.sendMessage(tab.id, { type: 'rockstar:tab-action', payload: msg.payload }, (res) => {
+          // L'onglet peut ne pas avoir le content script (page interne).
+          if (chrome.runtime.lastError) {
+            void chrome.runtime.lastError;
+            sendResponse({ ok: false, error: 'no-content-script' });
+            return;
+          }
+          sendResponse(res || { ok: false, error: 'no-response' });
         });
       });
       return true; // réponse asynchrone

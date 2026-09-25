@@ -20,6 +20,7 @@
     <nav class="sp-tabs" id="sp-tabs">
       <button class="sp-tab active" data-tab="practice">Studio</button>
       <button class="sp-tab" data-tab="piano">Piano</button>
+      <button class="sp-tab" data-tab="playback">Lecture</button>
     </nav>
 
     <main class="sp-content">
@@ -42,6 +43,36 @@
         <div class="sp-card" id="sp-card-piano">
           <h3 class="sp-card-title">Piano 88 touches</h3>
         </div>
+      </section>
+
+      <section id="sp-tab-playback" class="sp-tab-panel">
+        <div class="sp-card">
+          <h3 class="sp-card-title">Vidéo (page active)</h3>
+          <div class="sp-transport">
+            <button class="sp-cmd" data-cmd="recule 10 secondes">−10 s</button>
+            <button class="sp-cmd sp-cmd-primary" data-cmd="play">▶ Lecture</button>
+            <button class="sp-cmd sp-cmd-primary" data-cmd="pause">⏸ Pause</button>
+            <button class="sp-cmd" data-cmd="avance 10 secondes">+10 s</button>
+          </div>
+          <div class="sp-transport-row">
+            <button class="sp-cmd" data-cmd="recule 30 secondes">−30 s</button>
+            <button class="sp-cmd" data-cmd="recommence">⏮ Début</button>
+            <button class="sp-cmd" data-cmd="avance 30 secondes">+30 s</button>
+          </div>
+        </div>
+        <div class="sp-card">
+          <h3 class="sp-card-title">Défilement de la page</h3>
+          <div class="sp-transport-row">
+            <button class="sp-cmd sp-cmd-primary" data-cmd="défile">▶ Défiler</button>
+            <button class="sp-cmd" data-cmd="arrête le scroll">⏸ Stop</button>
+          </div>
+          <div class="sp-transport-row">
+            <button class="sp-cmd" data-cmd="moins vite">Moins vite</button>
+            <button class="sp-cmd" data-cmd="plus vite">Plus vite</button>
+            <button class="sp-cmd" data-cmd="tout en haut">⤒ Haut</button>
+          </div>
+        </div>
+        <div id="sp-cmd-status" class="sp-note" hidden></div>
       </section>
 
       <div id="sp-disabled-note" class="sp-note" hidden>

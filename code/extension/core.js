@@ -287,6 +287,35 @@
     });
   });
 
+  // Réception des actions envoyées par le side panel (via background.js).
+  // Le panneau ne partage pas le DOM de la page : il passe par ce bridge,
+  // qui réutilise le même router de commandes que le contrôle vocal.
+  if (!isExtensionPage && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (!msg || msg.type !== 'rockstar:tab-action') return;
+      const payload = msg.payload || {};
+
+      if (payload.kind === 'command') {
+        const success = handleCommand(payload.text || '');
+        sendResponse({ ok: success });
+      } else if (payload.kind === 'getState') {
+        sendResponse({
+          ok: true,
+          state: {
+            domain: currentDomain,
+            url: window.location.href,
+            title: document.title,
+            scrollSpeed,
+            isListening
+          }
+        });
+      } else {
+        sendResponse({ ok: false, error: 'unknown-payload' });
+      }
+      return true;
+    });
+  }
+
   const settingsListeners = [];
   let settingsLoaded = false;
   const settings = {
