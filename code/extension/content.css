@@ -177,8 +177,19 @@
 }
 
 #rockstar-floating-pill .rfp-ctrl b {
-  min-width: 14px;
+  min-width: 24px;
   text-align: center;
+}
+
+#rockstar-floating-pill .rfp-key-ctrl {
+  cursor: pointer;
+}
+
+#rockstar-floating-pill .rfp-key-ctrl::after {
+  content: '▾';
+  color: #a1a1aa;
+  font-size: 9px;
+  margin-left: 2px;
 }
 
 #rockstar-floating-pill .rfp-step {

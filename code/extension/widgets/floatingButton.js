@@ -266,7 +266,7 @@
         const current = field === 'scrollSpeed'
           ? (song.scrollSpeed || window.RockstarCore.scrollSpeed || 1)
           : (song[field] || 0);
-        const step = field === 'scrollSpeed' ? 0.25 : 1;
+        const step = 1;
         const next = Math.round((current + dir * step) * 100) / 100;
         const [min, max] = STEP_LIMITS[field];
         if (next < min || next > max) return;
@@ -279,9 +279,8 @@
     // Tonalité : clic → dropdown des 12 notes (notation anglophone)
     const KEY_OPTIONS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const keyCtrl = pill.querySelector('#rfp-key-ctrl');
-    const keyValue = pill.querySelector('#rfp-key');
-    if (keyCtrl && keyValue) {
-      keyValue.addEventListener('click', (e) => {
+    if (keyCtrl) {
+      keyCtrl.addEventListener('click', (e) => {
         e.stopPropagation();
         if (keyCtrl.querySelector('select')) return;
         const song = (window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong()) || {};
@@ -289,10 +288,14 @@
         select.className = 'rfp-key-select';
         select.innerHTML = '<option value="">–</option>' +
           KEY_OPTIONS.map((k) => `<option value="${k}"${k === song.key ? ' selected' : ''}>${k}</option>`).join('');
-        keyValue.replaceWith(select);
-        select.focus();
+        const keyValue = keyCtrl.querySelector('#rfp-key');
+        if (keyValue) keyValue.replaceWith(select);
+        else keyCtrl.appendChild(select);
 
+        let done = false;
         const commit = () => {
+          if (done || !select.isConnected) return;
+          done = true;
           const value = select.value;
           window.RockstarCore.updateCurrentSong && window.RockstarCore.updateCurrentSong({ key: value });
           const b = document.createElement('b');
@@ -303,8 +306,9 @@
         };
         select.addEventListener('change', commit);
         select.addEventListener('blur', commit);
-        select.addEventListener('click', (ev) => ev.stopPropagation());
         select.addEventListener('keydown', (ev) => ev.stopPropagation());
+        // Ouvre la liste tout de suite (le clic initial est le geste requis)
+        try { select.showPicker(); } catch (err) { /* fallback : clic manuel */ }
       });
     }
 
