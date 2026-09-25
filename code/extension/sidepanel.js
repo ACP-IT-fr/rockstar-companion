@@ -228,12 +228,16 @@
 
     sendTabMessage({ kind: 'getState' }).then((res) => {
       const domain = res && res.ok && res.state ? String(res.state.domain || '') : null;
-      const isYouTube = domain && domain.includes('youtube.com');
+      const isYouTube = Boolean(domain && domain.includes('youtube.com'));
+      const hasExtension = Boolean(domain);
+      const sep = document.getElementById('sp-playback-sep');
       videoRow.hidden = !isYouTube;
-      scrollRow.hidden = isYouTube;
-      if (unknown) unknown.hidden = Boolean(domain);
-      if (badge) badge.textContent = domain ? (isYouTube ? 'YouTube' : 'Page') : 'aucune page';
-      if (title) title.textContent = isYouTube ? '▶️ Vidéo' : '📜 Défilement de la page';
+      if (sep) sep.hidden = !isYouTube;
+      // Le défilement marche sur toute page avec l'extension (YouTube inclus)
+      scrollRow.hidden = !hasExtension;
+      if (unknown) unknown.hidden = hasExtension;
+      if (badge) badge.textContent = hasExtension ? (isYouTube ? 'YouTube' : 'Page') : 'aucune page';
+      if (title) title.textContent = isYouTube ? '▶️ Vidéo + défilement' : '📜 Défilement de la page';
     });
   }
 
