@@ -66,34 +66,6 @@
     });
   }
 
-  // --- Toggle "widgets dans le panneau" --------------------------------------
-  function setupModeToggle() {
-    const checkbox = document.getElementById('sp-mode-panel');
-    const note = document.getElementById('sp-disabled-note');
-    if (!checkbox) return;
-
-    window.RockstarCore.safeStorageSyncGet(['useSidePanel'], (res) => {
-      checkbox.checked = res.useSidePanel !== false;
-      updateNote(checkbox.checked);
-    });
-
-    checkbox.addEventListener('change', () => {
-      window.RockstarCore.safeStorageSyncSet({ useSidePanel: checkbox.checked });
-      updateNote(checkbox.checked);
-    });
-
-    window.RockstarCore.onSettingsChanged(function(s) {
-      if (checkbox.checked !== s.useSidePanel) {
-        checkbox.checked = s.useSidePanel;
-        updateNote(s.useSidePanel);
-      }
-    });
-
-    function updateNote(enabled) {
-      if (note) note.hidden = enabled;
-    }
-  }
-
   // --- Accordéons (plusieurs sections peuvent être ouvertes à la fois) --------
   function setupAccordion() {
     document.querySelectorAll('.sp-acc-head').forEach((head) => {
@@ -371,7 +343,6 @@
     setupPanelPort();
     setupMainTabs();
     setupAccordion();
-    setupModeToggle();
     setupMicMaster();
     setupPlaybackTab();
     setupPianoCompact();

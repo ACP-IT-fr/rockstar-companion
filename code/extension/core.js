@@ -356,7 +356,7 @@
       const inactivityDelay = result.inactivityDelay !== undefined && result.inactivityDelay !== null ? parseInt(result.inactivityDelay, 10) : 1;
       const wakeActiveDuration = result.wakeActiveDuration !== undefined && result.wakeActiveDuration !== null ? parseInt(result.wakeActiveDuration, 10) : 10;
       const barPosition = ['top', 'bottom'].indexOf(result.barPosition) !== -1 ? result.barPosition : 'top';
-      const useSidePanel = result.useSidePanel !== false;
+      const useSidePanel = true; // le mode panneau latéral est le comportement unique
 
       updateSettings({ chord7th, chordSus, wakeWord, wakeWordVariants, allowedDomains, muteAllSites, inactivityDelay, wakeActiveDuration, barPosition, useSidePanel });
       settingsLoaded = true;

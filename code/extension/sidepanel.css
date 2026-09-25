@@ -92,20 +92,6 @@ html, body {
   content: '🎸 ';
 }
 
-.sp-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--sp-text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.sp-toggle input {
-  accent-color: var(--sp-accent-orange);
-}
-
 /* Accordéons : plusieurs sections peuvent être ouvertes simultanément. */
 .sp-acc {
   border: 1px solid var(--sp-border-color);
