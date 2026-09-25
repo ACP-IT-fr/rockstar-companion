@@ -27,6 +27,7 @@
         "core.js",
         "voiceEngine.js",
         "widgets/floatingBar.js",
+        "widgets/floatingButton.js",
         "widgets/scroll.js",
         "widgets/metronome.js",
         "widgets/tuner.js",

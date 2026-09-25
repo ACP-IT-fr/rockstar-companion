@@ -19,6 +19,144 @@
   pointer-events: auto;
 }
 
+/* En mode panneau latéral, la barre est remplacée par le bouton flottant
+   (widgets/floatingButton.js) : une barre vide ne doit pas s'afficher. */
+#rockstar-floating-bar:empty {
+  display: none !important;
+}
+
+/* Bouton flottant unique avec poignée (mode panneau latéral) */
+#rockstar-floating-pill {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  background-color: #0f0f13;
+  color: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  z-index: 999999;
+  max-width: calc(100vw - 32px);
+}
+
+#rockstar-floating-pill .rfp-handle {
+  cursor: grab;
+  color: #a1a1aa;
+  padding: 2px 4px;
+  user-select: none;
+  letter-spacing: -2px;
+  font-size: 11px;
+}
+
+#rockstar-floating-pill .rfp-handle:active {
+  cursor: grabbing;
+}
+
+#rockstar-floating-pill .rfp-mic {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+#rockstar-floating-pill .rfp-mic:hover {
+  border-color: rgba(246, 146, 30, 0.5);
+}
+
+#rockstar-floating-pill .rfp-mic.active {
+  background: rgba(242, 100, 25, 0.2);
+  border-color: #f26419;
+  color: #f6921e;
+}
+
+#rockstar-floating-pill .rfp-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+#rockstar-floating-pill .rfp-chip {
+  white-space: nowrap;
+  color: #a1a1aa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#rockstar-floating-pill .rfp-chip b {
+  color: #ff9f1c;
+  font-weight: 600;
+}
+
+#rockstar-floating-pill .rfp-act {
+  appearance: none;
+  font: inherit;
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.2s;
+}
+
+#rockstar-floating-pill .rfp-act:hover {
+  color: #ff9f1c;
+}
+
+#rfp-transcript {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + 44px);
+  max-width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 6px 12px;
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #f4f4f5;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  z-index: 999998;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+
+#rfp-transcript.has-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#rfp-transcript.error {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+#rfp-transcript .rfp-transcript-label {
+  color: #a1a1aa;
+  margin-right: 6px;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+}
+
 #rockstar-floating-bar.banner-active {
   justify-content: flex-start;
   right: 290px;

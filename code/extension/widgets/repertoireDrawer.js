@@ -425,6 +425,7 @@
     window.storageService.getSong(url).then(song => {
       if (song) {
         currentSong = song;
+        notifySongChanged();
         if (song.scrollSpeed !== undefined) {
           window.RockstarCore.scrollSpeed = song.scrollSpeed;
         }
@@ -444,11 +445,17 @@
           playingTips: "",
           links: []
         };
+        notifySongChanged();
         window.storageService.saveSong(currentSong).then(() => {
           populateDrawerFields();
         });
       }
     });
+  }
+
+  // Informe les autres widgets (bouton flottant) que le morceau courant a changé
+  function notifySongChanged() {
+    window.dispatchEvent(new CustomEvent('rockstar-song-changed', { detail: { song: currentSong } }));
   }
 
   function populateDrawerFields() {
@@ -871,6 +878,8 @@
   window.RockstarCore.initializeDrawer = initializeDrawer;
   window.RockstarCore.sendYouTubeCommand = sendYouTubeCommand;
   window.RockstarCore.getActiveDrawerPlaybackLink = () => activeDrawerPlaybackLink;
+  window.RockstarCore.getCurrentSong = () => currentSong;
+  window.RockstarCore.toggleDrawer = toggleDrawer;
   window.RockstarCore.appendRepertoireDrawerBtn = (bar) => {
     const summaryBar = document.getElementById('ug-song-summary-bar');
     if (drawerBtn) {

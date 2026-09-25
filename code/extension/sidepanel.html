@@ -74,7 +74,7 @@
           <div class="widget-card" id="sp-card-piano">
             <div class="widget-card-header">
               <span class="widget-card-title">🎹 Piano 88 touches</span>
-              <span class="widget-card-badge">Audio</span>
+              <button class="sp-mini-btn" id="sp-piano-toggle" title="Ouvrir la version complète">⤢ Déployer</button>
             </div>
             <div class="widget-card-body"></div>
           </div>
@@ -90,35 +90,27 @@
         <div class="sp-acc-body">
           <div class="widget-card">
             <div class="widget-card-header">
-              <span class="widget-card-title">▶️ Vidéo (page active)</span>
+              <span class="widget-card-title" id="sp-playback-title">Lecture</span>
+              <span class="widget-card-badge" id="sp-playback-badge">—</span>
             </div>
             <div class="widget-card-body sp-playback-body">
-              <div class="sp-transport">
-                <button class="sp-cmd" data-cmd="recule 10 secondes">−10 s</button>
-                <button class="sp-cmd sp-cmd-primary" data-cmd="play">▶ Lecture</button>
-                <button class="sp-cmd sp-cmd-primary" data-cmd="pause">⏸ Pause</button>
-                <button class="sp-cmd" data-cmd="avance 10 secondes">+10 s</button>
+              <div id="sp-playback-video" class="sp-transport-row" hidden>
+                <button class="sp-cmd" data-cmd="recule 30 secondes">⏪30</button>
+                <button class="sp-cmd" data-cmd="recule 10 secondes">−10</button>
+                <button class="sp-cmd sp-cmd-primary" data-cmd="play">▶</button>
+                <button class="sp-cmd sp-cmd-primary" data-cmd="pause">⏸</button>
+                <button class="sp-cmd" data-cmd="avance 10 secondes">+10</button>
+                <button class="sp-cmd" data-cmd="recommence">⏮</button>
               </div>
-              <div class="sp-transport-row">
-                <button class="sp-cmd" data-cmd="recule 30 secondes">−30 s</button>
-                <button class="sp-cmd" data-cmd="recommence">⏮ Début</button>
-                <button class="sp-cmd" data-cmd="avance 30 secondes">+30 s</button>
-              </div>
-            </div>
-          </div>
-          <div class="widget-card">
-            <div class="widget-card-header">
-              <span class="widget-card-title">📜 Défilement de la page</span>
-            </div>
-            <div class="widget-card-body sp-playback-body">
-              <div class="sp-transport-row">
+              <div id="sp-playback-scroll" class="sp-transport-row" hidden>
                 <button class="sp-cmd sp-cmd-primary" data-cmd="défile">▶ Défiler</button>
-                <button class="sp-cmd" data-cmd="arrête le scroll">⏸ Stop</button>
+                <button class="sp-cmd" data-cmd="arrête le scroll">⏸</button>
+                <button class="sp-cmd" data-cmd="moins vite">« vite</button>
+                <button class="sp-cmd" data-cmd="plus vite">» vite</button>
+                <button class="sp-cmd" data-cmd="tout en haut">⤒</button>
               </div>
-              <div class="sp-transport-row">
-                <button class="sp-cmd" data-cmd="moins vite">Moins vite</button>
-                <button class="sp-cmd" data-cmd="plus vite">Plus vite</button>
-                <button class="sp-cmd" data-cmd="tout en haut">⤒ Haut</button>
+              <div id="sp-playback-unknown" class="sp-note" hidden>
+                Ouvre YouTube ou ultimate-guitar à côté pour piloter la lecture.
               </div>
             </div>
           </div>

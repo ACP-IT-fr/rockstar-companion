@@ -416,6 +416,9 @@
 
   // Hook d'initialisation de l'UI
   window.RockstarCore.registerInit(() => {
+    // En mode panneau latéral, la barre flottante est remplacée par le
+    // bouton flottant unique (widgets/floatingButton.js).
+    if (window.RockstarCore.shouldMountInPage && !window.RockstarCore.shouldMountInPage()) return;
     // 1. Bouton principal du micro
     btn = document.createElement('button');
     btn.id = 'ug-voice-btn';

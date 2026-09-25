@@ -114,6 +114,17 @@ html, body {
   overflow: hidden;
 }
 
+/* Les cartes se répartissent en lignes quand la place le permet */
+.sp-acc-body {
+  flex-wrap: wrap;
+}
+
+/* Studio : largeur maximale par carte, plusieurs par ligne si possible */
+#sp-acc-studio .widget-card {
+  flex: 1 1 240px;
+  max-width: 320px;
+}
+
 .sp-acc-head {
   appearance: none;
   width: 100%;
@@ -286,6 +297,36 @@ html, body {
   position: relative !important;
   padding: 0 !important;
   flex-direction: column;
+}
+
+/* Piano compact : une seule octave visible */
+.widget-card-body #rockstar-piano-widget.sp-piano-compact {
+  height: auto !important;
+}
+
+.widget-card-body #rockstar-piano-widget.sp-piano-compact .piano-scroll-outer {
+  max-width: 204px; /* 7 touches blanches de 28px + marge */
+  height: 118px;
+  overflow: hidden;
+}
+
+.sp-mini-btn {
+  appearance: none;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--sp-text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sp-border-color);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sp-mini-btn:hover {
+  color: var(--sp-accent-gold);
+  border-color: rgba(246, 146, 30, 0.5);
 }
 
 .widget-card-body #rockstar-piano-widget .piano-scroll-outer {

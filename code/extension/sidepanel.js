@@ -187,9 +187,25 @@
   // Toutes les actions sur la page passent par le hub (background.js),
   // qui relaye vers le même router de commandes que le contrôle vocal.
   function sendTabCommand(text) {
+    return sendTabMessage({ kind: 'command', text });
+  }
+
+  function showCmdStatus(text) {
+    const status = document.getElementById('sp-cmd-status');
+    if (!status) return;
+    status.hidden = false;
+    status.textContent = text;
+    clearTimeout(showCmdStatus._t);
+    showCmdStatus._t = setTimeout(() => { status.hidden = true; }, 2500);
+  }
+
+  // --- Lecture : groupe affiché selon le site de l'onglet actif ----------------
+  // Onglet YouTube → contrôles vidéo ; autre page avec l'extension → contrôles
+  // de défilement ; page sans extension → note explicative.
+  function sendTabMessage(payload) {
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
-        { type: 'rockstar:panel-to-tab', payload: { kind: 'command', text } },
+        { type: 'rockstar:panel-to-tab', payload },
         (res) => {
           if (chrome.runtime.lastError) {
             void chrome.runtime.lastError;
@@ -202,16 +218,36 @@
     });
   }
 
-  function showCmdStatus(text) {
-    const status = document.getElementById('sp-cmd-status');
-    if (!status) return;
-    status.hidden = false;
-    status.textContent = text;
-    clearTimeout(showCmdStatus._t);
-    showCmdStatus._t = setTimeout(() => { status.hidden = true; }, 2500);
+  function refreshPlaybackMode() {
+    const videoRow = document.getElementById('sp-playback-video');
+    const scrollRow = document.getElementById('sp-playback-scroll');
+    const unknown = document.getElementById('sp-playback-unknown');
+    const badge = document.getElementById('sp-playback-badge');
+    const title = document.getElementById('sp-playback-title');
+    if (!videoRow || !scrollRow) return;
+
+    sendTabMessage({ kind: 'getState' }).then((res) => {
+      const domain = res && res.ok && res.state ? String(res.state.domain || '') : null;
+      const isYouTube = domain && domain.includes('youtube.com');
+      videoRow.hidden = !isYouTube;
+      scrollRow.hidden = isYouTube;
+      if (unknown) unknown.hidden = Boolean(domain);
+      if (badge) badge.textContent = domain ? (isYouTube ? 'YouTube' : 'Page') : 'aucune page';
+      if (title) title.textContent = isYouTube ? '▶️ Vidéo' : '📜 Défilement de la page';
+    });
   }
 
   function setupPlaybackTab() {
+    if (chrome.tabs && chrome.tabs.onActivated) {
+      chrome.tabs.onActivated.addListener(() => refreshPlaybackMode());
+    }
+    if (chrome.tabs && chrome.tabs.onUpdated) {
+      chrome.tabs.onUpdated.addListener((tabId, info) => {
+        if (info.status === 'complete' || info.url) refreshPlaybackMode();
+      });
+    }
+    refreshPlaybackMode();
+
     document.querySelectorAll('.sp-cmd[data-cmd]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         btn.disabled = true;
@@ -232,6 +268,35 @@
     });
   }
 
+  // --- Piano : mode compact (une octave) par défaut, bouton "Déployer" ----------
+  function setupPianoCompact() {
+    const toggleBtn = document.getElementById('sp-piano-toggle');
+    if (!toggleBtn) return;
+
+    function setCompact(compact) {
+      const piano = document.getElementById('rockstar-piano-widget');
+      if (!piano) return;
+      piano.classList.toggle('sp-piano-compact', compact);
+      toggleBtn.textContent = compact ? '⤢ Déployer' : '⤡ Replier';
+      toggleBtn.title = compact ? 'Ouvrir la version complète' : 'Replier sur une octave';
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      const piano = document.getElementById('rockstar-piano-widget');
+      setCompact(!piano || !piano.classList.contains('sp-piano-compact'));
+    });
+
+    // Le piano peut ne pas exister au premier passage : réapplique l'état compact
+    const timer = setInterval(() => {
+      const piano = document.getElementById('rockstar-piano-widget');
+      if (piano) {
+        setCompact(true);
+        clearInterval(timer);
+      }
+    }, 250);
+    setTimeout(() => clearInterval(timer), 10000);
+  }
+
   // --- Bootstrap ----------------------------------------------------------------
   function boot() {
     if (!window.RockstarCore || typeof window.RockstarCore.initialize !== 'function') {
@@ -246,6 +311,7 @@
     setupModeToggle();
     setupMicMaster();
     setupPlaybackTab();
+    setupPianoCompact();
   }
 
   if (document.readyState === 'complete') {
