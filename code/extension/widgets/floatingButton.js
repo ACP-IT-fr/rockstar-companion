@@ -40,7 +40,7 @@
       <div class="rfp-chips">
         <span class="rfp-chip rfp-ctrl" id="rfp-speed-ctrl" title="Vitesse de défilement">
           <i>Vit</i>
-          <button class="rfp-step" data-field="scrollSpeed" data-dir="-1">−</button><b id="ug-voice-speed">1</b><button class="rfp-step" data-field="scrollSpeed" data-dir="1">+</button>
+          <button class="rfp-step" data-field="scrollSpeed" data-dir="-1">−</button><b id="rfp-speed">1</b><button class="rfp-step" data-field="scrollSpeed" data-dir="1">+</button>
         </span>
         <span class="rfp-chip rfp-ctrl" title="Capo">
           <i>Capo</i>
@@ -226,6 +226,15 @@
     });
 
     // --- Puces morceau (Vitesse / Capo / Trans / Ton) — éditables ----------------
+    // NB : la vitesse du pill a son propre id (#rfp-speed) — l'ancien
+    // #ug-voice-speed reçoit "Speed: X" du setter du core (format barre).
+    function updateSpeedChip() {
+      const speedEl = pill.querySelector('#rfp-speed');
+      if (speedEl) {
+        speedEl.textContent = window.RockstarCore.scrollSpeed;
+      }
+    }
+
     function updateSongChips(song) {
       const capoEl = pill.querySelector('#rfp-capo');
       const transEl = pill.querySelector('#rfp-trans');
@@ -238,7 +247,13 @@
       }
     }
     updateSongChips(window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong());
-    window.addEventListener('rockstar-song-changed', (e) => updateSongChips(e.detail && e.detail.song));
+    updateSpeedChip();
+    window.addEventListener('rockstar-song-changed', (e) => {
+      updateSongChips(e.detail && e.detail.song);
+      updateSpeedChip();
+    });
+    // La vitesse peut aussi changer via la voix / la barre : refresh léger
+    setInterval(updateSpeedChip, 1000);
 
     // Steppers discrets : − / + sur vitesse (±0,25), capo et transposition (±1)
     const STEP_LIMITS = { capo: [0, 12], transpose: [-12, 12], scrollSpeed: [0.25, 5] };

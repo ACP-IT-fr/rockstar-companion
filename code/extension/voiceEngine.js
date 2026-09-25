@@ -167,7 +167,11 @@
     window.RockstarCore.awakeDuration = null;
     window.RockstarCore.safeStorageRemove('rockstar_awake_until');
     if (window.RockstarCore.showFeedback) {
-      window.RockstarCore.showFeedback(`💤 ${wakeWord} is sleeping...`, true);
+      // Message localisé (placeholder = mot de réveil courant)
+      const reminder = (typeof chrome !== 'undefined' && chrome.i18n && chrome.i18n.getMessage)
+        ? chrome.i18n.getMessage('sayWakeWordBeforeCommand', wakeWord)
+        : `Say ${wakeWord} before your command`;
+      window.RockstarCore.showFeedback(`💤 ${reminder || `Say ${wakeWord} before your command`}`, true);
     }
   }
 
