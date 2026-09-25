@@ -406,8 +406,7 @@
   window.RockstarCore.registerInit(() => {
     if (window.RockstarCore.shouldMountInPage && !window.RockstarCore.shouldMountInPage()) return;
     singingContainer = document.createElement('div');
-    singingContainer.id = 'ug-singing-tracker';
-    
+    singingContainer.id = 'ug-singing-tracker';    
     singingContainer.innerHTML = `
       <div class="singing-max-content">
         <div class="singing-header">
@@ -443,5 +442,8 @@
     // Sync state
     initSingingTracker();
   });
+
+  // Exposé pour le side panel (micro master) et le dashboard
+  window.RockstarCore.initSingingTracker = initSingingTracker;
 
 })();

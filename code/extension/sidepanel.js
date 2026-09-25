@@ -19,8 +19,6 @@
     'rockstar-piano-widget': 'sp-card-piano'
   };
 
-  const TABS = ['practice', 'piano'];
-
   // --- Toggle "widgets dans le panneau" --------------------------------------
   function setupModeToggle() {
     const checkbox = document.getElementById('sp-mode-panel');
@@ -49,38 +47,39 @@
     }
   }
 
-  // --- Onglets -----------------------------------------------------------------
-  function setupTabs() {
-    const nav = document.getElementById('sp-tabs');
-    if (!nav) return;
-    nav.addEventListener('click', (e) => {
-      const btn = e.target.closest('.sp-tab');
-      if (!btn) return;
-      nav.querySelectorAll('.sp-tab').forEach((b) => b.classList.toggle('active', b === btn));
-      document.querySelectorAll('.sp-tab-panel').forEach((p) => {
-        p.classList.toggle('active', p.id === 'sp-tab-' + btn.dataset.tab);
+  // --- Accordéons (plusieurs sections peuvent être ouvertes à la fois) --------
+  function setupAccordion() {
+    document.querySelectorAll('.sp-acc-head').forEach((head) => {
+      head.addEventListener('click', () => {
+        head.closest('.sp-acc').classList.toggle('open');
       });
     });
   }
 
   // --- Montage des widgets dans leurs cartes -----------------------------------
+  // L'initialisation des widgets est asynchrone (core.initialize attend les
+  // réglages dans chrome.storage) : on retente le montage tant qu'il reste
+  // des widgets non montés, au lieu d'un unique appel trop tôt.
   function mountWidgets() {
+    let missing = 0;
+
     Object.entries(WIDGET_MAP).forEach(([widgetId, cardId]) => {
       const widget = document.getElementById(widgetId);
       const cardBody = document.querySelector('#' + cardId + ' .widget-card-body') ||
         document.getElementById(cardId);
-      if (widget && cardBody) {
+      if (!cardBody) return;
+
+      if (widget && widget.parentElement !== cardBody) {
         cardBody.appendChild(widget);
+        // Certains widgets démarrent avec opacity:0 (état "overlay page")
+        widget.classList.add('visible');
       }
+      if (!widget) missing++;
     });
 
     // Le piano crée son DOM paresseusement : l'afficher puis le monter.
     if (window.RockstarCore.pianoWidget && typeof window.RockstarCore.pianoWidget.show === 'function') {
       window.RockstarCore.pianoWidget.show();
-      const piano = document.getElementById('rockstar-piano-widget');
-      const pianoCardBody = document.querySelector('#sp-card-piano .widget-card-body') ||
-        document.getElementById('sp-card-piano');
-      if (piano && pianoCardBody) pianoCardBody.appendChild(piano);
     }
 
     // getOrCreateFloatingBar (utilisé par le piano comme conteneur par défaut)
@@ -89,6 +88,72 @@
     if (strayBar && !strayBar.firstChild) {
       strayBar.remove();
     }
+
+    return missing;
+  }
+
+  function mountWhenReady() {
+    let attempts = 0;
+    const maxAttempts = 40; // 40 × 250 ms = 10 s max
+    const timer = setInterval(() => {
+      attempts++;
+      const missing = mountWidgets();
+      if (missing === 0 || attempts >= maxAttempts) {
+        clearInterval(timer);
+        if (missing > 0) {
+          console.warn('[SidePanel] Widgets non montés après', attempts, 'tentatives');
+        }
+      }
+    }, 250);
+  }
+
+  // --- Micro master -------------------------------------------------------------
+  // Accordeur, détecteur d'accords et vocal pitch partagent le même analyser.
+  // getUserMedia exige un geste utilisateur : un seul bouton autorise le micro
+  // pour tous les widgets (même logique que le dashboard standalone).
+  function setupMicMaster() {
+    const btn = document.getElementById('sp-mic-master');
+    if (!btn) return;
+
+    btn.addEventListener('click', async function() {
+      if (!window.RockstarCore) return;
+
+      const ctx = window.RockstarCore.getAudioContext();
+      if (ctx.state === 'suspended') {
+        try { await ctx.resume(); } catch (e) { /* ignore */ }
+      }
+
+      if (window.RockstarCore.getAnalyser()) {
+        // Micro déjà autorisé : le re-toucher réinitialise juste l'état visuel
+        btn.classList.add('active');
+        btn.textContent = '🎙️ Micro ON';
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 16384;
+        source.connect(analyser);
+        window.RockstarCore.setAnalyser(analyser);
+
+        // Redémarre les widgets micro avec l'analyser partagé
+        if (typeof window.RockstarCore.initTuner === 'function') {
+          window.RockstarCore.initTuner();
+        }
+        if (typeof window.RockstarCore.initSingingTracker === 'function') {
+          window.RockstarCore.initSingingTracker();
+        }
+        window.dispatchEvent(new CustomEvent('rockstar-mic-ready'));
+
+        btn.classList.add('active');
+        btn.textContent = '🎙️ Micro ON';
+      } catch (err) {
+        console.error('[SidePanel] Accès micro refusé :', err);
+        btn.textContent = '🎙️ Micro refusé';
+      }
+    });
   }
 
   // --- Bridge panneau -> onglet actif ------------------------------------------
@@ -149,9 +214,10 @@
 
     window.RockstarCore.initialize();
 
-    mountWidgets();
-    setupTabs();
+    mountWhenReady();
+    setupAccordion();
     setupModeToggle();
+    setupMicMaster();
     setupPlaybackTab();
   }
 
