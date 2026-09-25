@@ -276,38 +276,35 @@
       });
     });
 
-    // Tonalité : clic → édition inline (Entrée ou blur pour valider)
+    // Tonalité : clic → dropdown des 12 notes (notation anglophone)
+    const KEY_OPTIONS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const keyCtrl = pill.querySelector('#rfp-key-ctrl');
     const keyValue = pill.querySelector('#rfp-key');
     if (keyCtrl && keyValue) {
       keyValue.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (keyCtrl.querySelector('input')) return;
+        if (keyCtrl.querySelector('select')) return;
         const song = (window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong()) || {};
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'rfp-key-input';
-        input.value = song.key || '';
-        input.placeholder = 'Ex: Gm';
-        input.maxLength = 8;
-        keyValue.replaceWith(input);
-        input.focus();
+        const select = document.createElement('select');
+        select.className = 'rfp-key-select';
+        select.innerHTML = '<option value="">–</option>' +
+          KEY_OPTIONS.map((k) => `<option value="${k}"${k === song.key ? ' selected' : ''}>${k}</option>`).join('');
+        keyValue.replaceWith(select);
+        select.focus();
 
         const commit = () => {
-          const value = input.value.trim();
+          const value = select.value;
           window.RockstarCore.updateCurrentSong && window.RockstarCore.updateCurrentSong({ key: value });
           const b = document.createElement('b');
           b.id = 'rfp-key';
           b.className = 'rfp-key-value';
           b.textContent = value || '–';
-          input.replaceWith(b);
+          select.replaceWith(b);
         };
-        input.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
-          if (ev.key === 'Escape') { input.value = song.key || ''; input.blur(); }
-        });
-        input.addEventListener('blur', commit);
-        input.addEventListener('click', (ev) => ev.stopPropagation());
+        select.addEventListener('change', commit);
+        select.addEventListener('blur', commit);
+        select.addEventListener('click', (ev) => ev.stopPropagation());
+        select.addEventListener('keydown', (ev) => ev.stopPropagation());
       });
     }
 

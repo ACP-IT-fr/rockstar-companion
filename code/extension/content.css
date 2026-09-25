@@ -202,8 +202,8 @@
   background: rgba(246, 146, 30, 0.25);
 }
 
-#rockstar-floating-pill .rfp-key-input {
-  width: 36px;
+#rockstar-floating-pill .rfp-key-select {
+  appearance: none;
   font: inherit;
   font-size: 10px;
   background: #18181b;
@@ -211,6 +211,7 @@
   border: 1px solid rgba(246, 146, 30, 0.5);
   border-radius: 4px;
   padding: 1px 3px;
+  width: 52px;
 }
 
 /* Onglets principaux du panneau (Studio / Répertoire) */
