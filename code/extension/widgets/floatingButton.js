@@ -20,19 +20,21 @@
     const pill = document.createElement('div');
     pill.id = 'rockstar-floating-pill';
     pill.innerHTML = `
-      <div class="rfp-handle" id="rfp-handle" title="Déplacer">⠿</div>
-      <button class="rfp-mic" id="rfp-mic-btn" title="Voice control OFF. Clique pour activer">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-        <span id="rfp-mic-state">Off</span>
-      </button>
+      <div class="rfp-top">
+        <div class="rfp-handle" id="rfp-handle" title="Déplacer">⠿</div>
+        <button class="rfp-mic" id="rfp-mic-btn" title="Voice control OFF. Clique pour activer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          <span id="rfp-mic-state">Off</span>
+        </button>
+        <button class="rfp-act" id="rfp-repertoire-btn" title="Répertoire">📖</button>
+      </div>
       <div class="rfp-chips">
-        <span class="rfp-chip">Flux: <b id="rfp-flux">Silencieux</b></span>
+        <span class="rfp-chip rfp-chip-wide">Flux: <b id="rfp-flux">Silencieux</b></span>
         <span class="rfp-chip">Vitesse: <b id="ug-voice-speed">1</b></span>
         <span class="rfp-chip">Capo: <b id="rfp-capo">–</b></span>
         <span class="rfp-chip">Trans: <b id="rfp-trans">–</b></span>
         <span class="rfp-chip">Ton: <b id="rfp-key">–</b></span>
       </div>
-      <button class="rfp-act" id="rfp-repertoire-btn" title="Répertoire">📖</button>
     `;
     document.body.appendChild(pill);
 
@@ -68,7 +70,12 @@
       handle.setPointerCapture(e.pointerId);
       const rect = pill.getBoundingClientRect();
       drag = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+      // Positionner en left/top uniquement : garder bottom défini en même
+      // temps étirerait le pill entre les deux ancres.
       pill.style.right = 'auto';
+      pill.style.bottom = 'auto';
+      pill.style.left = rect.left + 'px';
+      pill.style.top = rect.top + 'px';
     });
     handle.addEventListener('pointermove', (e) => {
       if (!drag) return;
@@ -100,7 +107,9 @@
 
     function updateMicVisual() {
       const core = window.RockstarCore;
-      if (core.isListening && core.isAwake) {
+      const isAwake = core.isListening && core.isAwake;
+      micBtn.classList.toggle('awake', isAwake);
+      if (isAwake) {
         micState.textContent = 'ON';
         micBtn.classList.add('active');
       } else if (core.isListening) {
@@ -114,6 +123,36 @@
     window.RockstarCore.onListeningChanged(updateMicVisual);
     window.RockstarCore.onAwakeChanged(updateMicVisual);
     updateMicVisual();
+
+    // --- Barre de progression du réveil (cooldown) sur le bouton micro ----------
+    // Même mécanique que l'ancien bouton : --awake-progress alimente le
+    // dégradé vert quand Roddy est réveillé ("À l'écoute" temporaire).
+    let awakeProgressAnimFrame = null;
+    function updateAwakeProgress() {
+      const awakeUntil = window.RockstarCore.awakeUntil;
+      const awakeDuration = window.RockstarCore.awakeDuration;
+      if (awakeUntil && awakeDuration) {
+        const remaining = awakeUntil - Date.now();
+        if (remaining > 0) {
+          const pct = Math.max(0, Math.min(100, (remaining / awakeDuration) * 100));
+          micBtn.style.setProperty('--awake-progress', pct + '%');
+          awakeProgressAnimFrame = requestAnimationFrame(updateAwakeProgress);
+          return;
+        }
+      }
+      micBtn.style.setProperty('--awake-progress', '0%');
+    }
+    window.RockstarCore.onAwakeChanged((isAwake) => {
+      if (awakeProgressAnimFrame) {
+        cancelAnimationFrame(awakeProgressAnimFrame);
+        awakeProgressAnimFrame = null;
+      }
+      if (isAwake) {
+        awakeProgressAnimFrame = requestAnimationFrame(updateAwakeProgress);
+      } else {
+        micBtn.style.setProperty('--awake-progress', '0%');
+      }
+    });
 
     // --- Bouton répertoire ------------------------------------------------------
     pill.querySelector('#rfp-repertoire-btn').addEventListener('click', (e) => {

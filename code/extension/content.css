@@ -25,31 +25,38 @@
   display: none !important;
 }
 
-/* Bouton flottant unique avec poignée (mode panneau latéral) */
+/* Bouton flottant unique avec poignée (mode panneau latéral).
+   Vertical et quasi carré : rangée micro au-dessus, puces en grille 2×2. */
 #rockstar-floating-pill {
   position: fixed;
   right: 16px;
   bottom: 16px;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
   box-sizing: border-box;
+  width: 148px;
   background-color: #0f0f13;
   color: #f4f4f5;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  border-radius: 14px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   z-index: 999999;
-  max-width: calc(100vw - 32px);
+}
+
+#rockstar-floating-pill .rfp-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 #rockstar-floating-pill .rfp-handle {
   cursor: grab;
   color: #a1a1aa;
-  padding: 2px 4px;
+  padding: 2px 3px;
   user-select: none;
   letter-spacing: -2px;
   font-size: 11px;
@@ -60,8 +67,10 @@
 }
 
 #rockstar-floating-pill .rfp-mic {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   appearance: none;
   font: inherit;
@@ -69,8 +78,8 @@
   color: #f4f4f5;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  padding: 4px 10px;
+  border-radius: 10px;
+  padding: 5px 8px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
@@ -85,18 +94,42 @@
   color: #f6921e;
 }
 
+/* Barre de cooldown du réveil (Roddy "À l'écoute") : dégradé vert */
+#rockstar-floating-pill .rfp-mic.awake {
+  background: linear-gradient(
+    to right,
+    #10b981 var(--awake-progress, 100%),
+    rgba(16, 185, 129, 0.25) var(--awake-progress, 100%)
+  ) !important;
+  border-color: rgba(16, 185, 129, 0.6);
+  color: #d1fae5;
+  animation: rfp-pulse-awake 1.5s infinite;
+}
+
+@keyframes rfp-pulse-awake {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
 #rockstar-floating-pill .rfp-chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
 }
 
 #rockstar-floating-pill .rfp-chip {
   white-space: nowrap;
-  color: #a1a1aa;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+#rockstar-floating-pill .rfp-chip-wide {
+  grid-column: 1 / -1;
 }
 
 #rockstar-floating-pill .rfp-chip b {
@@ -122,7 +155,7 @@
 #rfp-transcript {
   position: fixed;
   right: 16px;
-  bottom: calc(16px + 44px);
+  bottom: calc(16px + 190px);
   max-width: min(420px, calc(100vw - 32px));
   box-sizing: border-box;
   padding: 6px 12px;
