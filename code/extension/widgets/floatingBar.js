@@ -19,26 +19,12 @@
   let helpPanel = null;
 
   function appendButtonsToFloatingBar() {
+    // Les boutons du coin supérieur gauche (panneau, répertoire, piano,
+    // repères) ont été retirés : le pill flottant les remplace. La barre
+    // ne garde que le flux micro / commandes / réglages.
     const bar = window.RockstarCore.getOrCreateFloatingBar();
-    ensureOpenPanelBtn(bar);
     if (commandsWrapper) bar.appendChild(commandsWrapper);
     else if (commandsBtn) bar.appendChild(commandsBtn);
-    
-    if (window.RockstarCore.appendMarkersBtn) {
-      window.RockstarCore.appendMarkersBtn(bar);
-    }
-    
-    // Le bouton micro (#ug-voice-btn) reste un overlay fixe dans le coin
-    // inférieur droit, il n'est PAS accroché à la barre (qui peut changer de bord).
-    
-    // Si d'autres modules (comme le repertoireDrawer) enregistrent leurs boutons,
-    // ils pourront aussi s'ajouter à la barre flottante. Nous déclenchons un hook.
-    if (window.RockstarCore.appendRepertoireDrawerBtn) {
-      window.RockstarCore.appendRepertoireDrawerBtn(bar);
-    }
-    if (window.RockstarCore.appendPianoBtnToFloatingBar) {
-      window.RockstarCore.appendPianoBtnToFloatingBar(bar);
-    }
   }
   window.RockstarCore.appendButtonsToFloatingBar = appendButtonsToFloatingBar;
 

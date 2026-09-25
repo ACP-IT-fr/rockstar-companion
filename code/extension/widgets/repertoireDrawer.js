@@ -986,6 +986,11 @@
 
   // Init Drawer
   window.RockstarCore.registerInit(() => {
+    // Dans le side panel, le tiroir est toujours initialisé (onglet Répertoire)
+    if (window.RockstarCore.isExtensionPage) {
+      initializeDrawer();
+      return;
+    }
     if (isUG) {
       initializeDrawer();
       initSearchPageNumbering();

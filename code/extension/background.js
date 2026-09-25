@@ -29,36 +29,64 @@ enableOpenOnActionClick();
  *  - { type: 'rockstar:tab-to-panel', payload } → onglet → panneau (état / données)
  *  - { type: 'rockstar:tab-event', payload }    → broadcast reçu par le panneau
  */
+/**
+ * Hub de messages. Conventions :
+ *  - { type: 'rockstar:open-panel', kind?, tab? } → ouvrir/toggle le panneau
+ *  - { type: 'rockstar:panel-to-tab', payload } → panneau → onglet actif (action sur la page)
+ *  - { type: 'rockstar:tab-to-panel', payload } → onglet → panneau (état / données)
+ *  - { type: 'rockstar:tab-event', payload }    → broadcast reçu par le panneau
+ *
+ * Le panneau déclare un port (rockstar-panel) à l'ouverture : le service
+ * worker sait ainsi, par onglet, si le panneau est ouvert (toggle) et peut
+ * lui envoyer des ordres (fermeture, changement d'onglet).
+ */
+const panelPorts = new Map(); // tabId → port du panneau
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'rockstar-panel') return;
+  const tabId = port.sender && port.sender.tab ? port.sender.tab.id : null;
+  if (tabId == null) {
+    port.disconnect();
+    return;
+  }
+  panelPorts.set(tabId, port);
+  port.onDisconnect.addListener(() => {
+    if (panelPorts.get(tabId) === port) panelPorts.delete(tabId);
+  });
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || typeof msg.type !== 'string' || !msg.type.startsWith('rockstar:')) return;
 
   switch (msg.type) {
     case 'rockstar:open-panel': {
-      // kind='toggle' : si le panneau est ouvert, il se ferme lui-même
-      // (window.close() après réception de rockstar:panel-toggle) ; sinon on
-      // l'ouvre. Le message vers le panneau échoue s'il n'y a pas de
-      // récepteur, ce qui sert de test "panneau ouvert ?".
-      if (msg.kind === 'toggle') {
-        chrome.runtime
-          .sendMessage({ type: 'rockstar:panel-toggle' })
-          .then(() => { /* panneau ouvert : il se ferme tout seul */ })
-          .catch(() => {
-            const tabId = sender.tab ? sender.tab.id : (msg.tabId ?? null);
-            if (tabId != null) {
-              chrome.sidePanel
-                .open({ tabId })
-                .catch((e) => console.error('[VoxRoddy BG] sidePanel.open:', e));
-            }
-          });
+      const tabId = sender.tab ? sender.tab.id : (msg.tabId ?? null);
+      if (tabId == null) {
+        sendResponse({ ok: false, error: 'no-tab' });
+        break;
+      }
+
+      // Panneau déjà ouvert pour cet onglet : lui envoyer l'ordre directement.
+      if (panelPorts.has(tabId)) {
+        const port = panelPorts.get(tabId);
+        if (msg.kind === 'open' && msg.tab === 'repertoire') {
+          port.postMessage({ type: 'rockstar:show-tab', tab: 'repertoire' });
+        } else {
+          port.postMessage({ type: 'rockstar:panel-toggle' });
+        }
         sendResponse({ ok: true });
         break;
       }
-      const tabId = sender.tab ? sender.tab.id : (msg.tabId ?? null);
-      if (tabId != null) {
-        chrome.sidePanel
-          .open({ tabId })
-          .catch((e) => console.error('[VoxRoddy BG] sidePanel.open:', e));
+
+      // Panneau fermé : mémoriser l'onglet demandé (ex. répertoire via 📖)
+      // puis ouvrir — le panneau lira la demande à son chargement. sidePanel
+      // .open est appelé dans le même cycle que le geste utilisateur.
+      if (msg.tab) {
+        chrome.storage.local.set({ rockstar_panel_pending_tab: msg.tab }).catch(() => {});
       }
+      chrome.sidePanel
+        .open({ tabId })
+        .catch((e) => console.error('[VoxRoddy BG] sidePanel.open:', e));
       sendResponse({ ok: true });
       break;
     }

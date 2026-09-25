@@ -38,24 +38,26 @@
         <button class="rfp-act" id="rfp-repertoire-btn" title="Répertoire">📖</button>
       </div>
       <div class="rfp-chips">
-        <span class="rfp-chip rfp-chip-wide">Flux: <b id="rfp-flux">Silencieux</b></span>
         <span class="rfp-chip">Vitesse: <b id="ug-voice-speed">1</b></span>
         <span class="rfp-chip">Capo: <b id="rfp-capo">–</b></span>
         <span class="rfp-chip">Trans: <b id="rfp-trans">–</b></span>
         <span class="rfp-chip">Ton: <b id="rfp-key">–</b></span>
       </div>
+      <div class="rfp-transcript">
+        <div class="rfp-line">
+          <span class="rfp-transcript-label">🗣️</span>
+          <span id="rfp-heard">—</span>
+        </div>
+        <div class="rfp-line rfp-line-cmd">
+          <span id="rfp-cmd">—</span>
+        </div>
+      </div>
     `;
     document.body.appendChild(pill);
 
-    // Transcript intégré au pill (une ligne, sous les puces)
-    const transcript = document.createElement('div');
-    transcript.className = 'rfp-transcript';
-    transcript.innerHTML = `
-      <span class="rfp-transcript-label">Micro :</span>
-      <span id="rfp-transcript-text">—</span>
-    `;
-    pill.appendChild(transcript);
-    const transcriptText = transcript.querySelector('#rfp-transcript-text');
+    // Transcript intégré au pill : ligne mots entendus (🗣️) + ligne commandes
+    const heardEl = pill.querySelector('#rfp-heard');
+    const cmdEl = pill.querySelector('#rfp-cmd');
 
     // --- Position (persistée) -------------------------------------------------
     function restorePosition() {
@@ -63,9 +65,12 @@
         window.RockstarCore.safeStorageGet([POS_KEY], (res) => {
           const pos = res && res[POS_KEY];
           if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
+            // Ancrer uniquement en left/top : laisser bottom défini en même
+            // temps étirerait le pill entre les deux ancres (bug au chargement).
+            pill.style.right = 'auto';
+            pill.style.bottom = 'auto';
             pill.style.left = pos.left + 'px';
             pill.style.top = pos.top + 'px';
-            pill.style.right = 'auto';
           }
         });
       } catch (e) { /* position par défaut */ }
@@ -200,10 +205,11 @@
     });
 
     // --- Bouton répertoire ------------------------------------------------------
+    // Le tiroir répertoire vit maintenant dans le panneau (onglet Répertoire).
     pill.querySelector('#rfp-repertoire-btn').addEventListener('click', (e) => {
       e.stopPropagation();
-      if (window.RockstarCore.toggleDrawer) {
-        window.RockstarCore.toggleDrawer();
+      if (chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'rockstar:open-panel', kind: 'open', tab: 'repertoire' });
       }
     });
 
@@ -223,28 +229,31 @@
     window.addEventListener('rockstar-song-changed', (e) => updateSongChips(e.detail && e.detail.song));
 
     // --- Transcript du flux micro -------------------------------------------------
-    // voiceEngine émet 'rockstar-voice-raw' avec le texte en cours (interim).
+    // Ligne 1 (🗣️) : mots entendus (interim de voiceEngine via rockstar-voice-raw)
     window.addEventListener('rockstar-voice-raw', (e) => {
       const text = e.detail && e.detail.text;
       if (typeof text === 'string' && text.trim()) {
-        transcriptText.textContent = text;
-        transcript.classList.add('has-content');
+        heardEl.textContent = text;
       }
     });
+    // Ligne 2 : commande détectée (nom d'action renvoyé par le router)
     window.addEventListener('rockstar-voice-command', (e) => {
       const detail = e.detail || {};
-      transcriptText.textContent = detail.success ? '✓ ' + detail.action : '✗ ' + (detail.action || 'non reconnu');
-      transcript.classList.add('has-content');
+      cmdEl.textContent = detail.success ? '✓ ' + detail.action : '✗ ' + (detail.action || 'non reconnu');
+      cmdEl.classList.toggle('error', detail.success === false);
+      clearTimeout(window.RockstarCore.showFeedback._t);
+      window.RockstarCore.showFeedback._t = setTimeout(() => {
+        cmdEl.classList.remove('error');
+      }, 4000);
     });
 
     // Le feedback des commandes arrive ici (au lieu des toasts de la barre)
     window.RockstarCore.showFeedback = (text, isSuccess) => {
-      transcriptText.textContent = text;
-      transcript.classList.add('has-content');
-      transcript.classList.toggle('error', isSuccess === false);
+      cmdEl.textContent = text;
+      cmdEl.classList.toggle('error', isSuccess === false);
       clearTimeout(window.RockstarCore.showFeedback._t);
       window.RockstarCore.showFeedback._t = setTimeout(() => {
-        transcript.classList.remove('error');
+        cmdEl.classList.remove('error');
       }, 4000);
     };
   }

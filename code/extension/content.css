@@ -168,8 +168,80 @@
   color: #ff9f1c;
 }
 
+/* Onglets principaux du panneau (Studio / Répertoire) */
+.sp-maintabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
+  background: rgba(10, 14, 23, 0.7);
+  border-bottom: 1px solid var(--sp-border-color);
+  position: sticky;
+  top: 49px;
+  z-index: 8;
+}
+
+.sp-maintab {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sp-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sp-maintab:hover {
+  color: var(--sp-accent-gold);
+}
+
+.sp-maintab.active {
+  color: var(--sp-accent-gold);
+  border-bottom-color: var(--sp-accent-orange);
+}
+
+.sp-maintab-panel {
+  display: none;
+  flex-direction: column;
+  gap: var(--sp-gap);
+}
+
+.sp-maintab-panel.active {
+  display: flex;
+}
+
+/* Tiroir répertoire monté dans sa carte (pleine largeur, pas d'overlay) */
+.widget-card-body .rockstar-drawer,
+.widget-card-body #rockstar-drawer {
+  position: relative !important;
+  inset: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  transform: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Transcript du pill : deux lignes (mots entendus / commande détectée) */
 .rfp-transcript {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rfp-line {
   display: flex;
   align-items: baseline;
   gap: 5px;
@@ -178,29 +250,29 @@
   border-radius: 6px;
   color: #a1a1aa;
   font-size: 10px;
+  min-width: 0;
 }
 
-.rfp-transcript.error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #fca5a5;
-}
-
-#rfp-transcript-text {
+#rfp-heard {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #e4e4e7;
 }
 
-.rfp-transcript.error #rfp-transcript-text {
+#rfp-cmd {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #22c55e;
+}
+
+#rfp-cmd.error {
   color: #fca5a5;
 }
 
 .rfp-transcript-label {
   color: #a1a1aa;
-  text-transform: uppercase;
-  font-size: 9px;
-  letter-spacing: 0.8px;
   flex-shrink: 0;
 }
 

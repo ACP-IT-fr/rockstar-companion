@@ -16,8 +16,55 @@
     'ug-tuner': 'sp-card-tuner',
     'ug-chord': 'sp-card-chord',
     'ug-singing-tracker': 'sp-card-singing',
-    'rockstar-piano-widget': 'sp-card-piano'
+    'rockstar-piano-widget': 'sp-card-piano',
+    'rockstar-drawer': 'sp-card-repertoire'
   };
+
+  // --- Fermeture du panneau + ordres du background (toggle, changement d'onglet)
+  // Le port permet aussi au background de savoir que le panneau est ouvert.
+  function setupPanelPort() {
+    if (!chrome.runtime || !chrome.runtime.connect) return;
+    let port = null;
+    try {
+      port = chrome.runtime.connect({ name: 'rockstar-panel' });
+    } catch (e) { return; }
+
+    port.onMessage.addListener((msg) => {
+      if (!msg) return;
+      if (msg.type === 'rockstar:panel-toggle') {
+        try { window.close(); } catch (e) { /* ignore */ }
+      } else if (msg.type === 'rockstar:show-tab' && msg.tab === 'repertoire') {
+        showMainTab('repertoire');
+      }
+    });
+  }
+
+  function showMainTab(name) {
+    document.querySelectorAll('.sp-maintab').forEach((b) => {
+      b.classList.toggle('active', b.dataset.maintab === name);
+    });
+    document.querySelectorAll('.sp-maintab-panel').forEach((p) => {
+      p.classList.toggle('active', p.id === 'sp-maintab-' + name);
+    });
+  }
+
+  function setupMainTabs() {
+    const nav = document.getElementById('sp-maintabs');
+    if (!nav) return;
+    nav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sp-maintab');
+      if (btn) showMainTab(btn.dataset.maintab);
+    });
+
+    // Onglet demandé avant l'ouverture (ex. 📖 du pill → Répertoire)
+    chrome.storage.local.get('rockstar_panel_pending_tab', (res) => {
+      const pending = res && res.rockstar_panel_pending_tab;
+      if (pending) {
+        showMainTab(pending);
+        chrome.storage.local.remove('rockstar_panel_pending_tab');
+      }
+    });
+  }
 
   // --- Toggle "widgets dans le panneau" --------------------------------------
   function setupModeToggle() {
@@ -321,6 +368,8 @@
     window.RockstarCore.initialize();
 
     mountWhenReady();
+    setupPanelPort();
+    setupMainTabs();
     setupAccordion();
     setupModeToggle();
     setupMicMaster();
