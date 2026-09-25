@@ -627,6 +627,121 @@ html, body {
   color: #2e9e5b;
 }
 
+/* --- Onglet Paramètres (accordéons partagés avec le popup) ------------------- */
+.sp-settings-body {
+  padding: 2px;
+}
+
+.sp-settings-body .accordion-item {
+  border: 1px solid var(--sp-border, rgba(128, 128, 128, 0.35));
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--sp-card, rgba(24, 24, 27, 0.4));
+}
+
+.sp-settings-body .accordion-item + .accordion-item {
+  margin-top: 10px;
+}
+
+.sp-settings-body .accordion-header {
+  width: 100%;
+  color: var(--sp-accent-gold, #f6921e);
+  border: none;
+  padding: 11px 12px;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.sp-settings-body .accordion-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sp-settings-body .accordion-icon {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--sp-text-secondary, #a1a1aa);
+  display: flex;
+  align-items: center;
+}
+
+.sp-settings-body .accordion-item.active .accordion-header .accordion-icon {
+  transform: rotate(180deg);
+  color: var(--sp-accent-gold, #f6921e);
+}
+
+.sp-settings-body .accordion-content {
+  padding: 12px;
+  display: none;
+  border-top: 1px solid var(--sp-border, rgba(128, 128, 128, 0.35));
+}
+
+.sp-settings-body .accordion-item.active .accordion-content {
+  display: block;
+}
+
+.sp-settings-body .setting-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.sp-settings-body .setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.sp-settings-body .setting-item input {
+  margin-right: 10px;
+  accent-color: var(--sp-accent-orange, #f26419);
+}
+
+.sp-settings-body .text-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sp-settings-body .text-input-group label {
+  font-size: 12px;
+  color: var(--sp-text-secondary, #a1a1aa);
+  font-weight: 500;
+}
+
+.sp-settings-body .text-input-group input[type="text"],
+.sp-settings-body .text-input-group select {
+  padding: 8px 12px;
+  border: 1px solid var(--sp-border, rgba(128, 128, 128, 0.35));
+  border-radius: 8px;
+  background: var(--sp-bg, rgba(15, 15, 19, 0.6));
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.sp-settings-body .text-input-group select {
+  cursor: pointer;
+}
+
+.sp-settings-body .text-input-group input[type="text"]:focus,
+.sp-settings-body .text-input-group select:focus {
+  border-color: var(--sp-accent-orange, #f26419);
+}
+
+.sp-setting-hint {
+  font-size: 11px;
+  color: var(--sp-text-secondary, #a1a1aa);
+  margin: 4px 0 0 0;
+}
+
 /* Bandeau d'état du tiroir (onglet Répertoire sans onglet actif exploitable) */
 .drawer-tab-status {
   padding: 7px 9px;

@@ -262,6 +262,16 @@
   border-bottom-color: var(--sp-accent-orange);
 }
 
+/* Bouton ⚙ : tout à droite de la barre d'onglets */
+.sp-maintab-gear {
+  margin-left: auto;
+  font-size: 15px;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 4px 10px 6px;
+}
+
 .sp-maintab-panel {
   display: none;
   flex-direction: column;

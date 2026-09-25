@@ -25,6 +25,7 @@
       <button class="sp-maintab active" data-maintab="studio">Studio</button>
       <button class="sp-maintab" data-maintab="song">Chanson</button>
       <button class="sp-maintab" data-maintab="repertoire">Répertoire</button>
+      <button class="sp-maintab sp-maintab-gear" data-maintab="settings" id="sp-gear-btn" title="Paramètres" aria-label="Paramètres">⚙</button>
     </nav>
 
     <main class="sp-content">
@@ -152,6 +153,93 @@
           </div>
         </div>
       </section>
+
+      <!-- Onglet Paramètres : mêmes accordéons que le popup (settingsPanel.js partagé) -->
+      <section id="sp-maintab-settings" class="sp-maintab-panel">
+        <div class="widget-card" id="sp-card-settings">
+          <div class="widget-card-header">
+            <span class="widget-card-title">Paramètres</span>
+          </div>
+          <div class="widget-card-body sp-settings-body">
+
+            <div class="accordion-item">
+              <button class="accordion-header">
+                <span>Détection d'Accords</span>
+                <span class="accordion-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+              </button>
+              <div class="accordion-content">
+                <div class="setting-item">
+                  <input type="checkbox" id="chord-maj-min" checked disabled>
+                  <label for="chord-maj-min">Majeurs / Mineurs (Base)</label>
+                </div>
+                <div class="setting-item">
+                  <input type="checkbox" id="chord-7th">
+                  <label for="chord-7th">7ème (7, maj7, m7)</label>
+                </div>
+                <div class="setting-item">
+                  <input type="checkbox" id="chord-sus">
+                  <label for="chord-sus">Suspendus (sus2, sus4)</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="accordion-item">
+              <button class="accordion-header">
+                <span>Contrôle Vocal</span>
+                <span class="accordion-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+              </button>
+              <div class="accordion-content">
+                <div class="setting-item" id="domain-activation-group" style="display: none;">
+                  <input type="checkbox" id="domain-activation-cb">
+                  <label id="domain-activation-label" for="domain-activation-cb">Activer sur ce site</label>
+                </div>
+
+                <div class="text-input-group">
+                  <label for="wake-word-input">Mot déclencheur (Wake Word) :</label>
+                  <input type="text" id="wake-word-input" value="Roddy" placeholder="Ex: Roddy">
+                  <p class="sp-setting-hint">Saisissez le mot à prononcer avant chaque commande.</p>
+                </div>
+
+                <div class="text-input-group" style="margin-top: 12px;">
+                  <label for="wake-word-variants-input">Variantes du mot déclencheur (séparées par virgules) :</label>
+                  <input type="text" id="wake-word-variants-input" value="roadie, roady, rody, rhody, ruddy, rudy, rodi, roddi, redis, kodi" placeholder="Ex: roadie, roady, rody">
+                  <p class="sp-setting-hint">Variantes similaires captées par le micro qui déclencheront aussi l'assistant.</p>
+                </div>
+
+                <div class="text-input-group" style="margin-top: 12px;">
+                  <label for="inactivity-delay-select">Fermeture auto du micro :</label>
+                  <select id="inactivity-delay-select">
+                    <option value="1">Après 1 minute (Recommandé)</option>
+                    <option value="2">Après 2 minutes</option>
+                    <option value="5">Après 5 minutes</option>
+                    <option value="10">Après 10 minutes</option>
+                    <option value="0">Désactivée (Toujours ouvert)</option>
+                  </select>
+                  <p class="sp-setting-hint">Ferme le microphone en cas d'inactivité.</p>
+                </div>
+
+                <div class="text-input-group" style="margin-top: 12px;">
+                  <label for="wake-active-duration-select">Durée d'activation (chaînage) :</label>
+                  <select id="wake-active-duration-select">
+                    <option value="5">5 secondes</option>
+                    <option value="10">10 secondes (Recommandé)</option>
+                    <option value="15">15 secondes</option>
+                    <option value="20">20 secondes</option>
+                    <option value="30">30 secondes</option>
+                  </select>
+                  <p class="sp-setting-hint">Délai d'écoute active pour enchaîner les commandes sans devoir redire « Roddy ».</p>
+                </div>
+
+                <div class="setting-item" style="margin-top: 12px; align-items: flex-start;">
+                  <input type="checkbox" id="mute-all-sites-cb">
+                  <label for="mute-all-sites-cb" style="line-height: 1.3;">Rendre l'extension silencieuse sur les autres sites</label>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -166,6 +254,7 @@
   <script src="widgets/pianoKeyboard.js"></script>
   <script src="widgets/repertoireDrawer.js"></script>
   <script src="sidepanel-repertoire-list.js"></script>
+  <script src="settingsPanel.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
