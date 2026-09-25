@@ -126,6 +126,17 @@
 
       <!-- Onglet Répertoire -->
       <section id="sp-maintab-repertoire" class="sp-maintab-panel">
+        <div class="widget-card" id="sp-card-repertoire-list">
+          <div class="widget-card-header">
+            <span class="widget-card-title">Morceaux enregistrés</span>
+          </div>
+          <div class="widget-card-body">
+            <ul id="sp-repertoire-list" class="sp-song-list"></ul>
+            <div id="sp-repertoire-empty" class="sp-note" hidden>
+              Aucun morceau enregistré pour l'instant.
+            </div>
+          </div>
+        </div>
         <div class="widget-card" id="sp-card-repertoire">
           <div class="widget-card-header">
             <span class="widget-card-title">📚 Répertoire</span>
@@ -145,6 +156,7 @@
   <script src="widgets/singingTracker.js"></script>
   <script src="widgets/pianoKeyboard.js"></script>
   <script src="widgets/repertoireDrawer.js"></script>
+  <script src="sidepanel-repertoire-list.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

@@ -34,38 +34,61 @@
   const currentDomain = window.RockstarCore.currentDomain;
   const isUG = currentDomain.endsWith('ultimate-guitar.com');
 
-  function extractUGMetadata() {
+  function extractUGMetadata(titleOverride) {
+    // Panneau latéral : pas de DOM de page à analyser — titre fourni par
+    // l'onglet actif, capo inconnu (le content script de la page le remplira).
+    if (window.RockstarCore.isExtensionPage) {
+      return {
+        title: (titleOverride || '').replace(/ Chords.*/, '').replace(/ Tab.*/, '').trim() || 'Sans titre',
+        artist: '',
+        capo: 0
+      };
+    }
+
     let title = '';
     let artist = '';
     let capo = 0;
-    
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle && ogTitle.content) {
-      const content = ogTitle.content;
-      const parts = content.split(' Chords by ');
-      if (parts.length === 2) {
-        title = parts[0].trim();
-        artist = parts[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
-      } else {
-        const parts2 = content.split(' Tab by ');
-        if (parts2.length === 2) {
-          title = parts2[0].trim();
-          artist = parts2[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
+
+    try {
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle && ogTitle.content) {
+        const content = ogTitle.content;
+        const parts = content.split(' Chords by ');
+        if (parts.length === 2) {
+          title = parts[0].trim();
+          artist = parts[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
+        } else {
+          const parts2 = content.split(' Tab by ');
+          if (parts2.length === 2) {
+            title = parts2[0].trim();
+            artist = parts2[1].replace(/ tabs$/, '').replace(/ chords$/, '').trim();
+          }
         }
       }
+
+      if (!title) {
+        const h1 = document.querySelector('h1');
+        if (h1) title = h1.innerText.trim();
+      }
+
+      let capoMatch = null;
+      // Sélecteurs ciblés d'abord (moins coûteux et moins fragile qu'un scan
+      // de tout le body), puis fallback sur le texte complet de la page.
+      const capoEl = document.querySelector('[class*="capo" i], [id*="capo" i]');
+      if (capoEl) {
+        capoMatch = (capoEl.textContent || '').match(/capo\s*:?\s*(\d+)/i);
+      }
+      if (!capoMatch) {
+        const allText = document.body.innerText;
+        capoMatch = allText.match(/capo:\s*(\d+)/i) || allText.match(/capodastre:\s*(\d+)/i) || allText.match(/capo\s+(\d+)\w*\s+fret/i);
+      }
+      if (capoMatch) {
+        capo = parseInt(capoMatch[1], 10);
+      }
+    } catch (e) {
+      console.warn('[repertoireDrawer] extraction des métadonnées :', e);
     }
-    
-    if (!title) {
-      const h1 = document.querySelector('h1');
-      if (h1) title = h1.innerText.trim();
-    }
-    
-    const allText = document.body.innerText;
-    const capoMatch = allText.match(/capo:\s*(\d+)/i) || allText.match(/capodastre:\s*(\d+)/i) || allText.match(/capo\s+(\d+)\w*\s+fret/i);
-    if (capoMatch) {
-      capo = parseInt(capoMatch[1], 10);
-    }
-    
+
     return {
       title: title || document.title.replace(/ Chords.*/, '').replace(/ Tab.*/, '').trim(),
       artist: artist || "",
@@ -75,6 +98,12 @@
 
   function setupDrawerEventListeners() {
     if (!drawerContainer) return;
+    // Bind-once : les écouteurs sont attachés une seule fois par instance de
+    // tiroir. Si le DOM existait déjà (réinjection du content script), on
+    // réutilise les nœuds existants sans recréer d'écouteurs (fini le
+    // pattern cloneNode-rebind, source de doublons et de régressions).
+    if (drawerContainer.dataset.bound === '1') return;
+    drawerContainer.dataset.bound = '1';
 
     const titleInput = drawerContainer.querySelector('#drawer-title-input');
     const artistInput = drawerContainer.querySelector('#drawer-artist');
@@ -87,42 +116,35 @@
 
     function saveDrawerData() {
       if (!currentSong || !drawerContainer) return;
-      const currentTitleInput = drawerContainer.querySelector('#drawer-title-input');
-      const currentArtistInput = drawerContainer.querySelector('#drawer-artist');
-      const currentKeyInput = drawerContainer.querySelector('#drawer-key');
-      const currentCapoInput = drawerContainer.querySelector('#drawer-capo');
-      const currentTransInput = drawerContainer.querySelector('#drawer-transpose');
-      const currentSpeedInput = drawerContainer.querySelector('#drawer-speed');
-      const currentNotesText = drawerContainer.querySelector('#drawer-notes');
-      const currentTipsText = drawerContainer.querySelector('#drawer-tips');
 
-      if (currentTitleInput) {
-        currentSong.title = currentTitleInput.value.trim() || "Sans titre";
+      if (titleInput) {
+        currentSong.title = titleInput.value.trim() || "Sans titre";
       }
-      if (currentArtistInput) {
-        currentSong.artist = currentArtistInput.value.trim();
+      if (artistInput) {
+        currentSong.artist = artistInput.value.trim();
       }
-      if (currentKeyInput) {
-        currentSong.key = currentKeyInput.value.trim();
+      if (keyInput) {
+        currentSong.key = keyInput.value.trim();
       }
-      if (currentCapoInput) {
-        currentSong.capo = parseInt(currentCapoInput.value, 10) || 0;
+      if (capoInput) {
+        currentSong.capo = parseInt(capoInput.value, 10) || 0;
       }
-      if (currentTransInput) {
-        currentSong.transpose = parseInt(currentTransInput.value, 10) || 0;
+      if (transInput) {
+        currentSong.transpose = parseInt(transInput.value, 10) || 0;
       }
-      if (currentSpeedInput) {
-        currentSong.scrollSpeed = parseInt(currentSpeedInput.value, 10) || 1;
+      if (speedInput) {
+        currentSong.scrollSpeed = parseInt(speedInput.value, 10) || 1;
         if (window.RockstarCore) {
           window.RockstarCore.scrollSpeed = currentSong.scrollSpeed;
         }
       }
-      if (currentNotesText) {
-        currentSong.notes = currentNotesText.value;
-        currentSong.interpretationNotes = currentNotesText.value;
+      if (notesText) {
+        // Champ canonique unique (l'alias historique interpretationNotes est
+        // converti à la migration, on n'écrit plus jamais deux champs).
+        currentSong.notes = notesText.value;
       }
-      if (currentTipsText) {
-        currentSong.playingTips = currentTipsText.value;
+      if (tipsText) {
+        currentSong.playingTips = tipsText.value;
       }
 
       if (window.storageService) {
@@ -130,51 +152,20 @@
       }
     }
 
-    if (titleInput) {
-      const newTitleInput = titleInput.cloneNode(true);
-      titleInput.parentNode.replaceChild(newTitleInput, titleInput);
-      newTitleInput.addEventListener('blur', saveDrawerData);
-    }
-
-    if (artistInput) {
-      const newArtistInput = artistInput.cloneNode(true);
-      artistInput.parentNode.replaceChild(newArtistInput, artistInput);
-      newArtistInput.addEventListener('blur', saveDrawerData);
-    }
-
-    const newKeyInput = keyInput.cloneNode(true);
-    keyInput.parentNode.replaceChild(newKeyInput, keyInput);
-    newKeyInput.addEventListener('blur', saveDrawerData);
-
-    const newCapoInput = capoInput.cloneNode(true);
-    capoInput.parentNode.replaceChild(newCapoInput, capoInput);
-    newCapoInput.addEventListener('change', saveDrawerData);
-
-    const newTransInput = transInput.cloneNode(true);
-    transInput.parentNode.replaceChild(newTransInput, transInput);
-    newTransInput.addEventListener('change', saveDrawerData);
-
-    if (speedInput) {
-      const newSpeedInput = speedInput.cloneNode(true);
-      speedInput.parentNode.replaceChild(newSpeedInput, speedInput);
-      newSpeedInput.addEventListener('change', saveDrawerData);
-    }
-
-    const newNotesText = notesText.cloneNode(true);
-    notesText.parentNode.replaceChild(newNotesText, notesText);
-
-    const newTipsText = tipsText.cloneNode(true);
-    tipsText.parentNode.replaceChild(newTipsText, tipsText);
+    if (titleInput) titleInput.addEventListener('blur', saveDrawerData);
+    if (artistInput) artistInput.addEventListener('blur', saveDrawerData);
+    if (keyInput) keyInput.addEventListener('blur', saveDrawerData);
+    if (capoInput) capoInput.addEventListener('change', saveDrawerData);
+    if (transInput) transInput.addEventListener('change', saveDrawerData);
+    if (speedInput) speedInput.addEventListener('change', saveDrawerData);
 
     let debounceSave = null;
     function debouncedSave() {
       clearTimeout(debounceSave);
       debounceSave = setTimeout(saveDrawerData, 1000);
     }
-    newNotesText.addEventListener('input', debouncedSave);
-    newTipsText.addEventListener('input', debouncedSave);
-
-
+    if (notesText) notesText.addEventListener('input', debouncedSave);
+    if (tipsText) tipsText.addEventListener('input', debouncedSave);
 
     // Dictation
     const dictationButtons = drawerContainer.querySelectorAll('.drawer-dictate-btn');
@@ -183,11 +174,9 @@
       dictationButtons.forEach(btn => btn.style.display = 'none');
     } else {
       dictationButtons.forEach(btn => {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        newBtn.addEventListener('click', () => {
-          const targetId = newBtn.getAttribute('data-target');
-          toggleDictation(targetId, newBtn);
+        btn.addEventListener('click', () => {
+          const targetId = btn.getAttribute('data-target');
+          toggleDictation(targetId, btn);
         });
       });
     }
@@ -202,9 +191,7 @@
     const cancelLinkBtn = drawerContainer.querySelector('#drawer-cancel-link-btn');
 
     if (addLinkBtn && linkForm && saveLinkBtn && cancelLinkBtn) {
-      const newAddLinkBtn = addLinkBtn.cloneNode(true);
-      addLinkBtn.parentNode.replaceChild(newAddLinkBtn, addLinkBtn);
-      newAddLinkBtn.addEventListener('click', () => {
+      addLinkBtn.addEventListener('click', () => {
         linkForm.style.display = linkForm.style.display === 'none' ? 'block' : 'none';
         linkTitle.value = '';
         linkUrl.value = '';
@@ -222,15 +209,11 @@
         }
       });
 
-      const newCancelLinkBtn = cancelLinkBtn.cloneNode(true);
-      cancelLinkBtn.parentNode.replaceChild(newCancelLinkBtn, cancelLinkBtn);
-      newCancelLinkBtn.addEventListener('click', () => {
+      cancelLinkBtn.addEventListener('click', () => {
         linkForm.style.display = 'none';
       });
 
-      const newSaveLinkBtn = saveLinkBtn.cloneNode(true);
-      saveLinkBtn.parentNode.replaceChild(newSaveLinkBtn, saveLinkBtn);
-      newSaveLinkBtn.addEventListener('click', () => {
+      saveLinkBtn.addEventListener('click', () => {
         const url = linkUrl.value.trim();
         const title = linkTitle.value.trim();
         const type = linkType.value;
@@ -259,21 +242,10 @@
     const existingDrawer = document.getElementById('rockstar-drawer');
 
     if (existingBtn && existingDrawer) {
+      // Réinjection du content script : réutiliser le tiroir existant tel quel.
+      // Les écouteurs sont déjà attachés (bind-once, cf. dataset.bound).
       drawerBtn = existingBtn;
       drawerContainer = existingDrawer;
-
-      // Re-bind listeners by cloning the buttons
-      const newBtn = drawerBtn.cloneNode(true);
-      drawerBtn.parentNode.replaceChild(newBtn, drawerBtn);
-      drawerBtn = newBtn;
-      drawerBtn.addEventListener('click', toggleDrawer);
-
-      const closeBtn = drawerContainer.querySelector('#drawer-close-btn');
-      if (closeBtn) {
-        const newCloseBtn = closeBtn.cloneNode(true);
-        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-        newCloseBtn.addEventListener('click', closeDrawer);
-      }
 
       setupDrawerEventListeners();
       return;
@@ -281,14 +253,17 @@
 
     if (document.getElementById('rockstar-drawer') || document.getElementById('ug-drawer-btn')) return;
 
-    // Create Floating Button
-    drawerBtn = document.createElement('button');
-    drawerBtn.id = 'ug-drawer-btn';
-    drawerBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="floating-btn-svg"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
-    drawerBtn.title = 'Ouvrir Vox Roddy (Notes & Playbacks)';
-    
-    if (window.RockstarCore.appendButtonsToFloatingBar) {
-      window.RockstarCore.appendButtonsToFloatingBar();
+    // Create Floating Button (uniquement en page web : dans le panneau, le
+    // tiroir vit dans sa carte et est toujours visible — pas de bouton).
+    if (!window.RockstarCore.isExtensionPage) {
+      drawerBtn = document.createElement('button');
+      drawerBtn.id = 'ug-drawer-btn';
+      drawerBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="floating-btn-svg"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+      drawerBtn.title = 'Ouvrir Vox Roddy (Notes & Playbacks)';
+
+      if (window.RockstarCore.appendButtonsToFloatingBar) {
+        window.RockstarCore.appendButtonsToFloatingBar();
+      }
     }
 
     // Create Drawer Container
@@ -309,6 +284,7 @@
       </div>
 
       <div class="drawer-body">
+        <div id="drawer-tab-status" class="drawer-tab-status" hidden></div>
         <div class="drawer-section">
           <div class="drawer-grid">
             <div class="drawer-input-group">
@@ -386,7 +362,9 @@
     document.body.appendChild(drawerContainer);
 
     // Event listeners
-    drawerBtn.addEventListener('click', toggleDrawer);
+    if (drawerBtn) {
+      drawerBtn.addEventListener('click', toggleDrawer);
+    }
     drawerContainer.querySelector('#drawer-close-btn').addEventListener('click', closeDrawer);
 
     setupDrawerEventListeners();
@@ -419,7 +397,59 @@
   }
 
   function loadSongForDrawer() {
-    const url = normalizeUrl(window.location.href);
+    // Panneau latéral : travailler sur la chanson de l'onglet actif, pas sur
+    // l'URL du panneau lui-même (chrome-extension://...).
+    if (window.RockstarCore.isExtensionPage) {
+      loadSongFromActiveTab();
+      return;
+    }
+    loadSongForUrl(normalizeUrl(window.location.href), null);
+  }
+
+  // Panneau latéral : interroger l'onglet actif (son content script renvoie
+  // l'URL et le titre via getState, cf. core.js).
+  function loadSongFromActiveTab() {
+    if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.tabs.query) {
+      setDrawerTabStatus("Pas d'onglet actif disponible.");
+      return;
+    }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs && tabs[0];
+      if (!tab) {
+        setDrawerTabStatus('Aucun onglet actif.');
+        return;
+      }
+      chrome.tabs.sendMessage(tab.id, { type: 'rockstar:tab-action', payload: { kind: 'getState' } }, (res) => {
+        if (chrome.runtime.lastError) void chrome.runtime.lastError;
+        let url = null;
+        let pageTitle = '';
+        if (res && res.ok && res.state && res.state.url) {
+          url = res.state.url;
+          pageTitle = res.state.title || '';
+        } else if (tab.url && !/^(chrome|chrome-extension|edge|about|file):/.test(tab.url)) {
+          // Onglet sans content script : l'URL de l'onglet suffit pour lire
+          // une fiche existante du répertoire.
+          url = tab.url;
+          pageTitle = tab.title || '';
+        }
+        if (!url) {
+          setDrawerTabStatus("Ouvre une page avec l'extension (YouTube, ultimate-guitar...) pour éditer sa fiche.");
+          return;
+        }
+        loadSongForUrl(normalizeUrl(url), pageTitle);
+      });
+    });
+  }
+
+  function setDrawerTabStatus(message) {
+    if (!drawerContainer) return;
+    const el = drawerContainer.querySelector('#drawer-tab-status');
+    if (!el) return;
+    el.textContent = message;
+    el.hidden = !message;
+  }
+
+  function loadSongForUrl(url, fallbackTitle) {
     if (!window.storageService) return;
 
     window.storageService.getSong(url).then(song => {
@@ -430,8 +460,9 @@
           window.RockstarCore.scrollSpeed = song.scrollSpeed;
         }
         populateDrawerFields();
+        setDrawerTabStatus('');
       } else {
-        const metadata = extractUGMetadata();
+        const metadata = extractUGMetadata(fallbackTitle);
         currentSong = {
           url: url,
           title: metadata.title,
@@ -441,7 +472,6 @@
           transpose: 0,
           scrollSpeed: window.RockstarCore ? window.RockstarCore.scrollSpeed : 1,
           notes: "",
-          interpretationNotes: "",
           playingTips: "",
           links: []
         };
@@ -449,6 +479,7 @@
         window.storageService.saveSong(currentSong).then(() => {
           populateDrawerFields();
         });
+        setDrawerTabStatus('');
       }
     });
   }
@@ -479,15 +510,21 @@
     if (!drawerContainer) return;
     const list = drawerContainer.querySelector('#drawer-links-list');
     list.innerHTML = '';
-    
+
     const links = currentSong.links || [];
-    
+
     if (!activeDrawerPlaybackLink && links.length > 0) {
       activeDrawerPlaybackLink = links[0];
     }
 
     if (links.length === 0) {
-      list.innerHTML = '<li style="padding: 6px; font-size:11px; color:#888; text-align:center;">Aucun lien</li>';
+      const empty = document.createElement('li');
+      empty.style.padding = '6px';
+      empty.style.fontSize = '11px';
+      empty.style.color = '#888';
+      empty.style.textAlign = 'center';
+      empty.textContent = 'Aucun lien';
+      list.appendChild(empty);
       playDrawerPlayback();
       return;
     }
@@ -499,27 +536,27 @@
         li.classList.add('active');
       }
 
-      let icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
-      if (link.type === 'youtube') {
-        icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-orange);"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><polygon points="10 8 16 11 10 14 10 8"/></svg>';
-      } else if (link.type === 'spotify') {
-        icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #1ed760;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
-      }
+      const icon = document.createElement('span');
+      icon.style.display = 'flex';
+      icon.style.alignItems = 'center';
+      icon.innerHTML = buildLinkIcon(link.type); // SVG statique, jamais de donnée utilisateur
 
-      li.innerHTML = `
-        <span class="drawer-link-info">
-          <span style="display: flex; align-items: center;">${icon}</span>
-          <span class="drawer-link-title">${link.title}</span>
-        </span>
-        <button class="drawer-link-delete" data-index="${idx}">&times;</button>
-      `;
-
-      li.querySelector('.drawer-link-info').addEventListener('click', () => {
+      const info = document.createElement('span');
+      info.className = 'drawer-link-info';
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'drawer-link-title';
+      titleSpan.textContent = link.title || 'Lien'; // textContent : pas d'injection
+      info.appendChild(icon);
+      info.appendChild(titleSpan);
+      info.addEventListener('click', () => {
         activeDrawerPlaybackLink = link;
         renderDrawerLinks();
       });
 
-      li.querySelector('.drawer-link-delete').addEventListener('click', (e) => {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'drawer-link-delete';
+      deleteBtn.textContent = '\u00d7';
+      deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentSong.links.splice(idx, 1);
         window.storageService.saveSong(currentSong).then(() => {
@@ -530,10 +567,22 @@
         });
       });
 
+      li.appendChild(info);
+      li.appendChild(deleteBtn);
       list.appendChild(li);
     });
 
     playDrawerPlayback();
+  }
+
+  function buildLinkIcon(type) {
+    const linkSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+    if (type === 'youtube') {
+      return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-orange);"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><polygon points="10 8 16 11 10 14 10 8"/></svg>';
+    } else if (type === 'spotify') {
+      return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #1ed760;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+    }
+    return linkSvg;
   }
 
   function playDrawerPlayback() {
@@ -615,10 +664,29 @@
         container.innerHTML = '<div class="drawer-media-empty">Lien Spotify invalide</div>';
       }
     } else {
-      container.innerHTML = `
-        <div class="drawer-media-empty">
-          <a href="${url}" target="_blank" style="color:#d880ff; text-decoration:underline;">Ouvrir le lien externe</a>
-        </div>`;
+      container.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'drawer-media-empty';
+      // Validation du protocole : javascript: / data: ne doivent jamais
+      // devenir des liens cliquables.
+      let safeUrl = null;
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') safeUrl = parsed.href;
+      } catch (e) {}
+      if (safeUrl) {
+        const anchor = document.createElement('a');
+        anchor.href = safeUrl;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.style.color = '#d880ff';
+        anchor.style.textDecoration = 'underline';
+        anchor.textContent = 'Ouvrir le lien externe';
+        wrap.appendChild(anchor);
+      } else {
+        wrap.textContent = 'Lien invalide';
+      }
+      container.appendChild(wrap);
     }
   }
 
@@ -709,7 +777,7 @@
         event: 'command',
         func: func,
         args: args
-      }), '*');
+      }), 'https://www.youtube.com');
     }
   }
 
@@ -893,7 +961,6 @@
         transpose: 0,
         scrollSpeed: window.RockstarCore ? window.RockstarCore.scrollSpeed : 1,
         notes: '',
-        interpretationNotes: '',
         playingTips: '',
         links: []
       };
@@ -934,50 +1001,41 @@
     function numberSearchResults() {
       if (!activeConfig.isSearchPage()) return;
 
-      let attempts = 0;
-      const interval = setInterval(() => {
-        attempts++;
-        if (attempts > 30) {
-          clearInterval(interval);
-          return;
+      const tabLinks = activeConfig.getLinks();
+      // Pas de polling : si les liens ne sont pas encore là, le
+      // MutationObserver relancera le numérotage quand ils apparaîtront.
+      if (tabLinks.length === 0) return;
+
+      // Remove existing badges to avoid duplicates on re-render
+      document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());
+
+      window.ugSearchResultLinks = {};
+      let counter = 1;
+      const processedUrls = new Set();
+
+      tabLinks.forEach(link => {
+        const url = normalizeUrl(link.href);
+        if (!processedUrls.has(url)) {
+          processedUrls.add(url);
+          window.ugSearchResultLinks[counter] = link.href;
+
+          const badge = document.createElement('span');
+          badge.className = 'ug-result-badge';
+          badge.innerText = counter;
+          badge.style.display = 'inline-block';
+          badge.style.backgroundColor = '#f6921e';
+          badge.style.color = '#fff';
+          badge.style.fontSize = '11px';
+          badge.style.fontWeight = 'bold';
+          badge.style.padding = '1px 5px';
+          badge.style.borderRadius = '3px';
+          badge.style.marginRight = '6px';
+          badge.style.verticalAlign = 'middle';
+
+          link.insertBefore(badge, link.firstChild);
+          counter++;
         }
-
-        const tabLinks = activeConfig.getLinks();
-        if (tabLinks.length === 0) return;
-
-        clearInterval(interval);
-
-        // Remove existing badges to avoid duplicates on re-render
-        document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());
-
-        window.ugSearchResultLinks = {};
-        let counter = 1;
-        const processedUrls = new Set();
-
-        tabLinks.forEach(link => {
-          const url = normalizeUrl(link.href);
-          if (!processedUrls.has(url)) {
-            processedUrls.add(url);
-            window.ugSearchResultLinks[counter] = link.href;
-
-            const badge = document.createElement('span');
-            badge.className = 'ug-result-badge';
-            badge.innerText = counter;
-            badge.style.display = 'inline-block';
-            badge.style.backgroundColor = '#f6921e';
-            badge.style.color = '#fff';
-            badge.style.fontSize = '11px';
-            badge.style.fontWeight = 'bold';
-            badge.style.padding = '1px 5px';
-            badge.style.borderRadius = '3px';
-            badge.style.marginRight = '6px';
-            badge.style.verticalAlign = 'middle';
-            
-            link.insertBefore(badge, link.firstChild);
-            counter++;
-          }
-        });
-      }, 200);
+      });
     }
 
     // Run immediately
@@ -1032,15 +1090,52 @@
       });
     }
   });
-  // URL SPA Navigation Observer
-  let lastLoadedUrl = window.location.href;
-  setInterval(() => {
-    const currentUrl = window.location.href;
-    if (normalizeUrl(currentUrl) !== normalizeUrl(lastLoadedUrl)) {
+  // Navigation SPA : pas de setInterval — hooks history (page web) et
+  // événements chrome.tabs (panneau latéral).
+  function setupUrlWatch() {
+    if (window.RockstarCore.isExtensionPage) {
+      // Changement d'onglet actif ou navigation dans l'onglet : recharger
+      // la fiche correspondante.
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+        if (chrome.tabs.onActivated) {
+          chrome.tabs.onActivated.addListener(() => {
+            if (isDrawerInitialized) loadSongForDrawer();
+          });
+        }
+        if (chrome.tabs.onUpdated) {
+          chrome.tabs.onUpdated.addListener((tabId, info) => {
+            if ((info.status === 'complete' || info.url) && isDrawerInitialized) {
+              loadSongForDrawer();
+            }
+          });
+        }
+      }
+      return;
+    }
+
+    let lastLoadedUrl = normalizeUrl(window.location.href);
+    const onUrlChange = () => {
+      const currentUrl = normalizeUrl(window.location.href);
+      if (currentUrl === lastLoadedUrl) return;
       lastLoadedUrl = currentUrl;
       if (isDrawerInitialized) {
         loadSongForDrawer();
       }
-    }
-  }, 1000);
+    };
+    window.addEventListener('popstate', onUrlChange);
+    window.addEventListener('hashchange', onUrlChange);
+    ['pushState', 'replaceState'].forEach((fn) => {
+      const original = history[fn];
+      if (typeof original !== 'function') return;
+      history[fn] = function() {
+        const result = original.apply(this, arguments);
+        setTimeout(onUrlChange, 0);
+        return result;
+      };
+    });
+  }
+  setupUrlWatch();
+
+  // Exposé pour les tests (normalizeUrl est la clé de répartition du stockage)
+  window.RockstarCore.normalizeUrl = normalizeUrl;
 })();
