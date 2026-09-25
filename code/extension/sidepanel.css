@@ -1,16 +1,33 @@
-/* sidepanel.css — habillage du side panel (les widgets gardent leurs styles
-   d'origine via content.css). Utilise les variables du thème de l'hôte. */
+/* sidepanel.css — habillage du side panel, aligné sur le thème du dashboard
+   standalone (dashboard/index.html) : fond noir, accents orange, police Outfit.
+   Les widgets gardent leurs styles d'origine via content.css, puis les cartes
+   neutralisent leur positionnement "overlay" (même mécanique que le dashboard). */
 
 :root {
+  --sp-bg-dark: #09090b;
+  --sp-bg-card: #18181b;
+  --sp-bg-cell: rgba(18, 17, 24, 0.6);
+  --sp-border-color: rgba(255, 255, 255, 0.06);
+  --sp-accent-orange: #f26419;
+  --sp-accent-gold: #f6921e;
+  --sp-text-primary: #f4f4f5;
+  --sp-text-secondary: #a1a1aa;
   --sp-gap: 10px;
 }
+
+*, *::before, *::after { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: transparent;
-  color: var(--foreground, #e6e6e6);
-  font-family: inherit;
+  background-color: var(--sp-bg-dark);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(20, 30, 60, 0.3) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(10, 15, 30, 0.5) 0px, transparent 50%);
+  color: var(--sp-text-primary);
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 #sidepanel-app {
@@ -25,13 +42,23 @@ html, body {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-gap);
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border, #333);
+  padding: 12px 16px;
+  background: rgba(10, 14, 23, 0.7);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--sp-border-color);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .sp-title {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+}
+
+.sp-title::before {
+  content: '🎸 ';
 }
 
 .sp-toggle {
@@ -39,21 +66,25 @@ html, body {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--muted-foreground, #999);
+  color: var(--sp-text-secondary);
   cursor: pointer;
   user-select: none;
 }
 
 .sp-toggle input {
-  accent-color: var(--accent, #f60);
+  accent-color: var(--sp-accent-orange);
 }
 
 /* Tabs */
 .sp-tabs {
   display: flex;
   gap: 4px;
-  padding: 8px 12px 0;
-  border-bottom: 1px solid var(--border, #333);
+  padding: 8px 16px 0;
+  border-bottom: 1px solid var(--sp-border-color);
+  background: rgba(10, 14, 23, 0.4);
+  position: sticky;
+  top: 49px;
+  z-index: 9;
 }
 
 .sp-tab {
@@ -61,26 +92,34 @@ html, body {
   border: 1px solid transparent;
   border-bottom: none;
   background: transparent;
-  color: var(--muted-foreground, #999);
+  color: var(--sp-text-secondary);
   font: inherit;
   font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 10px 10px 0 0;
   cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.sp-tab:hover {
+  color: var(--sp-accent-gold);
 }
 
 .sp-tab.active {
-  color: var(--foreground, #fff);
-  background: var(--card, #1c1c1c);
-  border-color: var(--border, #444);
+  color: var(--sp-text-primary);
+  background: var(--sp-bg-cell);
+  border-color: var(--sp-border-color);
   transform: translateY(1px);
 }
 
 /* Content */
 .sp-content {
   flex: 1;
-  padding: var(--sp-gap) 12px 16px;
-  box-sizing: border-box;
+  padding: var(--sp-gap) 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-gap);
 }
 
 .sp-tab-panel {
@@ -93,68 +132,185 @@ html, body {
   display: flex;
 }
 
-.sp-card {
-  border: 1px solid var(--border, #333);
-  background: var(--card, #1c1c1c);
-  border-radius: 10px;
-  padding: 8px 10px 10px;
-  min-width: 0;
+/* Cartes widget : mêmes classes que le dashboard standalone. */
+.widget-card {
+  background: var(--sp-bg-cell);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--sp-border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-.sp-card-title {
-  margin: 2px 0 8px;
+.widget-card:hover {
+  border-color: rgba(246, 146, 30, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.widget-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--sp-border-color);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.widget-card-title {
+  font-weight: 700;
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--muted-foreground, #999);
+  letter-spacing: 0.8px;
+  color: var(--sp-accent-gold);
 }
 
+.widget-card-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(246, 146, 30, 0.15);
+  color: var(--sp-accent-gold);
+  font-weight: 600;
+}
+
+.widget-card-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* Neutralise le positionnement "overlay page" des widgets une fois montés
+   dans une carte (même stratégie que le dashboard). */
+.widget-card-body > * {
+  position: relative !important;
+  bottom: auto !important;
+  right: auto !important;
+  top: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.widget-card-body #ug-metronome,
+.widget-card-body #ug-tuner,
+.widget-card-body #ug-chord {
+  flex-direction: column;
+  padding: 16px;
+  gap: 10px;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.widget-card-body #ug-singing-tracker {
+  flex-direction: column;
+  padding: 12px;
+  background: transparent;
+  backdrop-filter: none;
+  height: 200px !important;
+}
+
+.widget-card-body #ug-singing-tracker .singing-canvas-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.widget-card-body #ug-singing-tracker.maximized {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  z-index: 9999999 !important;
+}
+
+.widget-card-body #rockstar-piano-widget {
+  height: 420px !important;
+  position: relative !important;
+  padding: 0 !important;
+  flex-direction: column;
+}
+
+.widget-card-body #rockstar-piano-widget .piano-scroll-outer {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Notes */
 .sp-note {
   font-size: 13px;
   line-height: 1.5;
-  color: var(--muted-foreground, #aaa);
-  padding: 12px;
-  border: 1px dashed var(--border, #444);
-  border-radius: 10px;
+  color: var(--sp-text-secondary);
+  padding: 12px 16px;
+  border: 1px dashed rgba(246, 146, 30, 0.35);
+  border-radius: 12px;
+  background: rgba(246, 146, 30, 0.05);
 }
 
 /* Transport / commandes vers la page */
+.sp-playback-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .sp-transport,
 .sp-transport-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .sp-transport {
   justify-content: center;
-  margin-bottom: 8px;
 }
 
 .sp-cmd {
   appearance: none;
   font: inherit;
   font-size: 13px;
-  color: var(--foreground, #eee);
-  background: var(--background, transparent);
-  border: 1px solid var(--border, #444);
-  border-radius: 8px;
-  padding: 6px 12px;
+  font-weight: 600;
+  color: var(--sp-text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sp-border-color);
+  border-radius: 10px;
+  padding: 8px 16px;
   cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.1s;
 }
 
 .sp-cmd:hover:not(:disabled) {
-  border-color: var(--accent, #f60);
+  border-color: rgba(246, 146, 30, 0.5);
+  background: rgba(246, 146, 30, 0.1);
+  color: var(--sp-accent-gold);
+}
+
+.sp-cmd:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .sp-cmd:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
+  cursor: default;
 }
 
 .sp-cmd-primary {
-  background: var(--accent, #f60);
-  border-color: var(--accent, #f60);
-  color: #111;
-  font-weight: 600;
+  background: var(--sp-accent-orange);
+  border-color: var(--sp-accent-orange);
+  color: #fff;
+}
+
+.sp-cmd-primary:hover:not(:disabled) {
+  background: var(--sp-accent-gold);
+  border-color: var(--sp-accent-gold);
+  color: #fff;
 }

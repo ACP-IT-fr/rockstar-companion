@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vox Roddy — Panneau</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="content.css">
   <link rel="stylesheet" href="sidepanel.css">
 </head>
@@ -25,51 +28,79 @@
 
     <main class="sp-content">
       <section id="sp-tab-practice" class="sp-tab-panel active">
-        <div class="sp-card" id="sp-card-metronome">
-          <h3 class="sp-card-title">Métronome</h3>
+        <div class="widget-card" id="sp-card-metronome">
+          <div class="widget-card-header">
+            <span class="widget-card-title">⏱️ Métronome</span>
+            <span class="widget-card-badge">Audio</span>
+          </div>
+          <div class="widget-card-body"></div>
         </div>
-        <div class="sp-card" id="sp-card-tuner">
-          <h3 class="sp-card-title">Accordeur</h3>
+        <div class="widget-card" id="sp-card-tuner">
+          <div class="widget-card-header">
+            <span class="widget-card-title">🎸 Accordeur</span>
+            <span class="widget-card-badge">Micro</span>
+          </div>
+          <div class="widget-card-body"></div>
         </div>
-        <div class="sp-card" id="sp-card-chord">
-          <h3 class="sp-card-title">Accord détecté</h3>
+        <div class="widget-card" id="sp-card-chord">
+          <div class="widget-card-header">
+            <span class="widget-card-title">🎵 Détecteur d'Accords</span>
+            <span class="widget-card-badge">Micro</span>
+          </div>
+          <div class="widget-card-body"></div>
         </div>
-        <div class="sp-card" id="sp-card-singing">
-          <h3 class="sp-card-title">Vocal Pitch</h3>
+        <div class="widget-card" id="sp-card-singing">
+          <div class="widget-card-header">
+            <span class="widget-card-title">🎤 Vocal Pitch Tracker</span>
+            <span class="widget-card-badge">Micro</span>
+          </div>
+          <div class="widget-card-body"></div>
         </div>
       </section>
 
       <section id="sp-tab-piano" class="sp-tab-panel">
-        <div class="sp-card" id="sp-card-piano">
-          <h3 class="sp-card-title">Piano 88 touches</h3>
+        <div class="widget-card" id="sp-card-piano">
+          <div class="widget-card-header">
+            <span class="widget-card-title">🎹 Piano 88 touches</span>
+            <span class="widget-card-badge">Audio</span>
+          </div>
+          <div class="widget-card-body"></div>
         </div>
       </section>
 
       <section id="sp-tab-playback" class="sp-tab-panel">
-        <div class="sp-card">
-          <h3 class="sp-card-title">Vidéo (page active)</h3>
-          <div class="sp-transport">
-            <button class="sp-cmd" data-cmd="recule 10 secondes">−10 s</button>
-            <button class="sp-cmd sp-cmd-primary" data-cmd="play">▶ Lecture</button>
-            <button class="sp-cmd sp-cmd-primary" data-cmd="pause">⏸ Pause</button>
-            <button class="sp-cmd" data-cmd="avance 10 secondes">+10 s</button>
+        <div class="widget-card">
+          <div class="widget-card-header">
+            <span class="widget-card-title">▶️ Vidéo (page active)</span>
           </div>
-          <div class="sp-transport-row">
-            <button class="sp-cmd" data-cmd="recule 30 secondes">−30 s</button>
-            <button class="sp-cmd" data-cmd="recommence">⏮ Début</button>
-            <button class="sp-cmd" data-cmd="avance 30 secondes">+30 s</button>
+          <div class="widget-card-body sp-playback-body">
+            <div class="sp-transport">
+              <button class="sp-cmd" data-cmd="recule 10 secondes">−10 s</button>
+              <button class="sp-cmd sp-cmd-primary" data-cmd="play">▶ Lecture</button>
+              <button class="sp-cmd sp-cmd-primary" data-cmd="pause">⏸ Pause</button>
+              <button class="sp-cmd" data-cmd="avance 10 secondes">+10 s</button>
+            </div>
+            <div class="sp-transport-row">
+              <button class="sp-cmd" data-cmd="recule 30 secondes">−30 s</button>
+              <button class="sp-cmd" data-cmd="recommence">⏮ Début</button>
+              <button class="sp-cmd" data-cmd="avance 30 secondes">+30 s</button>
+            </div>
           </div>
         </div>
-        <div class="sp-card">
-          <h3 class="sp-card-title">Défilement de la page</h3>
-          <div class="sp-transport-row">
-            <button class="sp-cmd sp-cmd-primary" data-cmd="défile">▶ Défiler</button>
-            <button class="sp-cmd" data-cmd="arrête le scroll">⏸ Stop</button>
+        <div class="widget-card">
+          <div class="widget-card-header">
+            <span class="widget-card-title">📜 Défilement de la page</span>
           </div>
-          <div class="sp-transport-row">
-            <button class="sp-cmd" data-cmd="moins vite">Moins vite</button>
-            <button class="sp-cmd" data-cmd="plus vite">Plus vite</button>
-            <button class="sp-cmd" data-cmd="tout en haut">⤒ Haut</button>
+          <div class="widget-card-body sp-playback-body">
+            <div class="sp-transport-row">
+              <button class="sp-cmd sp-cmd-primary" data-cmd="défile">▶ Défiler</button>
+              <button class="sp-cmd" data-cmd="arrête le scroll">⏸ Stop</button>
+            </div>
+            <div class="sp-transport-row">
+              <button class="sp-cmd" data-cmd="moins vite">Moins vite</button>
+              <button class="sp-cmd" data-cmd="plus vite">Plus vite</button>
+              <button class="sp-cmd" data-cmd="tout en haut">⤒ Haut</button>
+            </div>
           </div>
         </div>
         <div id="sp-cmd-status" class="sp-note" hidden></div>

@@ -67,9 +67,10 @@
   function mountWidgets() {
     Object.entries(WIDGET_MAP).forEach(([widgetId, cardId]) => {
       const widget = document.getElementById(widgetId);
-      const card = document.getElementById(cardId);
-      if (widget && card) {
-        card.appendChild(widget);
+      const cardBody = document.querySelector('#' + cardId + ' .widget-card-body') ||
+        document.getElementById(cardId);
+      if (widget && cardBody) {
+        cardBody.appendChild(widget);
       }
     });
 
@@ -77,8 +78,9 @@
     if (window.RockstarCore.pianoWidget && typeof window.RockstarCore.pianoWidget.show === 'function') {
       window.RockstarCore.pianoWidget.show();
       const piano = document.getElementById('rockstar-piano-widget');
-      const pianoCard = document.getElementById('sp-card-piano');
-      if (piano && pianoCard) pianoCard.appendChild(piano);
+      const pianoCardBody = document.querySelector('#sp-card-piano .widget-card-body') ||
+        document.getElementById('sp-card-piano');
+      if (piano && pianoCardBody) pianoCardBody.appendChild(piano);
     }
 
     // getOrCreateFloatingBar (utilisé par le piano comme conteneur par défaut)
