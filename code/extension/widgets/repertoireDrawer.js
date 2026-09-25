@@ -425,6 +425,7 @@
     window.storageService.getSong(url).then(song => {
       if (song) {
         currentSong = song;
+        notifySongChanged();
         if (song.scrollSpeed !== undefined) {
           window.RockstarCore.scrollSpeed = song.scrollSpeed;
         }
@@ -444,11 +445,17 @@
           playingTips: "",
           links: []
         };
+        notifySongChanged();
         window.storageService.saveSong(currentSong).then(() => {
           populateDrawerFields();
         });
       }
     });
+  }
+
+  // Informe les autres widgets (bouton flottant) que le morceau courant a changé
+  function notifySongChanged() {
+    window.dispatchEvent(new CustomEvent('rockstar-song-changed', { detail: { song: currentSong } }));
   }
 
   function populateDrawerFields() {
@@ -871,15 +878,42 @@
   window.RockstarCore.initializeDrawer = initializeDrawer;
   window.RockstarCore.sendYouTubeCommand = sendYouTubeCommand;
   window.RockstarCore.getActiveDrawerPlaybackLink = () => activeDrawerPlaybackLink;
-  window.RockstarCore.appendRepertoireDrawerBtn = (bar) => {
-    const summaryBar = document.getElementById('ug-song-summary-bar');
-    if (drawerBtn) {
-      if (summaryBar) {
-        summaryBar.insertBefore(drawerBtn, summaryBar.firstChild);
-      } else {
-        bar.appendChild(drawerBtn);
-      }
+  window.RockstarCore.getCurrentSong = () => currentSong;
+  window.RockstarCore.toggleDrawer = toggleDrawer;
+  // Mise à jour manuelle (pill flottant) : fusionne, sauvegarde et notifie.
+  window.RockstarCore.updateCurrentSong = (patch) => {
+    if (!patch || typeof patch !== 'object') return;
+    if (!currentSong) {
+      currentSong = {
+        url: normalizeUrl(window.location.href),
+        title: document.title.replace(/ Chords.*/, '').replace(/ Tab.*/, '').trim(),
+        artist: '',
+        key: '',
+        capo: 0,
+        transpose: 0,
+        scrollSpeed: window.RockstarCore ? window.RockstarCore.scrollSpeed : 1,
+        notes: '',
+        interpretationNotes: '',
+        playingTips: '',
+        links: []
+      };
     }
+    Object.assign(currentSong, patch);
+    if (patch.scrollSpeed !== undefined && window.RockstarCore) {
+      window.RockstarCore.scrollSpeed = patch.scrollSpeed;
+    }
+    notifySongChanged();
+    if (window.storageService) {
+      window.storageService.saveSong(currentSong);
+    }
+    return currentSong;
+  };
+  window.RockstarCore.appendRepertoireDrawerBtn = (bar) => {
+    // Le bouton répertoire a quitté la barre résumé : il vit dans le pill
+    // (mode panneau) et reste accessible via la voix en mode barre.
+    const summaryBar = document.getElementById('ug-song-summary-bar');
+    if (summaryBar || !bar) return;
+    bar.appendChild(drawerBtn);
   };
 
   // Listening state changes cleanup
@@ -980,6 +1014,11 @@
 
   // Init Drawer
   window.RockstarCore.registerInit(() => {
+    // Dans le side panel, le tiroir est toujours initialisé (onglet Répertoire)
+    if (window.RockstarCore.isExtensionPage) {
+      initializeDrawer();
+      return;
+    }
     if (isUG) {
       initializeDrawer();
       initSearchPageNumbering();

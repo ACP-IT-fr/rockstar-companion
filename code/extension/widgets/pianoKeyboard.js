@@ -936,25 +936,24 @@
       pianoBtn.title = 'Piano Concert 88 Touches';
       pianoBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 4v10"/><path d="M10 4v10"/><path d="M14 4v10"/><path d="M18 4v10"/></svg>`;
       pianoBtn.addEventListener('click', () => {
+        // En mode panneau latéral, le piano vit dans le panneau : le bouton
+        // de la floatingBar l'ouvre au lieu de l'afficher sur la page.
+        if (window.RockstarCore.settings && window.RockstarCore.settings.useSidePanel &&
+            !window.RockstarCore.isExtensionPage && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ type: 'rockstar:open-panel' });
+          return;
+        }
         togglePiano();
       });
     }
 
     const summaryBar = document.getElementById('ug-song-summary-bar');
     if (summaryBar) {
-      const drawerBtn = summaryBar.querySelector('#ug-drawer-btn');
-      const playBtn = summaryBar.querySelector('#summary-scroll-toggle');
-
-      if (drawerBtn && drawerBtn.nextSibling) {
-        summaryBar.insertBefore(pianoBtn, drawerBtn.nextSibling);
-      } else if (playBtn && playBtn.nextSibling) {
-        summaryBar.insertBefore(pianoBtn, playBtn.nextSibling);
-      } else {
-        summaryBar.insertBefore(pianoBtn, summaryBar.firstChild);
-      }
-    } else {
-      bar.appendChild(pianoBtn);
+      // La barre résumé ne doit plus contenir le bouton piano (demande de
+      // désencombrement autour du bouton de défilement ♬).
+      return;
     }
+    bar.appendChild(pianoBtn);
   }
   window.RockstarCore.appendPianoBtnToFloatingBar = appendPianoBtnToFloatingBar;
 

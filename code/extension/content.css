@@ -19,6 +19,320 @@
   pointer-events: auto;
 }
 
+/* En mode panneau latéral, la barre est remplacée par le bouton flottant
+   (widgets/floatingButton.js) : une barre vide ne doit pas s'afficher. */
+#rockstar-floating-bar:empty {
+  display: none !important;
+}
+
+/* Bouton flottant unique avec poignée (mode panneau latéral).
+   Vertical et quasi carré : rangée micro au-dessus, puces en grille 2×2. */
+#rockstar-floating-pill {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+  box-sizing: border-box;
+  width: 176px;
+  background-color: #0f0f13;
+  color: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  z-index: 999999;
+}
+
+#rockstar-floating-pill .rfp-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#rockstar-floating-pill .rfp-handle {
+  cursor: grab;
+  color: #a1a1aa;
+  padding: 2px 3px;
+  user-select: none;
+  letter-spacing: -2px;
+  font-size: 11px;
+}
+
+#rockstar-floating-pill .rfp-handle:active {
+  cursor: grabbing;
+}
+
+#rockstar-floating-pill .rfp-mic {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  color: #f4f4f5;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+#rockstar-floating-pill .rfp-mic:hover {
+  border-color: rgba(246, 146, 30, 0.5);
+}
+
+#rockstar-floating-pill .rfp-mic.active {
+  background: rgba(242, 100, 25, 0.2);
+  border-color: #f26419;
+  color: #f6921e;
+}
+
+/* Barre de cooldown du réveil (Roddy "À l'écoute") : dégradé vert */
+#rockstar-floating-pill .rfp-mic.awake {
+  background: linear-gradient(
+    to right,
+    #10b981 var(--awake-progress, 100%),
+    rgba(16, 185, 129, 0.25) var(--awake-progress, 100%)
+  ) !important;
+  border-color: rgba(16, 185, 129, 0.6);
+  color: #d1fae5;
+  animation: rfp-pulse-awake 1.5s infinite;
+}
+
+@keyframes rfp-pulse-awake {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+#rockstar-floating-pill .rfp-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+#rockstar-floating-pill .rfp-chip {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+#rockstar-floating-pill .rfp-chip-wide {
+  grid-column: 1 / -1;
+}
+
+#rockstar-floating-pill .rfp-chip b {
+  color: #ff9f1c;
+  font-weight: 600;
+}
+
+#rockstar-floating-pill .rfp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+#rockstar-floating-pill .rfp-act.rfp-scroll.active {
+  color: #f6921e;
+  background: rgba(246, 146, 30, 0.12);
+  border-radius: 6px;
+}
+
+#rockstar-floating-pill .rfp-act {
+  appearance: none;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+#rockstar-floating-pill .rfp-act:hover {
+  color: #ff9f1c;
+}
+
+#rockstar-floating-pill .rfp-chip i {
+  font-style: normal;
+  color: #71717a;
+  font-size: 9px;
+  margin-right: 2px;
+  text-transform: uppercase;
+}
+
+#rockstar-floating-pill .rfp-ctrl b {
+  min-width: 24px;
+  text-align: center;
+}
+
+#rockstar-floating-pill .rfp-key-ctrl {
+  cursor: pointer;
+}
+
+#rockstar-floating-pill .rfp-key-ctrl::after {
+  content: '▾';
+  color: #a1a1aa;
+  font-size: 9px;
+  margin-left: 2px;
+}
+
+#rockstar-floating-pill .rfp-step {
+  appearance: none;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 4px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+#rockstar-floating-pill .rfp-step:hover {
+  color: #ff9f1c;
+  background: rgba(246, 146, 30, 0.25);
+}
+
+#rockstar-floating-pill .rfp-key-select {
+  appearance: none;
+  font: inherit;
+  font-size: 10px;
+  background: #18181b;
+  color: #f4f4f5;
+  border: 1px solid rgba(246, 146, 30, 0.5);
+  border-radius: 4px;
+  padding: 1px 3px;
+  width: 52px;
+}
+
+/* Onglets principaux du panneau (Studio / Répertoire) */
+.sp-maintabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
+  background: rgba(10, 14, 23, 0.7);
+  border-bottom: 1px solid var(--sp-border-color);
+  position: sticky;
+  top: 49px;
+  z-index: 8;
+}
+
+.sp-maintab {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sp-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sp-maintab:hover {
+  color: var(--sp-accent-gold);
+}
+
+.sp-maintab.active {
+  color: var(--sp-accent-gold);
+  border-bottom-color: var(--sp-accent-orange);
+}
+
+.sp-maintab-panel {
+  display: none;
+  flex-direction: column;
+  gap: var(--sp-gap);
+}
+
+.sp-maintab-panel.active {
+  display: flex;
+}
+
+/* Tiroir répertoire monté dans sa carte (pleine largeur, pas d'overlay) */
+.widget-card-body .rockstar-drawer,
+.widget-card-body #rockstar-drawer {
+  position: relative !important;
+  inset: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  transform: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Transcript du pill : deux lignes (mots entendus / commande détectée) */
+.rfp-transcript {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rfp-line {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  color: #a1a1aa;
+  font-size: 10px;
+  min-width: 0;
+}
+
+#rfp-heard {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e4e4e7;
+}
+
+#rfp-cmd {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #22c55e;
+}
+
+#rfp-cmd.error {
+  color: #fca5a5;
+}
+
+.rfp-transcript-label {
+  color: #a1a1aa;
+  flex-shrink: 0;
+}
+
 #rockstar-floating-bar.banner-active {
   justify-content: flex-start;
   right: 290px;

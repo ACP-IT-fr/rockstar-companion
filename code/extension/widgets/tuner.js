@@ -209,6 +209,7 @@
 
   // Init tuner UI
   window.RockstarCore.registerInit(() => {
+    if (window.RockstarCore.shouldMountInPage && !window.RockstarCore.shouldMountInPage()) return;
     tunerContainer = document.createElement('div');
     tunerContainer.id = 'ug-tuner';
     tunerContainer.innerHTML = `

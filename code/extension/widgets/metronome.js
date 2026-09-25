@@ -357,6 +357,7 @@
 
   // Init metronome UI
   window.RockstarCore.registerInit(() => {
+    if (window.RockstarCore.shouldMountInPage && !window.RockstarCore.shouldMountInPage()) return;
     metronomeContainer = document.createElement('div');
     metronomeContainer.id = 'ug-metronome';
     metronomeContainer.innerHTML = `

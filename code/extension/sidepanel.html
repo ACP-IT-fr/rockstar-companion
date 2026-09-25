@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vox Roddy — Panneau</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="content.css">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div id="sidepanel-app">
+    <header class="sp-header">
+      <span class="sp-title">Vox Roddy</span>
+      <div class="sp-header-actions">
+        <button class="sp-mic-btn" id="sp-mic-master" title="Autoriser le micro pour l'accordeur, le détecteur d'accords et le vocal pitch">
+          🎙️ Micro
+        </button>
+      </div>
+    </header>
+
+    <nav class="sp-maintabs" id="sp-maintabs">
+      <button class="sp-maintab active" data-maintab="studio">Studio</button>
+      <button class="sp-maintab" data-maintab="repertoire">Répertoire</button>
+    </nav>
+
+    <main class="sp-content">
+      <section id="sp-maintab-studio" class="sp-maintab-panel active">
+      <!-- Studio -->
+      <section class="sp-acc open" id="sp-acc-studio">
+        <button class="sp-acc-head" type="button">
+          <span class="sp-acc-title">Studio</span>
+          <span class="sp-acc-chevron">▾</span>
+        </button>
+        <div class="sp-acc-body">
+          <div class="widget-card" id="sp-card-metronome">
+            <div class="widget-card-header">
+              <span class="widget-card-title">⏱️ Métronome</span>
+              <span class="widget-card-badge">Audio</span>
+            </div>
+            <div class="widget-card-body"></div>
+          </div>
+          <div class="widget-card" id="sp-card-tuner">
+            <div class="widget-card-header">
+              <span class="widget-card-title">🎸 Accordeur</span>
+              <span class="widget-card-badge">Micro</span>
+            </div>
+            <div class="widget-card-body"></div>
+          </div>
+          <div class="widget-card" id="sp-card-chord">
+            <div class="widget-card-header">
+              <span class="widget-card-title">🎵 Détecteur d'Accords</span>
+              <span class="widget-card-badge">Micro</span>
+            </div>
+            <div class="widget-card-body"></div>
+          </div>
+          <div class="widget-card" id="sp-card-singing">
+            <div class="widget-card-header">
+              <span class="widget-card-title">🎤 Vocal Pitch Tracker</span>
+              <span class="widget-card-badge">Micro</span>
+            </div>
+            <div class="widget-card-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Piano -->
+      <section class="sp-acc open" id="sp-acc-piano">
+        <button class="sp-acc-head" type="button">
+          <span class="sp-acc-title">Piano</span>
+          <span class="sp-acc-chevron">▾</span>
+        </button>
+        <div class="sp-acc-body">
+          <div class="widget-card" id="sp-card-piano">
+            <div class="widget-card-header">
+              <span class="widget-card-title">🎹 Piano 88 touches</span>
+              <button class="sp-mini-btn" id="sp-piano-toggle" title="Ouvrir la version complète">⤢ Déployer</button>
+            </div>
+            <div class="widget-card-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Lecture -->
+      <section class="sp-acc open" id="sp-acc-playback">
+        <button class="sp-acc-head" type="button">
+          <span class="sp-acc-title">Lecture</span>
+          <span class="sp-acc-chevron">▾</span>
+        </button>
+        <div class="sp-acc-body">
+          <div class="widget-card">
+            <div class="widget-card-header">
+              <span class="widget-card-title" id="sp-playback-title">Lecture</span>
+              <span class="widget-card-badge" id="sp-playback-badge">—</span>
+            </div>
+            <div class="widget-card-body sp-playback-body">
+              <div id="sp-playback-video" class="sp-transport-row" hidden>
+                <button class="sp-cmd" data-cmd="recule 30 secondes">⏪30</button>
+                <button class="sp-cmd" data-cmd="recule 10 secondes">−10</button>
+                <button class="sp-cmd sp-cmd-primary" data-cmd="play">▶</button>
+                <button class="sp-cmd sp-cmd-primary" data-cmd="pause">⏸</button>
+                <button class="sp-cmd" data-cmd="avance 10 secondes">+10</button>
+                <button class="sp-cmd" data-cmd="recommence">⏮</button>
+              </div>
+              <span class="sp-playback-sep" id="sp-playback-sep" hidden></span>
+              <div id="sp-playback-scroll" class="sp-transport-row">
+                <button class="sp-cmd sp-cmd-primary" data-cmd="défile">▶ Défiler</button>
+                <button class="sp-cmd" data-cmd="arrête le scroll">⏸</button>
+                <button class="sp-cmd" data-cmd="moins vite">« vite</button>
+                <button class="sp-cmd" data-cmd="plus vite">» vite</button>
+                <button class="sp-cmd" data-cmd="tout en haut">⤒</button>
+              </div>
+              <div id="sp-playback-unknown" class="sp-note" hidden>
+                Ouvre YouTube ou ultimate-guitar à côté pour piloter la lecture.
+              </div>
+            </div>
+          </div>
+          <div id="sp-cmd-status" class="sp-note" hidden></div>
+        </div>
+      </section>
+
+      <div id="sp-disabled-note" class="sp-note" hidden></div>
+      </section>
+
+      <!-- Onglet Répertoire -->
+      <section id="sp-maintab-repertoire" class="sp-maintab-panel">
+        <div class="widget-card" id="sp-card-repertoire">
+          <div class="widget-card-header">
+            <span class="widget-card-title">📚 Répertoire</span>
+          </div>
+          <div class="widget-card-body sp-repertoire-body"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Même montage que le dashboard : core + widgets originaux -->
+  <script src="storageService.js"></script>
+  <script src="core.js"></script>
+  <script src="widgets/metronome.js"></script>
+  <script src="widgets/tuner.js"></script>
+  <script src="widgets/chordDetector.js"></script>
+  <script src="widgets/singingTracker.js"></script>
+  <script src="widgets/pianoKeyboard.js"></script>
+  <script src="widgets/repertoireDrawer.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

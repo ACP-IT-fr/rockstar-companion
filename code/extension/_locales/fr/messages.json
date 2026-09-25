@@ -10,5 +10,15 @@
   "pianoWidgetTitle": {
     "message": "Piano & Générateur de Notes",
     "description": "Title for the piano note generator widget."
+  },
+  "sayWakeWordBeforeCommand": {
+    "message": "Dis « $WAKEWORD$ » avant ta commande",
+    "description": "Shown when the wake word session ends, to remind how to wake Roddy.",
+    "placeholders": {
+      "wakeword": {
+        "content": "$1",
+        "example": "Roddy"
+      }
+    }
   }
 }

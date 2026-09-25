@@ -19,27 +19,38 @@
   let helpPanel = null;
 
   function appendButtonsToFloatingBar() {
+    // Les boutons du coin supérieur gauche (panneau, répertoire, piano,
+    // repères) ont été retirés : le pill flottant les remplace. La barre
+    // ne garde que le flux micro / commandes / réglages.
     const bar = window.RockstarCore.getOrCreateFloatingBar();
     if (commandsWrapper) bar.appendChild(commandsWrapper);
     else if (commandsBtn) bar.appendChild(commandsBtn);
-    
-    if (window.RockstarCore.appendMarkersBtn) {
-      window.RockstarCore.appendMarkersBtn(bar);
-    }
-    
-    // Le bouton micro (#ug-voice-btn) reste un overlay fixe dans le coin
-    // inférieur droit, il n'est PAS accroché à la barre (qui peut changer de bord).
-    
-    // Si d'autres modules (comme le repertoireDrawer) enregistrent leurs boutons,
-    // ils pourront aussi s'ajouter à la barre flottante. Nous déclenchons un hook.
-    if (window.RockstarCore.appendRepertoireDrawerBtn) {
-      window.RockstarCore.appendRepertoireDrawerBtn(bar);
-    }
-    if (window.RockstarCore.appendPianoBtnToFloatingBar) {
-      window.RockstarCore.appendPianoBtnToFloatingBar(bar);
-    }
   }
   window.RockstarCore.appendButtonsToFloatingBar = appendButtonsToFloatingBar;
+
+  /**
+   * Bouton "panneau latéral" : ouvre le side panel (background.js fait le
+   * pont vers chrome.sidePanel.open). Toujours présent, quel que soit le mode.
+   */
+  function ensureOpenPanelBtn(bar) {
+    if (!bar) return;
+    let panelBtn = document.getElementById('ug-open-panel-btn');
+    if (!panelBtn) {
+      panelBtn = document.createElement('button');
+      panelBtn.id = 'ug-open-panel-btn';
+      panelBtn.className = 'summary-scroll-toggle';
+      panelBtn.title = 'Ouvrir le panneau latéral';
+      panelBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>`;
+      panelBtn.addEventListener('click', () => {
+        if (chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ type: 'rockstar:open-panel' });
+        }
+      });
+    }
+    if (!bar.contains(panelBtn)) {
+      bar.insertBefore(panelBtn, bar.firstChild);
+    }
+  }
 
   function showFeedback(text, isSuccess) {
     // N'afficher la notification visuelle que pour les échecs / commandes non reconnues
@@ -391,6 +402,9 @@
 
   // Hook d'initialisation de l'UI
   window.RockstarCore.registerInit(() => {
+    // En mode panneau latéral, la barre flottante est remplacée par le
+    // bouton flottant unique (widgets/floatingButton.js).
+    if (window.RockstarCore.shouldMountInPage && !window.RockstarCore.shouldMountInPage()) return;
     // 1. Bouton principal du micro
     btn = document.createElement('button');
     btn.id = 'ug-voice-btn';

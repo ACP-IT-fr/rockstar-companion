@@ -21,6 +21,11 @@
   let analyser = null;
   
   const currentDomain = window.location.hostname;
+
+  // Le core tourne dans deux contextes : content script (page web) et
+  // documents d'extension (side panel). Les widgets s'en servent pour
+  // savoir où se monter (voir settings.useSidePanel).
+  const isExtensionPage = window.location.protocol === 'chrome-extension:';
   
   const SITE_CONFIGS = {
     'ultimate-guitar.com': {
@@ -282,6 +287,35 @@
     });
   });
 
+  // Réception des actions envoyées par le side panel (via background.js).
+  // Le panneau ne partage pas le DOM de la page : il passe par ce bridge,
+  // qui réutilise le même router de commandes que le contrôle vocal.
+  if (!isExtensionPage && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (!msg || msg.type !== 'rockstar:tab-action') return;
+      const payload = msg.payload || {};
+
+      if (payload.kind === 'command') {
+        const success = handleCommand(payload.text || '');
+        sendResponse({ ok: success });
+      } else if (payload.kind === 'getState') {
+        sendResponse({
+          ok: true,
+          state: {
+            domain: currentDomain,
+            url: window.location.href,
+            title: document.title,
+            scrollSpeed,
+            isListening
+          }
+        });
+      } else {
+        sendResponse({ ok: false, error: 'unknown-payload' });
+      }
+      return true;
+    });
+  }
+
   const settingsListeners = [];
   let settingsLoaded = false;
   const settings = {
@@ -322,8 +356,9 @@
       const inactivityDelay = result.inactivityDelay !== undefined && result.inactivityDelay !== null ? parseInt(result.inactivityDelay, 10) : 1;
       const wakeActiveDuration = result.wakeActiveDuration !== undefined && result.wakeActiveDuration !== null ? parseInt(result.wakeActiveDuration, 10) : 10;
       const barPosition = ['top', 'bottom'].indexOf(result.barPosition) !== -1 ? result.barPosition : 'top';
-      
-      updateSettings({ chord7th, chordSus, wakeWord, wakeWordVariants, allowedDomains, muteAllSites, inactivityDelay, wakeActiveDuration, barPosition });
+      const useSidePanel = true; // le mode panneau latéral est le comportement unique
+
+      updateSettings({ chord7th, chordSus, wakeWord, wakeWordVariants, allowedDomains, muteAllSites, inactivityDelay, wakeActiveDuration, barPosition, useSidePanel });
       settingsLoaded = true;
       if (callback) callback();
     });
@@ -420,6 +455,11 @@
     set isSuspendedByVisibility(val) { isSuspendedByVisibility = val; },
     
     get currentDomain() { return currentDomain; },
+    get isExtensionPage() { return isExtensionPage; },
+    // true si ce contexte (page web) doit monter les widgets dans son DOM.
+    // En mode "panneau latéral", les widgets autonomes se montent dans le
+    // panneau et non dans la page. Les documents d'extension montent toujours.
+    shouldMountInPage: () => isExtensionPage || !(settings && settings.useSidePanel),
     get activeSiteKey() { return activeSiteKey; },
     get activeConfig() { return activeConfig; },
     
