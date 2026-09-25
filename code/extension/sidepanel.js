@@ -111,12 +111,14 @@
   // Accordeur, détecteur d'accords et vocal pitch partagent le même analyser.
   // getUserMedia exige un geste utilisateur : un seul bouton autorise le micro
   // pour tous les widgets (même logique que le dashboard standalone).
-  function setupMicMaster() {
-    const btn = document.getElementById('sp-mic-master');
-    if (!btn) return;
-
-    btn.addEventListener('click', async function() {
-      if (!window.RockstarCore) return;
+  //
+  // Limitation Chrome : les prompts de permission ne s'affichent pas depuis un
+  // document de side panel (NotAllowedError "Permission dismissed"). On
+  // contourne en demandant la permission une fois dans un onglet normal
+  // (même origine chrome-extension://<id> → mémorisée pour le panneau aussi).
+  function requestMic(btn) {
+    return new Promise(async (resolve) => {
+      if (!window.RockstarCore) { resolve(false); return; }
 
       const ctx = window.RockstarCore.getAudioContext();
       if (ctx.state === 'suspended') {
@@ -147,13 +149,38 @@
         }
         window.dispatchEvent(new CustomEvent('rockstar-mic-ready'));
 
-        btn.classList.add('active');
-        btn.textContent = '🎙️ Micro ON';
+        if (btn) {
+          btn.classList.add('active');
+          btn.textContent = '🎙️ Micro ON';
+        }
+        resolve(true);
       } catch (err) {
         console.error('[SidePanel] Accès micro refusé :', err);
-        btn.textContent = '🎙️ Micro refusé';
+        if (err.name === 'NotAllowedError' && btn) {
+          // Le prompt ne peut pas s'afficher dans le panneau : proposer l'onglet
+          btn.textContent = '🎙️ Autoriser via l\'onglet ouvert';
+          chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html?mic=1') });
+        } else if (btn) {
+          btn.textContent = '🎙️ Micro refusé';
+        }
+        resolve(false);
       }
     });
+  }
+
+  function setupMicMaster() {
+    const btn = document.getElementById('sp-mic-master');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => { requestMic(btn); });
+
+    // Ouvert en onglet avec ?mic=1 : la permission peut se demander ici
+    // (le prompt fonctionne dans un onglet normal). Une fois accordée, elle
+    // vaut pour l'origine entière de l'extension, donc pour le panneau.
+    if (new URLSearchParams(location.search).get('mic') === '1') {
+      document.title = 'Vox Roddy — autorisation du micro (tu peux fermer cet onglet ensuite)';
+      requestMic(btn);
+    }
   }
 
   // --- Bridge panneau -> onglet actif ------------------------------------------
