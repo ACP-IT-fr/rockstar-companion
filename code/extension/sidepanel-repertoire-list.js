@@ -192,12 +192,64 @@
     });
   }
 
+  // --- Bouton « Drive » ----------------------------------------------------------
+  // Une seule action : fusionner le répertoire local et celui de Google Drive.
+  // Copy court, sans jargon ; les messages d'erreur restent humains.
+  function setDriveStatus(text, kind) {
+    const status = document.getElementById('sp-drive-status');
+    if (!status) return;
+    if (!text) {
+      status.hidden = true;
+      status.textContent = '';
+      return;
+    }
+    status.hidden = false;
+    status.dataset.kind = kind || '';
+    status.textContent = text;
+  }
+
+  function runDriveSync() {
+    const svc = window.driveSyncService;
+    if (!svc || !window.storageService) return;
+
+    if (!svc.isAvailable()) {
+      setDriveStatus('Google Drive n\'est pas encore configuré pour cette extension.', 'error');
+      return;
+    }
+
+    setDriveStatus('Synchronisation…', 'busy');
+    svc.sync().then((stats) => {
+      const parts = [];
+      if (stats.added) parts.push(stats.added + ' nouveau' + (stats.added > 1 ? 'x' : '') + ' morceau' + (stats.added > 1 ? 'x' : ''));
+      if (stats.updated) parts.push(stats.updated + ' mis à jour');
+      if (stats.deleted) parts.push(stats.deleted + ' supprimé' + (stats.deleted > 1 ? 's' : ''));
+      setDriveStatus(parts.length ? 'À jour ✓ — ' + parts.join(', ') : 'À jour ✓', 'ok');
+      renderList();
+      setTimeout(() => setDriveStatus(''), 4000);
+    }).catch((e) => {
+      const msg = (e && e.message) || '';
+      if (/no-client-id/.test(msg)) {
+        setDriveStatus('Google Drive n\'est pas encore configuré pour cette extension.', 'error');
+      } else if (/access_denied|authError|idpiframe|network|Failed to fetch/i.test(msg)) {
+        setDriveStatus('Connexion à Google impossible pour le moment. Réessaie plus tard.', 'error');
+      } else {
+        setDriveStatus('La synchronisation n\'a pas abouti. Réessaie dans un instant.', 'error');
+      }
+      console.error('[driveSync]', e);
+    });
+  }
+
   function setup() {
     renderList();
 
     const addBtn = document.getElementById('sp-add-song-btn');
     if (addBtn) {
       addBtn.addEventListener('click', addCurrentPage);
+    }
+
+    const driveBtn = document.getElementById('sp-drive-sync-btn');
+    if (driveBtn) {
+      driveBtn.addEventListener('click', runDriveSync);
     }
 
     // La liste suit les modifications du répertoire, où qu'elles viennent

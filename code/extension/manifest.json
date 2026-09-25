@@ -8,8 +8,15 @@
     "activeTab",
     "scripting",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "identity"
   ],
+  "oauth2": {
+    "client_id": "REMPLACER_PAR_CLIENT_ID_GOOGLE.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.appdata"
+    ]
+  },
   "optional_host_permissions": [
     "http://*/*",
     "https://*/*"

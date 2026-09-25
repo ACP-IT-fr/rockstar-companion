@@ -141,9 +141,11 @@
           <div class="widget-card-header">
             <span class="widget-card-title">Répertoire</span>
             <button class="sp-add-song" id="sp-add-song-btn" title="Ajouter cette page au répertoire"><span class="sp-add-plus">+</span> Ajouter cette page</button>
+          <button class="sp-drive-btn" id="sp-drive-sync-btn" title="Sauvegarder le répertoire sur Google Drive et récupérer les dernières modifications">Drive</button>
           </div>
           <div class="widget-card-body">
             <ul id="sp-repertoire-list" class="sp-song-list"></ul>
+            <div id="sp-drive-status" class="sp-note" hidden></div>
             <div id="sp-repertoire-empty" class="sp-note" hidden>
               Aucun morceau enregistré pour l'instant.
             </div>
@@ -155,6 +157,7 @@
 
   <!-- Même montage que le dashboard : core + widgets originaux -->
   <script src="storageService.js"></script>
+  <script src="driveSyncService.js"></script>
   <script src="core.js"></script>
   <script src="widgets/metronome.js"></script>
   <script src="widgets/tuner.js"></script>

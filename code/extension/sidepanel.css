@@ -591,6 +591,42 @@ html, body {
   cursor: default;
 }
 
+/* Bouton « Drive » (synchro du répertoire, même rangée que « + Ajouter cette page ») */
+.sp-drive-btn {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border: 1px solid var(--sp-border, rgba(128, 128, 128, 0.4));
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, opacity 0.2s, transform 0.1s;
+}
+
+.sp-drive-btn:hover {
+  border-color: var(--sp-accent-gold, #f6921e);
+}
+
+.sp-drive-btn:active {
+  transform: scale(0.97);
+}
+
+.sp-drive-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+#sp-drive-status[data-kind='error'] {
+  color: #e05252;
+}
+
+#sp-drive-status[data-kind='ok'] {
+  color: #2e9e5b;
+}
+
 /* Bandeau d'état du tiroir (onglet Répertoire sans onglet actif exploitable) */
 .drawer-tab-status {
   padding: 7px 9px;

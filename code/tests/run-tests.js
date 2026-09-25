@@ -141,6 +141,69 @@ function testStorageService() {
     });
 }
 
+// --- 3. driveSyncService — fusion locale ↔ Drive (pure) -----------------------
+function testDriveMerge() {
+  console.log('\n[driveSyncService]');
+  const g = freshGlobals();
+  load(path.join(EXT, 'driveSyncService.js'), { chrome: g.chrome, window: g.window, document: g.document });
+  const svc = g.window.driveSyncService;
+  check('driveSyncService exposé', !!svc);
+
+  const t1 = Date.parse('2026-01-01T10:00:00Z');
+  const t2 = Date.parse('2026-01-01T11:00:00Z');
+  const t3 = Date.parse('2026-01-01T12:00:00Z');
+
+  // Dernier écrivain gagne par morceau.
+  const r1 = svc.mergeRepertoire(
+    { 'u1': { url: 'u1', savedAt: t1 } },
+    { songs: { 'u1': { url: 'u1', savedAt: t2 } } },
+    {}
+  );
+  check('remote plus récent gagne', r1.songs['u1'] && r1.songs['u1'].savedAt === t2);
+
+  const r2 = svc.mergeRepertoire(
+    { 'u1': { url: 'u1', savedAt: t3 } },
+    { songs: { 'u1': { url: 'u1', savedAt: t1 } } },
+    {}
+  );
+  check('local plus récent gagne', r2.songs['u1'] && r2.songs['u1'].savedAt === t3);
+
+  // Nouveau morceau distant → ajouté.
+  const r3 = svc.mergeRepertoire({}, { songs: { 'u2': { url: 'u2', savedAt: t1 } } }, {});
+  check('ajout depuis Drive', !!r3.songs['u2']);
+
+  // Suppression locale récente → le morceau distant est écarté + tombe locale conservée.
+  const r4 = svc.mergeRepertoire(
+    {},
+    { songs: { 'u3': { url: 'u3', savedAt: t1 } } },
+    { 'u3': t2 }
+  );
+  check('suppression locale gagne', !r4.songs['u3']);
+  check('pierre tombale conservée', r4.deleted['u3'] === t2);
+
+  // Suppression distante plus récente qu'un morceau modifié localement → suppression.
+  const r5 = svc.mergeRepertoire(
+    { 'u4': { url: 'u4', savedAt: t1 } },
+    { songs: {}, deleted: { 'u4': t2 } },
+    {}
+  );
+  check('suppression distante gagne', !r5.songs['u4']);
+  check('tombe distante propagée', r5.deleted['u4'] === t2);
+
+  // Morceau réédité localement APRÈS une suppression distante → il survit.
+  const r6 = svc.mergeRepertoire(
+    { 'u5': { url: 'u5', savedAt: t3 } },
+    { songs: {}, deleted: { 'u5': t1 } },
+    {}
+  );
+  check('édition récente bat vieille suppression', !!r6.songs['u5']);
+  check('tombe obsolète purgée', !r6.deleted['u5']);
+
+  // Supprimé des deux côtés : la trace la plus récente gagne.
+  const r7 = svc.mergeRepertoire({}, { songs: {}, deleted: { 'u6': t1 } }, { 'u6': t2 });
+  check('tombe doublée → max', r7.deleted['u6'] === t2);
+}
+
 // --- 2. normalizeUrl (via le module réel) ------------------------------------
 function testNormalizeUrl() {
   console.log('\n[normalizeUrl]');
@@ -169,6 +232,7 @@ function testNormalizeUrl() {
 }
 
 testStorageService()
+  .then(testDriveMerge)
   .then(testNormalizeUrl)
   .then(() => {
     console.log(`\n${count} assertions, ${failures} échec(s)`);

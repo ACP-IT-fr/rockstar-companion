@@ -13,6 +13,7 @@
 const storageService = {
   LEGACY_KEY: 'saved_songs',
   KEY_PREFIX: 'song:',
+  TOMBSTONE_PREFIX: 'song:deleted:',
 
   _keyFor(url) {
     return this.KEY_PREFIX + url;
@@ -136,7 +137,7 @@ const storageService = {
     return this.migrate().then(() => this._get(null)).then((result) => {
       const map = {};
       Object.keys(result || {}).forEach((k) => {
-        if (k.startsWith(this.KEY_PREFIX) && result[k] && result[k].url) {
+        if (k.startsWith(this.KEY_PREFIX) && !k.startsWith(this.TOMBSTONE_PREFIX) && result[k] && result[k].url) {
           map[result[k].url] = result[k];
         }
       });
@@ -186,12 +187,15 @@ const storageService = {
 
   /**
    * Supprime un morceau à partir de son URL.
+   * Laisse une pierre tombale (url → date) pour que la synchronisation
+   * Google Drive ne ressuscite pas le morceau depuis un autre appareil.
    * @param {string} url - URL normalisée du morceau
    * @returns {Promise<void>}
    */
   deleteSong(url) {
     if (!url) return Promise.reject(new Error('Invalid URL: URL is required for deletion.'));
-    return this._remove(this._keyFor(url));
+    return this._set({ ['song:deleted:' + url]: { url: url, deletedAt: Date.now() } })
+      .then(() => this._remove(this._keyFor(url)));
   }
 };
 
