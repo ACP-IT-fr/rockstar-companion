@@ -69,7 +69,7 @@
   }
 
   // Onglets connus ; 'repertoire' hérité du bouton 📖 historique → fiche (song).
-  const KNOWN_TABS = ['studio', 'song', 'repertoire'];
+  const KNOWN_TABS = ['studio', 'song', 'repertoire', 'settings'];
 
   // --- Accordéons (plusieurs sections peuvent être ouvertes à la fois) --------
   function setupAccordion() {
