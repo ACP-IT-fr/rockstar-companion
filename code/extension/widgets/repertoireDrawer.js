@@ -476,9 +476,10 @@
           links: []
         };
         notifySongChanged();
-        window.storageService.saveSong(currentSong).then(() => {
-          populateDrawerFields();
-        });
+        // Pas d'enregistrement automatique : une page visitée ne rejoint le
+        // répertoire que si l'utilisateur la sauvegarde (bouton « + Ajouter
+        // cette page ») ou modifie un champ de la fiche (saveDrawerData).
+        populateDrawerFields();
         setDrawerTabStatus('');
       }
     });

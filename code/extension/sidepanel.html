@@ -23,6 +23,7 @@
 
     <nav class="sp-maintabs" id="sp-maintabs">
       <button class="sp-maintab active" data-maintab="studio">Studio</button>
+      <button class="sp-maintab" data-maintab="song">Chanson</button>
       <button class="sp-maintab" data-maintab="repertoire">Répertoire</button>
     </nav>
 
@@ -124,11 +125,22 @@
       <div id="sp-disabled-note" class="sp-note" hidden></div>
       </section>
 
-      <!-- Onglet Répertoire -->
+      <!-- Onglet Chanson : fiche du morceau de l'onglet actif -->
+      <section id="sp-maintab-song" class="sp-maintab-panel">
+        <div class="widget-card" id="sp-card-repertoire">
+          <div class="widget-card-header">
+            <span class="widget-card-title">📚 Fiche du morceau</span>
+          </div>
+          <div class="widget-card-body sp-repertoire-body"></div>
+        </div>
+      </section>
+
+      <!-- Onglet Répertoire : liste des morceaux enregistrés -->
       <section id="sp-maintab-repertoire" class="sp-maintab-panel">
         <div class="widget-card" id="sp-card-repertoire-list">
           <div class="widget-card-header">
-            <span class="widget-card-title">Morceaux enregistrés</span>
+            <span class="widget-card-title">Répertoire</span>
+            <button class="sp-add-song" id="sp-add-song-btn" title="Ajouter cette page au répertoire"><span class="sp-add-plus">+</span> Ajouter cette page</button>
           </div>
           <div class="widget-card-body">
             <ul id="sp-repertoire-list" class="sp-song-list"></ul>
@@ -136,12 +148,6 @@
               Aucun morceau enregistré pour l'instant.
             </div>
           </div>
-        </div>
-        <div class="widget-card" id="sp-card-repertoire">
-          <div class="widget-card-header">
-            <span class="widget-card-title">📚 Répertoire</span>
-          </div>
-          <div class="widget-card-body sp-repertoire-body"></div>
         </div>
       </section>
     </main>

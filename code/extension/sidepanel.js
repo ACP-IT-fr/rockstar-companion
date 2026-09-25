@@ -33,13 +33,14 @@
       if (!msg) return;
       if (msg.type === 'rockstar:panel-toggle') {
         try { window.close(); } catch (e) { /* ignore */ }
-      } else if (msg.type === 'rockstar:show-tab' && msg.tab === 'repertoire') {
-        showMainTab('repertoire');
+      } else if (msg.type === 'rockstar:show-tab' && msg.tab) {
+        showMainTab(msg.tab);
       }
     });
   }
 
   function showMainTab(name) {
+    if (!KNOWN_TABS.includes(name)) return;
     document.querySelectorAll('.sp-maintab').forEach((b) => {
       b.classList.toggle('active', b.dataset.maintab === name);
     });
@@ -56,7 +57,8 @@
       if (btn) showMainTab(btn.dataset.maintab);
     });
 
-    // Onglet demandé avant l'ouverture (ex. 📖 du pill → Répertoire)
+    // Onglet demandé avant l'ouverture (ex. 📖 du pill → Chanson).
+    // Valeurs inconnues ou onglets hérités ignorés : on reste sur Studio.
     chrome.storage.local.get('rockstar_panel_pending_tab', (res) => {
       const pending = res && res.rockstar_panel_pending_tab;
       if (pending) {
@@ -65,6 +67,9 @@
       }
     });
   }
+
+  // Onglets connus ; 'repertoire' hérité du bouton 📖 historique → fiche (song).
+  const KNOWN_TABS = ['studio', 'song', 'repertoire'];
 
   // --- Accordéons (plusieurs sections peuvent être ouvertes à la fois) --------
   function setupAccordion() {

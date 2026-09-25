@@ -69,8 +69,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // Panneau déjà ouvert pour cet onglet : lui envoyer l'ordre directement.
       if (panelPorts.has(tabId)) {
         const port = panelPorts.get(tabId);
-        if (msg.kind === 'open' && msg.tab === 'repertoire') {
-          port.postMessage({ type: 'rockstar:show-tab', tab: 'repertoire' });
+        if (msg.kind === 'open' && msg.tab) {
+          port.postMessage({ type: 'rockstar:show-tab', tab: msg.tab });
         } else {
           port.postMessage({ type: 'rockstar:panel-toggle' });
         }
