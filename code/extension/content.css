@@ -36,7 +36,7 @@
   gap: 5px;
   padding: 6px;
   box-sizing: border-box;
-  width: 148px;
+  width: 160px;
   background-color: #0f0f13;
   color: #f4f4f5;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -137,15 +137,31 @@
   font-weight: 600;
 }
 
+#rockstar-floating-pill .rfp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+#rockstar-floating-pill .rfp-act.rfp-scroll.active {
+  color: #f6921e;
+  background: rgba(246, 146, 30, 0.12);
+  border-radius: 6px;
+}
+
 #rockstar-floating-pill .rfp-act {
   appearance: none;
   font: inherit;
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
   color: #a1a1aa;
   cursor: pointer;
-  padding: 2px 4px;
-  transition: color 0.2s;
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s, border-color 0.2s;
 }
 
 #rockstar-floating-pill .rfp-act:hover {

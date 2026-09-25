@@ -26,6 +26,15 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
           <span id="rfp-mic-state">Off</span>
         </button>
+      </div>
+      <div class="rfp-actions">
+        <button class="rfp-act" id="rfp-panel-btn" title="Ouvrir / fermer le panneau latéral">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
+        </button>
+        <button class="rfp-act rfp-scroll" id="rfp-scroll-btn" title="Lancer / Arrêter le défilement automatique">
+          <svg id="rfp-scroll-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:block;"><polygon points="5,3 19,12 5,21"/></svg>
+          <svg id="rfp-scroll-stop" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        </button>
         <button class="rfp-act" id="rfp-repertoire-btn" title="Répertoire">📖</button>
       </div>
       <div class="rfp-chips">
@@ -152,6 +161,41 @@
         awakeProgressAnimFrame = requestAnimationFrame(updateAwakeProgress);
       } else {
         micBtn.style.setProperty('--awake-progress', '0%');
+      }
+    });
+
+    // --- Boutons panneau / défilement / répertoire -------------------------------
+    const scrollBtn = pill.querySelector('#rfp-scroll-btn');
+    const scrollPlay = scrollBtn.querySelector('#rfp-scroll-play');
+    const scrollStop = scrollBtn.querySelector('#rfp-scroll-stop');
+
+    function updateScrollVisual() {
+      const scrolling = Boolean(window.RockstarCore.isScrolling);
+      scrollPlay.style.display = scrolling ? 'none' : 'block';
+      scrollStop.style.display = scrolling ? 'block' : 'none';
+      scrollBtn.classList.toggle('active', scrolling);
+    }
+    window.addEventListener('rockstar-scroll-state-changed', updateScrollVisual);
+    // Filet de sécurité si l'événement a été manqué (ex. ouverture du pill pendant le scroll)
+    setInterval(updateScrollVisual, 1000);
+    updateScrollVisual();
+
+    scrollBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.RockstarCore.isScrolling) {
+        if (window.RockstarCore.stopScrolling) window.RockstarCore.stopScrolling();
+      } else if (window.RockstarCore.handleCommand) {
+        window.RockstarCore.handleCommand('défile');
+      }
+      setTimeout(updateScrollVisual, 100);
+    });
+
+    // Ouvre le panneau ; s'il est déjà ouvert, le panneau se ferme lui-même
+    // (message rockstar:panel-toggle -> window.close()).
+    pill.querySelector('#rfp-panel-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'rockstar:open-panel', kind: 'toggle' });
       }
     });
 

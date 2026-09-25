@@ -949,19 +949,11 @@
 
     const summaryBar = document.getElementById('ug-song-summary-bar');
     if (summaryBar) {
-      const drawerBtn = summaryBar.querySelector('#ug-drawer-btn');
-      const playBtn = summaryBar.querySelector('#summary-scroll-toggle');
-
-      if (drawerBtn && drawerBtn.nextSibling) {
-        summaryBar.insertBefore(pianoBtn, drawerBtn.nextSibling);
-      } else if (playBtn && playBtn.nextSibling) {
-        summaryBar.insertBefore(pianoBtn, playBtn.nextSibling);
-      } else {
-        summaryBar.insertBefore(pianoBtn, summaryBar.firstChild);
-      }
-    } else {
-      bar.appendChild(pianoBtn);
+      // La barre résumé ne doit plus contenir le bouton piano (demande de
+      // désencombrement autour du bouton de défilement ♬).
+      return;
     }
+    bar.appendChild(pianoBtn);
   }
   window.RockstarCore.appendPianoBtnToFloatingBar = appendPianoBtnToFloatingBar;
 

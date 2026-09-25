@@ -34,6 +34,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   switch (msg.type) {
     case 'rockstar:open-panel': {
+      // kind='toggle' : si le panneau est ouvert, il se ferme lui-même
+      // (window.close() après réception de rockstar:panel-toggle) ; sinon on
+      // l'ouvre. Le message vers le panneau échoue s'il n'y a pas de
+      // récepteur, ce qui sert de test "panneau ouvert ?".
+      if (msg.kind === 'toggle') {
+        chrome.runtime
+          .sendMessage({ type: 'rockstar:panel-toggle' })
+          .then(() => { /* panneau ouvert : il se ferme tout seul */ })
+          .catch(() => {
+            const tabId = sender.tab ? sender.tab.id : (msg.tabId ?? null);
+            if (tabId != null) {
+              chrome.sidePanel
+                .open({ tabId })
+                .catch((e) => console.error('[VoxRoddy BG] sidePanel.open:', e));
+            }
+          });
+        sendResponse({ ok: true });
+        break;
+      }
       const tabId = sender.tab ? sender.tab.id : (msg.tabId ?? null);
       if (tabId != null) {
         chrome.sidePanel

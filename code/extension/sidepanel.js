@@ -183,6 +183,16 @@
     }
   }
 
+  // Fermeture du panneau : le pill envoie rockstar:panel-toggle via le
+  // background pour un comportement "toggle" (ouvrir / fermer).
+  if (chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg && msg.type === 'rockstar:panel-toggle') {
+        try { window.close(); } catch (e) { /* ignore */ }
+      }
+    });
+  }
+
   // --- Bridge panneau -> onglet actif ------------------------------------------
   // Toutes les actions sur la page passent par le hub (background.js),
   // qui relaye vers le même router de commandes que le contrôle vocal.

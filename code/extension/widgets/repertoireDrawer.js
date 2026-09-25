@@ -881,14 +881,11 @@
   window.RockstarCore.getCurrentSong = () => currentSong;
   window.RockstarCore.toggleDrawer = toggleDrawer;
   window.RockstarCore.appendRepertoireDrawerBtn = (bar) => {
+    // Le bouton répertoire a quitté la barre résumé : il vit dans le pill
+    // (mode panneau) et reste accessible via la voix en mode barre.
     const summaryBar = document.getElementById('ug-song-summary-bar');
-    if (drawerBtn) {
-      if (summaryBar) {
-        summaryBar.insertBefore(drawerBtn, summaryBar.firstChild);
-      } else {
-        bar.appendChild(drawerBtn);
-      }
-    }
+    if (summaryBar || !bar) return;
+    bar.appendChild(drawerBtn);
   };
 
   // Listening state changes cleanup
