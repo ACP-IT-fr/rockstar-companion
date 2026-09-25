@@ -38,10 +38,22 @@
         <button class="rfp-act" id="rfp-repertoire-btn" title="Répertoire">📖</button>
       </div>
       <div class="rfp-chips">
-        <span class="rfp-chip">Vitesse: <b id="ug-voice-speed">1</b></span>
-        <span class="rfp-chip">Capo: <b id="rfp-capo">–</b></span>
-        <span class="rfp-chip">Trans: <b id="rfp-trans">–</b></span>
-        <span class="rfp-chip">Ton: <b id="rfp-key">–</b></span>
+        <span class="rfp-chip rfp-ctrl" id="rfp-speed-ctrl" title="Vitesse de défilement">
+          <i>Vit</i>
+          <button class="rfp-step" data-field="scrollSpeed" data-dir="-1">−</button><b id="ug-voice-speed">1</b><button class="rfp-step" data-field="scrollSpeed" data-dir="1">+</button>
+        </span>
+        <span class="rfp-chip rfp-ctrl" title="Capo">
+          <i>Capo</i>
+          <button class="rfp-step" data-field="capo" data-dir="-1">−</button><b id="rfp-capo">–</b><button class="rfp-step" data-field="capo" data-dir="1">+</button>
+        </span>
+        <span class="rfp-chip rfp-ctrl" title="Transposition">
+          <i>Tr</i>
+          <button class="rfp-step" data-field="transpose" data-dir="-1">−</button><b id="rfp-trans">–</b><button class="rfp-step" data-field="transpose" data-dir="1">+</button>
+        </span>
+        <span class="rfp-chip rfp-ctrl rfp-key-ctrl" id="rfp-key-ctrl" title="Tonalité (clique pour éditer)">
+          <i>Ton</i>
+          <b id="rfp-key" class="rfp-key-value">–</b>
+        </span>
       </div>
       <div class="rfp-transcript">
         <div class="rfp-line">
@@ -213,7 +225,7 @@
       }
     });
 
-    // --- Puces morceau (Capo / Trans / Ton) -------------------------------------
+    // --- Puces morceau (Vitesse / Capo / Trans / Ton) — éditables ----------------
     function updateSongChips(song) {
       const capoEl = pill.querySelector('#rfp-capo');
       const transEl = pill.querySelector('#rfp-trans');
@@ -227,6 +239,62 @@
     }
     updateSongChips(window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong());
     window.addEventListener('rockstar-song-changed', (e) => updateSongChips(e.detail && e.detail.song));
+
+    // Steppers discrets : − / + sur vitesse (±0,25), capo et transposition (±1)
+    const STEP_LIMITS = { capo: [0, 12], transpose: [-12, 12], scrollSpeed: [0.25, 5] };
+    pill.querySelectorAll('.rfp-step').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const field = btn.dataset.field;
+        const dir = parseInt(btn.dataset.dir, 10);
+        const song = (window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong()) || {};
+        const current = field === 'scrollSpeed'
+          ? (song.scrollSpeed || window.RockstarCore.scrollSpeed || 1)
+          : (song[field] || 0);
+        const step = field === 'scrollSpeed' ? 0.25 : 1;
+        const next = Math.round((current + dir * step) * 100) / 100;
+        const [min, max] = STEP_LIMITS[field];
+        if (next < min || next > max) return;
+        if (window.RockstarCore.updateCurrentSong) {
+          window.RockstarCore.updateCurrentSong({ [field]: next });
+        }
+      });
+    });
+
+    // Tonalité : clic → édition inline (Entrée ou blur pour valider)
+    const keyCtrl = pill.querySelector('#rfp-key-ctrl');
+    const keyValue = pill.querySelector('#rfp-key');
+    if (keyCtrl && keyValue) {
+      keyValue.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (keyCtrl.querySelector('input')) return;
+        const song = (window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong()) || {};
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'rfp-key-input';
+        input.value = song.key || '';
+        input.placeholder = 'Ex: Gm';
+        input.maxLength = 8;
+        keyValue.replaceWith(input);
+        input.focus();
+
+        const commit = () => {
+          const value = input.value.trim();
+          window.RockstarCore.updateCurrentSong && window.RockstarCore.updateCurrentSong({ key: value });
+          const b = document.createElement('b');
+          b.id = 'rfp-key';
+          b.className = 'rfp-key-value';
+          b.textContent = value || '–';
+          input.replaceWith(b);
+        };
+        input.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+          if (ev.key === 'Escape') { input.value = song.key || ''; input.blur(); }
+        });
+        input.addEventListener('blur', commit);
+        input.addEventListener('click', (ev) => ev.stopPropagation());
+      });
+    }
 
     // --- Transcript du flux micro -------------------------------------------------
     // Ligne 1 (🗣️) : mots entendus (interim de voiceEngine via rockstar-voice-raw)
