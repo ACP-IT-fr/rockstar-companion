@@ -12,7 +12,7 @@
     "identity"
   ],
   "oauth2": {
-    "client_id": "REMPLACER_PAR_CLIENT_ID_GOOGLE.apps.googleusercontent.com",
+    "client_id": "914231993900-dqqsidnt20jhs16bsu6p3ecqth7suq6r.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/drive.appdata"
     ]
