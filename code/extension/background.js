@@ -109,8 +109,15 @@ function handlePanelWidthFromPort(port, width) {
 }
 
 chrome.runtime.onConnect.addListener((port) => {
-  if (port.name !== 'rockstar-panel') return;
-  const tabId = port.sender && port.sender.tab ? port.sender.tab.id : null;
+  if (port.name !== 'rockstar-panel' && !port.name.startsWith('rockstar-panel:')) return;
+  // Le side panel est un document d'extension : sender.tab est null. Le
+  // panneau annonce l'onglet auquel il est attaché via le nom du port
+  // (« rockstar-panel:<tabId> ») ; fallback sur sender.tab quand il existe.
+  let tabId = port.sender && port.sender.tab ? port.sender.tab.id : null;
+  if (tabId == null && port.name.startsWith('rockstar-panel:')) {
+    const parsed = parseInt(port.name.split(':')[1], 10);
+    if (!Number.isNaN(parsed)) tabId = parsed;
+  }
   if (tabId == null) {
     port.disconnect();
     return;
@@ -151,7 +158,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (panelPorts.has(tabId)) {
         const port = panelPorts.get(tabId);
         if (msg.kind === 'open' && msg.tab) {
-          port.postMessage({ type: 'rockstar:show-tab', tab: msg.tab });
+          port.postMessage({
+            type: 'rockstar:show-tab',
+            tab: msg.tab,
+            addCurrent: msg.addCurrent === true
+          });
         } else {
           port.postMessage({ type: 'rockstar:panel-toggle' });
         }
@@ -164,6 +175,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // .open est appelé dans le même cycle que le geste utilisateur.
       if (msg.tab) {
         chrome.storage.local.set({ rockstar_panel_pending_tab: msg.tab }).catch(() => {});
+      }
+      if (msg.addCurrent === true) {
+        // « + » du pill : l'onglet Chanson devra ajouter la page à l'ouverture.
+        chrome.storage.local.set({ rockstar_panel_pending_action: 'add-current' }).catch(() => {});
       }
       chrome.sidePanel
         .open({ tabId })
@@ -219,9 +234,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 // Fermeture du panneau pendant la partie « onglets » de la visite : marquer
-// le tour comme terminé (choix produit : pas de reprise inattendue).
+// le tour comme terminé (choix produit : pas de reprise inattendue) — sauf
+// si c'est la fermeture volontaire d'un « Revoir la visite ».
 function completeOnboardingOnPanelClose() {
-  chrome.storage.local.get('rockstar_onboarding_panel_tour_active', (res) => {
+  chrome.storage.local.get(['rockstar_onboarding_panel_tour_active', 'rockstar_onboarding_replaying'], (res) => {
+    if (res && res.rockstar_onboarding_replaying) {
+      // Replay demandé : le tour de page va reprendre ; ne pas toucher.
+      chrome.storage.local.remove('rockstar_onboarding_replaying').catch(() => {});
+      return;
+    }
     if (!res || !res.rockstar_onboarding_panel_tour_active) return;
     chrome.storage.local.set({
       rockstar_onboarding_completed: true,

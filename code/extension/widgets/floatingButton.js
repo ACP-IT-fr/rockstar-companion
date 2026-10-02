@@ -32,7 +32,7 @@
           <svg id="rfp-scroll-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:block;"><polygon points="5,3 19,12 5,21"/></svg>
           <svg id="rfp-scroll-stop" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
         </button>
-        <button class="rfp-act" id="rfp-repertoire-btn" title="Répertoire : ouvrir la bibliothèque de chansons">📖</button>
+        <button class="rfp-act" id="rfp-repertoire-btn" title="Chanson : ouvrir la fiche dans le volet latéral">🎵</button>
         <button class="rfp-act" id="rfp-panel-btn" title="Volet latéral : afficher / masquer les paroles et réglages">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
         </button>
@@ -256,12 +256,59 @@
       }
     });
 
-    // --- Bouton répertoire ------------------------------------------------------
-    // Le tiroir répertoire vit maintenant dans le panneau (onglet Répertoire).
-    pill.querySelector('#rfp-repertoire-btn').addEventListener('click', (e) => {
+    // --- Bouton répertoire / ajout de chanson -----------------------------------
+    // État dynamique selon la page courante :
+    //  - enregistrée → 🎵 ouvre la fiche dans le volet latéral ;
+    //  - non enregistrée → + ajoute la page au répertoire puis ouvre la fiche.
+    const repertoireBtn = pill.querySelector('#rfp-repertoire-btn');
+    let repertoireMode = 'add'; // 'open' | 'add'
+
+    function currentPageUrl() {
+      const core = window.RockstarCore;
+      const raw = window.location.href;
+      if (!core || typeof core.normalizeUrl !== 'function') return null;
+      return core.normalizeUrl(raw);
+    }
+
+    function refreshRepertoireBtn() {
+      if (!window.storageService) return;
+      const url = currentPageUrl();
+      if (!url) {
+        repertoireMode = 'add';
+        repertoireBtn.textContent = '+';
+        repertoireBtn.classList.add('rfp-add-mode');
+        repertoireBtn.title = 'Répertoire : ajouter cette page, puis ouvrir sa fiche';
+        return;
+      }
+      window.storageService.getSong(url).then((song) => {
+        repertoireMode = song ? 'open' : 'add';
+        repertoireBtn.textContent = song ? '🎵' : '+';
+        repertoireBtn.classList.toggle('rfp-add-mode', !song);
+        repertoireBtn.title = song
+          ? 'Chanson : ouvrir la fiche dans le volet latéral'
+          : 'Répertoire : ajouter cette page, puis ouvrir sa fiche';
+      }).catch(() => {});
+    }
+    refreshRepertoireBtn();
+    // Toute écriture song: (ajout, suppression, synchro Drive) met à jour le bouton.
+    if (chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && Object.keys(changes).some((k) => k.startsWith('song:'))) {
+          refreshRepertoireBtn();
+        }
+      });
+    }
+
+    // Le tiroir répertoire vit maintenant dans le panneau (onglet Chanson).
+    repertoireBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ type: 'rockstar:open-panel', kind: 'open', tab: 'song' });
+        chrome.runtime.sendMessage({
+          type: 'rockstar:open-panel',
+          kind: 'open',
+          tab: 'song',
+          addCurrent: repertoireMode === 'add'
+        });
       }
     });
 

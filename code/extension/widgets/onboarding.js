@@ -44,7 +44,7 @@
       title: '🎤 La voix, d’abord',
       selector: '#rfp-mic-btn',
       placement: 'right',
-      desc: () => `Cliquez sur le micro pour réveiller l’assistant, puis dites <b>« ${wakeWord()} »</b> suivi d’une commande — par exemple <b>« ${wakeWord()}, c’est parti »</b> pour faire défiler la tablature.<br><br><i>💡 Une fois réveillé, inutile de répéter « ${wakeWord()} » : enchaînez vos commandes.</i>`
+      desc: () => `Cliquez sur le micro pour réveiller l’assistant, puis dites <b>« ${wakeWord()} »</b> suivi d’une commande — par exemple <b>« ${wakeWord()}, c’est parti »</b> pour faire défiler la tablature, ou <b>« ${wakeWord()}, pause »</b> pour l’arrêter.<br><br><i>💡 Une fois réveillé, inutile de répéter « ${wakeWord()} » : enchaînez vos commandes.</i>`
     },
     {
       title: '🖱️ Contrôles du morceau',
@@ -382,15 +382,20 @@
   window.RockstarCore.registerInit(() => {
     if (inPanel) {
       // Bouton « Revoir la visite » : relance la partie page sur l'onglet
-      // actif (le panneau ne partage pas son DOM avec la page).
+      // actif et FERME le panneau (la visite reprend de zéro à l'étape 1).
       const replayBtn = document.getElementById('sp-replay-tour');
       if (replayBtn) {
         replayBtn.addEventListener('click', () => {
           chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
             const tab = tabs && tabs[0];
             if (!tab) return;
+            // Drapeau posé AVANT la fermeture : le background, en voyant le
+            // port se déconnecter, ne doit pas marquer le tour « terminé ».
+            window.RockstarCore.safeStorageSet({ rockstar_onboarding_replaying: true });
             chrome.runtime.sendMessage({ type: 'rockstar:replay-onboarding', tabId: tab.id }, () => {
               void chrome.runtime.lastError;
+              // Le message est parti : on peut refermer le panneau.
+              try { window.close(); } catch (e) { /* ignore */ }
             });
           });
         });
@@ -429,7 +434,12 @@
   if (!inPanel && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg && msg.type === 'rockstar:replay-onboarding') {
-        window.RockstarCore.safeStorageSet({ [DONE_KEY]: false, [STAGE_KEY]: 'page', [PANEL_TOUR_ACTIVE_KEY]: false });
+        window.RockstarCore.safeStorageSet({
+          [DONE_KEY]: false,
+          [STAGE_KEY]: 'page',
+          [PANEL_TOUR_ACTIVE_KEY]: false,
+          rockstar_onboarding_replaying: false
+        });
         startOnboarding();
       }
     });

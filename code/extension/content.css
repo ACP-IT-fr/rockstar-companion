@@ -3289,3 +3289,12 @@ body.rockstar-bar-top #ug-song-summary-bar .summary-dropdown {
 
 
 
+
+/* Bouton « + » du pill (page non enregistrée) : légèrement plus grand que
+   les icônes SVG voisines pour rester lisible. */
+#rockstar-floating-pill .rfp-act.rfp-add-mode {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--sp-accent-gold, #f6921e);
+}

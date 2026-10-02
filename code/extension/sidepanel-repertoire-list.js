@@ -305,6 +305,14 @@
       addBtn.addEventListener('click', addCurrentPage);
     }
 
+    // « + » du pill (onglet fermé → action en attente, ou volet déjà ouvert) :
+    // même chemin que « Ajouter cette page » du bouton ci-dessus.
+    if (window.__rockstarPendingAddCurrent) {
+      window.__rockstarPendingAddCurrent = false;
+      addCurrentPage();
+    }
+    window.addEventListener('rockstar-panel-add-current', addCurrentPage);
+
     const driveBtn = document.getElementById('sp-drive-sync-btn');
     if (driveBtn) {
       driveBtn.addEventListener('click', runDriveSync);
