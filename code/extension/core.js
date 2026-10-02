@@ -39,23 +39,6 @@
       },
       searchUrl: (query) => `https://www.ultimate-guitar.com/search.php?title=${encodeURIComponent(query)}&page=1&type[0]=300&rating[0]=4&rating[1]=5&order=myweight`
     },
-    'google.com': {
-      isSearchPage: () => window.location.pathname.startsWith('/search'),
-      getLinks: () => {
-        const results = [];
-        document.querySelectorAll('h3').forEach(h3 => {
-          let a = h3.closest('a');
-          if (!a) {
-            a = h3.querySelector('a');
-          }
-          if (a && a.href && !a.href.includes('google.com/search') && !a.classList.contains('fl')) {
-            results.push(a);
-          }
-        });
-        return results;
-      },
-      searchUrl: (query) => `https://www.google.com/search?q=${encodeURIComponent(query)}`
-    },
     'youtube.com': {
       isSearchPage: () => window.location.pathname.startsWith('/results'),
       getLinks: () => {

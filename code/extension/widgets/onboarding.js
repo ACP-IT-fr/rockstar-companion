@@ -411,9 +411,8 @@
             const allowedDomains = syncRes.allowedDomains || {};
             const isUG = currentDomain.endsWith('ultimate-guitar.com');
             const isYT = currentDomain.endsWith('youtube.com');
-            const isGoogle = currentDomain.endsWith('google.com');
             const isDemoPage = window.location.pathname.includes('demo.html');
-            if (isUG || isYT || isGoogle || isDemoPage || allowedDomains[currentDomain] === true) {
+            if (isUG || isYT || isDemoPage || allowedDomains[currentDomain] === true) {
               startOnboarding();
             }
           });
