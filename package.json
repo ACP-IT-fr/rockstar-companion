@@ -1,6 +1,6 @@
 {
   "name": "vox-roddy",
-  "version": "1.0.0",
+  "version": "1.2",
   "description": "Vox Roddy voice assistant extension packager",
   "scripts": {
     "zip": "node scripts/package.js",

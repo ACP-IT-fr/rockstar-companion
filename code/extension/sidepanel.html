@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vox Roddy — Panneau</title>
+  <title>__MSG_extensionName__ — Panneau</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 <body>
   <div id="sidepanel-app">
     <header class="sp-header">
-      <span class="sp-title">Vox Roddy</span>
+      <span class="sp-title">__MSG_panelTitle__</span>
       <div class="sp-header-actions">
         <button class="sp-mic-btn" id="sp-mic-master" title="Autoriser le micro pour l'accordeur, le détecteur d'accords et le vocal pitch">
           🎙️ Micro
@@ -30,6 +30,40 @@
 
     <main class="sp-content">
       <section id="sp-maintab-studio" class="sp-maintab-panel active">
+      <!-- Lecture : lignes directes dans le layout, pas de carte -->
+      <div class="sp-playback-direct">
+        <span class="sp-playback-hint">Cliquez, ou dites le nom du bouton à haute voix, pour l'activer.</span>
+        <div id="sp-playback-video-group" class="sp-playback-group" hidden>
+          <span class="sp-playback-label">Contrôle vidéo YouTube</span>
+          <div id="sp-playback-video" class="sp-transport-row">
+            <button class="sp-cmd" data-cmd="recule 30 secondes" title="recule 30 secondes">⏪ 30 s</button>
+            <button class="sp-cmd" data-cmd="recule 10 secondes" title="recule 10 secondes">⏪ 10 s</button>
+            <button class="sp-cmd sp-cmd-primary" data-cmd="play" title="lecture">▶</button>
+            <button class="sp-cmd sp-cmd-primary" data-cmd="pause" title="pause">⏸</button>
+            <button class="sp-cmd" data-cmd="avance 10 secondes" title="avance 10 secondes">⏩ 10 s</button>
+            <button class="sp-cmd" data-cmd="avance 30 secondes" title="avance 30 secondes">⏩ 30 s</button>
+            <button class="sp-cmd" data-cmd="recommence" title="recommence">⏮</button>
+          </div>
+        </div>
+        <div id="sp-playback-scroll-group" class="sp-playback-group" hidden>
+          <span class="sp-playback-label">Défilement de la page</span>
+          <div id="sp-playback-scroll" class="sp-transport-row">
+            <button class="sp-cmd sp-cmd-primary" data-cmd="défile">défile</button>
+            <button class="sp-cmd" data-cmd="pause">pause</button>
+            <button class="sp-cmd" data-cmd="descends un peu">descends un peu</button>
+            <button class="sp-cmd" data-cmd="descends beaucoup">descends beaucoup</button>
+            <button class="sp-cmd" data-cmd="monte un peu">monte un peu</button>
+            <button class="sp-cmd" data-cmd="monte beaucoup">monte beaucoup</button>
+            <button class="sp-cmd" data-cmd="plus vite">plus vite</button>
+            <button class="sp-cmd" data-cmd="moins vite">moins vite</button>
+            <button class="sp-cmd" data-cmd="tout en haut">tout en haut</button>
+          </div>
+        </div>
+        <div id="sp-playback-unknown" class="sp-note" hidden>
+          Ouvre YouTube ou ultimate-guitar à côté pour piloter la lecture.
+        </div>
+      </div>
+
       <!-- Studio -->
       <section class="sp-acc open" id="sp-acc-studio">
         <button class="sp-acc-head" type="button">
@@ -85,44 +119,6 @@
         </div>
       </section>
 
-      <!-- Lecture -->
-      <section class="sp-acc open" id="sp-acc-playback">
-        <button class="sp-acc-head" type="button">
-          <span class="sp-acc-title">Lecture</span>
-          <span class="sp-acc-chevron">▾</span>
-        </button>
-        <div class="sp-acc-body">
-          <div class="widget-card">
-            <div class="widget-card-header">
-              <span class="widget-card-title" id="sp-playback-title">Lecture</span>
-              <span class="widget-card-badge" id="sp-playback-badge">—</span>
-            </div>
-            <div class="widget-card-body sp-playback-body">
-              <div id="sp-playback-video" class="sp-transport-row" hidden>
-                <button class="sp-cmd" data-cmd="recule 30 secondes">⏪30</button>
-                <button class="sp-cmd" data-cmd="recule 10 secondes">−10</button>
-                <button class="sp-cmd sp-cmd-primary" data-cmd="play">▶</button>
-                <button class="sp-cmd sp-cmd-primary" data-cmd="pause">⏸</button>
-                <button class="sp-cmd" data-cmd="avance 10 secondes">+10</button>
-                <button class="sp-cmd" data-cmd="recommence">⏮</button>
-              </div>
-              <span class="sp-playback-sep" id="sp-playback-sep" hidden></span>
-              <div id="sp-playback-scroll" class="sp-transport-row">
-                <button class="sp-cmd sp-cmd-primary" data-cmd="défile">▶ Défiler</button>
-                <button class="sp-cmd" data-cmd="arrête le scroll">⏸</button>
-                <button class="sp-cmd" data-cmd="moins vite">« vite</button>
-                <button class="sp-cmd" data-cmd="plus vite">» vite</button>
-                <button class="sp-cmd" data-cmd="tout en haut">⤒</button>
-              </div>
-              <div id="sp-playback-unknown" class="sp-note" hidden>
-                Ouvre YouTube ou ultimate-guitar à côté pour piloter la lecture.
-              </div>
-            </div>
-          </div>
-          <div id="sp-cmd-status" class="sp-note" hidden></div>
-        </div>
-      </section>
-
       <div id="sp-disabled-note" class="sp-note" hidden></div>
       </section>
 
@@ -142,11 +138,10 @@
           <div class="widget-card-header">
             <span class="widget-card-title">Répertoire</span>
             <button class="sp-add-song" id="sp-add-song-btn" title="Ajouter cette page au répertoire"><span class="sp-add-plus">+</span> Ajouter cette page</button>
-          <button class="sp-drive-btn" id="sp-drive-sync-btn" title="Sauvegarder le répertoire sur Google Drive et récupérer les dernières modifications">Drive</button>
+          <button class="sp-drive-btn" id="sp-drive-sync-btn" title="Synchroniser maintenant avec Google Drive (synchro automatique à chaque modification)"><span id="sp-drive-indicator" class="sp-drive-indicator" data-state="idle">☁</span></button>
           </div>
           <div class="widget-card-body">
             <ul id="sp-repertoire-list" class="sp-song-list"></ul>
-            <div id="sp-drive-status" class="sp-note" hidden></div>
             <div id="sp-repertoire-empty" class="sp-note" hidden>
               Aucun morceau enregistré pour l'instant.
             </div>
@@ -234,6 +229,10 @@
                   <input type="checkbox" id="mute-all-sites-cb">
                   <label for="mute-all-sites-cb" style="line-height: 1.3;">Rendre l'extension silencieuse sur les autres sites</label>
                 </div>
+
+                <div class="setting-item" style="margin-top: 12px;">
+                  <button id="sp-replay-tour" class="sp-add-song" title="Relancer la visite guidée sur la page active">Revoir la visite</button>
+                </div>
               </div>
             </div>
 
@@ -255,6 +254,7 @@
   <script src="widgets/repertoireDrawer.js"></script>
   <script src="sidepanel-repertoire-list.js"></script>
   <script src="settingsPanel.js"></script>
+  <script src="widgets/onboarding.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

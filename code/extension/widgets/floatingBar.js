@@ -212,7 +212,7 @@
     '#ug-commands-panel', '#ug-voice-activation-banner',
     '#ug-chord', '#ug-tuner', '#ug-metronome', '#ug-metronome-screen-overlay',
     '#ug-singing-tracker', '#rockstar-piano-widget', '#rockstar-drawer',
-    '.rockstar-onboarding-card', '.rockstar-spotlight'
+    '.rockstar-onboarding-card', '.rockstar-onboarding-overlay'
   ].join(',');
   const externalBarCandidates = new Set();
   let externalBarOffset = 0;

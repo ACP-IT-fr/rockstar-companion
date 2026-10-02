@@ -239,15 +239,6 @@
     return sendTabMessage({ kind: 'command', text });
   }
 
-  function showCmdStatus(text) {
-    const status = document.getElementById('sp-cmd-status');
-    if (!status) return;
-    status.hidden = false;
-    status.textContent = text;
-    clearTimeout(showCmdStatus._t);
-    showCmdStatus._t = setTimeout(() => { status.hidden = true; }, 2500);
-  }
-
   // --- Lecture : groupe affiché selon le site de l'onglet actif ----------------
   // Onglet YouTube → contrôles vidéo ; autre page avec l'extension → contrôles
   // de défilement ; page sans extension → note explicative.
@@ -268,25 +259,19 @@
   }
 
   function refreshPlaybackMode() {
-    const videoRow = document.getElementById('sp-playback-video');
-    const scrollRow = document.getElementById('sp-playback-scroll');
+    const videoGroup = document.getElementById('sp-playback-video-group');
+    const scrollGroup = document.getElementById('sp-playback-scroll-group');
     const unknown = document.getElementById('sp-playback-unknown');
-    const badge = document.getElementById('sp-playback-badge');
-    const title = document.getElementById('sp-playback-title');
-    if (!videoRow || !scrollRow) return;
+    if (!videoGroup || !scrollGroup) return;
 
     sendTabMessage({ kind: 'getState' }).then((res) => {
       const domain = res && res.ok && res.state ? String(res.state.domain || '') : null;
       const isYouTube = Boolean(domain && domain.includes('youtube.com'));
       const hasExtension = Boolean(domain);
-      const sep = document.getElementById('sp-playback-sep');
-      videoRow.hidden = !isYouTube;
-      if (sep) sep.hidden = !isYouTube;
-      // Le défilement marche sur toute page avec l'extension (YouTube inclus)
-      scrollRow.hidden = !hasExtension;
+      // YouTube → contrôles vidéo ; autre page avec l'extension → défilement
+      videoGroup.hidden = !isYouTube;
+      scrollGroup.hidden = isYouTube || !hasExtension;
       if (unknown) unknown.hidden = hasExtension;
-      if (badge) badge.textContent = hasExtension ? (isYouTube ? 'YouTube' : 'Page') : 'aucune page';
-      if (title) title.textContent = isYouTube ? '▶️ Vidéo + défilement' : '📜 Défilement de la page';
     });
   }
 
@@ -305,15 +290,7 @@
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
-          const res = await sendTabCommand(btn.dataset.cmd);
-          if (res && res.ok) {
-            showCmdStatus('✓ Commande envoyée à la page');
-          } else {
-            const why = res && res.error === 'no-content-script'
-              ? "La page active ne contient pas l'extension (essaie sur YouTube ou ultimate-guitar)"
-              : 'Commande non reconnue sur cette page';
-            showCmdStatus(why);
-          }
+          await sendTabCommand(btn.dataset.cmd);
         } finally {
           btn.disabled = false;
         }
@@ -351,6 +328,15 @@
   }
 
   // --- Bootstrap ----------------------------------------------------------------
+  function applyPanelTitle() {
+    // Le placeholder __MSG_panelTitle__ peut rester brut si Chrome n'a pas
+    // re-résolu les locales : on force via chrome.i18n côté JS.
+    const titleEl = document.querySelector('.sp-title');
+    const msg = chrome?.i18n?.getMessage?.('panelTitle');
+    if (titleEl && msg) titleEl.textContent = msg;
+    if (msg) document.title = `${msg} — Panneau`;
+  }
+
   function boot() {
     if (!window.RockstarCore || typeof window.RockstarCore.initialize !== 'function') {
       console.error('[SidePanel] RockstarCore indisponible');
@@ -359,6 +345,7 @@
 
     window.RockstarCore.initialize();
 
+    applyPanelTitle();
     mountWhenReady();
     setupPanelPort();
     setupMainTabs();

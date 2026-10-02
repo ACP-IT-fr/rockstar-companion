@@ -2978,21 +2978,32 @@ body.ug-widgets-hidden #ug-metronome {
 /* ==========================================================================
    ROCKSTAR ONBOARDING TOUR STYLES
    ========================================================================== */
-.rockstar-spotlight {
+/* Overlay de la visite guidée : SVG unique plein viewport. Le dim couvre
+   tout, le masque interne découpe un trou par zone cible (opacité réglée
+   inline dans onboarding.js — DIM_PAGE / DIM_PANEL). */
+.rockstar-onboarding-overlay {
   position: fixed;
+  inset: 0;
   z-index: 9999999;
-  border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(9, 9, 11, 0.85);
-  border: 2px solid #f6921e;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
-  box-sizing: border-box;
+}
+
+/* Flash de confirmation vocale sur le contrôle du pill correspondant. */
+.rfp-flash {
+  animation: rfp-flash-pulse 1.2s ease-out;
+}
+@keyframes rfp-flash-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(246, 146, 30, 0.9); }
+  70% { box-shadow: 0 0 0 10px rgba(246, 146, 30, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(246, 146, 30, 0); }
 }
 
 .rockstar-onboarding-card {
   position: fixed;
   z-index: 10000000;
   width: 320px;
+  /* Côté side panel (~300-360px de large) : la carte ne doit pas déborder. */
+  max-width: calc(100vw - 16px);
   background: rgba(15, 17, 23, 0.9);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);

@@ -3,6 +3,10 @@
     "message": "[DEV] Guitar Tuner, Metronome & Voice Tab Scroller",
     "description": "The name of the extension."
   },
+  "panelTitle": {
+    "message": "Guitar Tuner & Métronome",
+    "description": "Short display name used in panel headers."
+  },
   "extensionDescription": {
     "message": "Accordeur, métronome, tablatures et accords à la voix : pilotez YouTube et Ultimate Guitar, mains libres.",
     "description": "The short description of the extension."

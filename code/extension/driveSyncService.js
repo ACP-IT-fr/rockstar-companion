@@ -50,11 +50,11 @@ const driveSyncService = {
   // sur « Synchronisation… » pour toujours.
   AUTH_TIMEOUT_MS: 90000,
 
-  getToken() {
-    // 1) Essai silencieux : utilise le jeton en cache s'il est encore valable,
-    //    sans ouvrir de popup. Un cache pourri fait souvent pendre le flux
-    //    interactif ; l'échec silencieux, lui, remonte un vrai message.
-    return new Promise((resolve, reject) => {
+  // Jeton en cache uniquement, sans jamais ouvrir de fenêtre. Utilisé par
+  // l'auto-synchro : si l'utilisateur n'a jamais autorisé l'accès, on ne
+  // déclenche pas de popup surprise.
+  getTokenCached() {
+    return new Promise((resolve) => {
       chrome.identity.getAuthToken({ interactive: false, scopes: [this.SCOPE] }, (token) => {
         if (!chrome.runtime.lastError && token) {
           console.log('[driveSyncService] jeton obtenu (cache)');
@@ -66,7 +66,27 @@ const driveSyncService = {
         }
         resolve(null);
       });
-    }).then((cached) => {
+    });
+  },
+
+  // Lecture locale indépendante du contexte (le service worker n'a pas
+  // storageService) : scan direct de chrome.storage.local.
+  _getAllSongs() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(null, (result) => {
+        const songs = {};
+        Object.keys(result || {}).forEach((k) => {
+          if (k.startsWith('song:') && !k.startsWith(this.TOMBSTONE_PREFIX) && result[k] && result[k].url) {
+            songs[result[k].url] = result[k];
+          }
+        });
+        resolve(songs);
+      });
+    });
+  },
+
+  getToken() {
+    return this.getTokenCached().then((cached) => {
       if (cached) return cached;
 
       // 2) Flux interactif, avec garde-fou : sans lui, un échec silencieux de
@@ -288,14 +308,45 @@ const driveSyncService = {
 
   // --- Synchro complète -------------------------------------------------------
 
+  // Comparaisons sans dépendre de l'ordre d'insertion des clés.
+  _sortedJson(obj) {
+    const out = {};
+    Object.keys(obj || {}).sort().forEach((k) => { out[k] = obj[k]; });
+    return JSON.stringify(out);
+  },
+
+  _sameDoc(remoteDoc, merged) {
+    if (!remoteDoc) return false; // pas encore de fichier Drive → il faut l'écrire
+    return this._sortedJson(remoteDoc.songs) === this._sortedJson(merged.songs) &&
+      this._sortedJson(remoteDoc.deleted) === this._sortedJson(merged.deleted);
+  },
+
+  _sameLocal(localSongs, localTombstones, merged) {
+    return this._sortedJson(localSongs) === this._sortedJson(merged.songs) &&
+      this._sortedJson(localTombstones) === this._sortedJson(merged.deleted);
+  },
+
   /**
    * Signature Google (si besoin) puis fusion locale ↔ Drive, dans les deux sens.
+   * Sans argument (ou interactive=true) : ouvre la fenêtre Google au besoin —
+   * usage du bouton « Drive ». Avec interactive=false (auto-synchro) : jeton en
+   * cache uniquement, jamais de popup.
    * @returns {Promise<{added: number, updated: number, deleted: number}>}
    */
-  sync() {
+  // Indicateur de synchro : l'état est écrit dans le storage pour que le
+  // panneau le reflète, quelle que soit la synchro (manuelle ou auto).
+  _setStatus(state, message) {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+    chrome.storage.local.set({ 'drive:status': { state: state, at: Date.now(), message: message || '' } }, () => {
+      void chrome.runtime.lastError;
+    });
+  },
+
+  sync(interactive) {
     if (this._syncing) {
       return Promise.reject(new Error('already-running'));
     }
+    interactive = interactive !== false; // par défaut : synchro manuelle (popup ok)
     if (!this._hasChromeIdentity()) {
       return Promise.reject(new Error('no-identity'));
     }
@@ -303,11 +354,18 @@ const driveSyncService = {
       return Promise.reject(new Error('no-client-id'));
     }
     this._syncing = true;
-    return this.getToken()
+    this._setStatus('busy');
+    const tokenPromise = interactive
+      ? this.getToken()
+      : this.getTokenCached().then((t) => {
+          if (!t) throw new Error('no-token');
+          return t;
+        });
+    return tokenPromise
       .then((token) => {
         console.log('[driveSyncService] synchro : lecture locale + Drive…');
         return Promise.all([
-          window.storageService ? window.storageService.getAllSongs() : Promise.resolve({}),
+          window.storageService ? window.storageService.getAllSongs() : this._getAllSongs(),
           this._getTombstones(),
           this.findFileId(token).then((fileId) => (fileId ? this.readFile(token) : Promise.resolve(null)))
         ]).then(([localSongs, localTombstones, remoteDoc]) => {
@@ -327,10 +385,26 @@ const driveSyncService = {
           });
 
           const doc = { format: 1, savedAt: Date.now(), songs: merged.songs, deleted: merged.deleted };
-          return this.writeFile(doc, token)
-            .then(() => this.applyMerged(merged))
-            .then(() => ({ added: added, updated: updated, deleted: deleted }));
+          // Éviter les écritures inutiles (et la boucle auto-synchro → écriture →
+          // auto-synchro) : si la fusion ne change ni Drive ni le local, ne rien
+          // écrire du tout.
+          const stable =
+            this._sameDoc(remoteDoc ? { songs: remoteDoc.songs, deleted: remoteDoc.deleted } : null, merged) &&
+            this._sameLocal(localSongs, localTombstones, merged);
+          const write = stable ? Promise.resolve() : this.writeFile(doc, token);
+          const apply = stable ? Promise.resolve() : this.applyMerged(merged);
+          return write
+            .then(() => apply)
+            .then(() => {
+              if (stable) console.log('[driveSyncService] rien à synchroniser');
+              this._setStatus('ok');
+              return { added: added, updated: updated, deleted: deleted };
+            });
         });
+      })
+      .catch((e) => {
+        this._setStatus('error', e && e.message);
+        throw e;
       })
       .finally(() => {
         this._syncing = false;
@@ -338,5 +412,10 @@ const driveSyncService = {
   }
 };
 
-// Rendre accessible globalement dans l'extension
-window.driveSyncService = driveSyncService;
+// Rendre accessible globalement : window dans les pages d'extension et les
+// tests, self dans le service worker (où window n'existe pas).
+if (typeof window !== 'undefined') {
+  window.driveSyncService = driveSyncService;
+} else if (typeof self !== 'undefined') {
+  self.driveSyncService = driveSyncService;
+}

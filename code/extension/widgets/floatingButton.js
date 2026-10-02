@@ -148,6 +148,8 @@
       const top = Math.max(0, Math.min(window.innerHeight - pill.offsetHeight, e.clientY - drag.dy));
       pill.style.left = left + 'px';
       pill.style.top = top + 'px';
+      // La visite guidée (spotlight/carte sur le pill) suit le déplacement.
+      window.dispatchEvent(new Event('rockstar-pill-moved'));
     });
     handle.addEventListener('pointerup', () => {
       if (!drag) return;
@@ -367,7 +369,30 @@
       window.RockstarCore.showFeedback._t = setTimeout(() => {
         cmdEl.classList.remove('error');
       }, 4000);
+
+      // Confirmation visuelle : le contrôle du pill visé par la commande
+      // vocale s'illumine brièvement (retour « c'est bien lui qui a bougé »).
+      if (detail.success) flashControlForCommand(detail.action || '');
     });
+
+    // Action vocale → contrôle du pill correspondant.
+    function flashControlForCommand(action) {
+      const a = action.toLowerCase();
+      const chips = pill.querySelectorAll('.rfp-chip'); // [Vit, Capo, Tr, Ton]
+      let el = null;
+      if (/défile|c'est parti|scroll|pause/.test(a)) el = pill.querySelector('#rfp-scroll-btn');
+      else if (/vitesse|vite|speed/.test(a)) el = pill.querySelector('#rfp-speed-ctrl');
+      else if (/capo/.test(a)) el = chips[1];
+      else if (/transpos/.test(a)) el = chips[2];
+      else if (/tonalité|\bton\b|\bkey\b/.test(a)) el = pill.querySelector('#rfp-key-ctrl');
+      else if (/réveille|micro|wake/.test(a)) el = pill.querySelector('#rfp-mic-btn');
+      if (!el) return;
+      el.classList.remove('rfp-flash');
+      // Force le redémarrage de l'animation sur les commandes rapprochées.
+      void el.offsetWidth;
+      el.classList.add('rfp-flash');
+      setTimeout(() => el.classList.remove('rfp-flash'), 1300);
+    }
 
     // Le feedback des commandes arrive ici (au lieu des toasts de la barre)
     window.RockstarCore.showFeedback = (text, isSuccess) => {

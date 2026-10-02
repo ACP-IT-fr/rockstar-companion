@@ -22,6 +22,47 @@ function enableOpenOnActionClick() {
 chrome.runtime.onInstalled.addListener(enableOpenOnActionClick);
 enableOpenOnActionClick();
 
+// --- Synchro Drive automatique ----------------------------------------------
+// Le répertoire change (ajout, édition, suppression n'importe où dans
+// l'extension) → synchro différée avec Drive, en silence : jamais de popup
+// (si l'utilisateur n'a pas encore autorisé l'accès, on attend sa première
+// synchro manuelle via le bouton « Drive »).
+importScripts('driveSyncService.js');
+const AUTO_SYNC_DELAY_MS = 15000; // laisse les écritures en rafale se terminer
+let autoSyncTimer = null;
+
+function scheduleAutoSync() {
+  if (autoSyncTimer) clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(runAutoSync, AUTO_SYNC_DELAY_MS);
+}
+
+function runAutoSync() {
+  autoSyncTimer = null;
+  const svc = globalThis.driveSyncService;
+  if (!svc || !svc.isAvailable()) return;
+  // interactive:false → jeton en cache uniquement, jamais de popup.
+  svc.sync(false).then((stats) => {
+    console.log('[driveSync auto] ok', stats);
+  }).catch((e) => {
+    const msg = (e && e.message) || '';
+    if (/no-token|already-running/.test(msg)) return; // pas encore autorisé / déjà en cours : silence
+    console.error('[driveSync auto] échec :', msg);
+  });
+}
+
+// Toute écriture dans le stockage local touchant le répertoire déclenche
+// (avec temporisation) une synchro. Les écritures de la synchro elle-même
+// tombent pendant svc._syncing → filtrées ci-dessous.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  const svc = globalThis.driveSyncService;
+  if (svc && svc._syncing) return; // nos propres écritures de fusion
+  if (Object.keys(changes).some((k) => k.startsWith('song:'))) scheduleAutoSync();
+});
+
+// Au démarrage de Chrome : rattraper ce qui a pu changer ailleurs.
+chrome.runtime.onStartup.addListener(scheduleAutoSync);
+
 /**
  * Hub de messages. Conventions :
  *  - { type: 'rockstar:open-panel' }        → ouvrir le panneau (depuis un bouton de page)
@@ -86,6 +127,7 @@ chrome.runtime.onConnect.addListener((port) => {
     if (portTabIds.get(port) === tabId) {
       // Panneau fermé (ou rechargé) : la zone masquée disparaît.
       portTabIds.delete(port);
+      completeOnboardingOnPanelClose();
       chrome.tabs.get(tabId, (tab) => {
         if (chrome.runtime.lastError || !tab) return;
         broadcastPanelWidth(tab.windowId, 0);
@@ -159,5 +201,32 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true });
       break;
     }
+
+    case 'rockstar:replay-onboarding': {
+      // « Revoir la visite » (panneau) → relance la partie page du tour sur
+      // l'onglet indiqué. Content script absent (page interne) : ignorer.
+      if (typeof msg.tabId !== 'number') {
+        sendResponse({ ok: false, error: 'no-tab' });
+        break;
+      }
+      chrome.tabs.sendMessage(msg.tabId, { type: 'rockstar:replay-onboarding' }, () => {
+        void chrome.runtime.lastError;
+        sendResponse({ ok: true });
+      });
+      return true;
+    }
   }
 });
+
+// Fermeture du panneau pendant la partie « onglets » de la visite : marquer
+// le tour comme terminé (choix produit : pas de reprise inattendue).
+function completeOnboardingOnPanelClose() {
+  chrome.storage.local.get('rockstar_onboarding_panel_tour_active', (res) => {
+    if (!res || !res.rockstar_onboarding_panel_tour_active) return;
+    chrome.storage.local.set({
+      rockstar_onboarding_completed: true,
+      rockstar_onboarding_stage: false,
+      rockstar_onboarding_panel_tour_active: false
+    }).catch(() => {});
+  });
+}
