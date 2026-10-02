@@ -230,6 +230,11 @@
       const msg = (e && e.message) || '';
       if (/no-client-id/.test(msg)) {
         setDriveStatus('Google Drive n\'est pas encore configuré pour cette extension.', 'error');
+      } else if (/already-running/.test(msg)) {
+        // Une synchro est déjà en cours : on ne touche pas au message « Synchronisation… ».
+        return;
+      } else if (/auth-timeout/.test(msg)) {
+        setDriveStatus('Google n\'a pas répondu. Si une fenêtre de connexion Google est restée ouverte derrière cette fenêtre, termine-la, puis réessaie.', 'error');
       } else if (/access_denied|authError|idpiframe|network|Failed to fetch/i.test(msg)) {
         setDriveStatus('Connexion à Google impossible pour le moment. Réessaie plus tard.', 'error');
       } else {

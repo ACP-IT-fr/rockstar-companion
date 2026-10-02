@@ -37,6 +37,21 @@
         showMainTab(msg.tab);
       }
     });
+
+    // --- Largeur du panneau → onglets de la fenêtre --------------------------
+    // Le side panel recouvre la page sans redimensionner son viewport : la
+    // page ne peut pas mesurer la zone masquée. Le panneau se mesure
+    // lui-même et relaie sa largeur (au chargement, puis à chaque
+    // redimensionnement) ; le hub la broadcast aux onglets.
+    let widthTimer = null;
+    function reportPanelWidth() {
+      try { port.postMessage({ type: 'rockstar:panel-width', width: window.innerWidth }); } catch (e) { /* port fermé */ }
+    }
+    reportPanelWidth();
+    window.addEventListener('resize', () => {
+      clearTimeout(widthTimer);
+      widthTimer = setTimeout(reportPanelWidth, 150);
+    });
   }
 
   function showMainTab(name) {

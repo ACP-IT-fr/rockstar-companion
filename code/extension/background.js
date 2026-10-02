@@ -41,6 +41,31 @@ enableOpenOnActionClick();
  * lui envoyer des ordres (fermeture, changement d'onglet).
  */
 const panelPorts = new Map(); // tabId → port du panneau
+const portTabIds = new Map(); // port → tabId (pour relayer la largeur du panneau)
+
+// La largeur du side panel n'est pas mesurable depuis la page (le panneau
+// recouvre le contenu sans redimensionner le viewport) : le panneau se
+// mesure lui-même et relaie sa largeur, que l'on broadcast aux onglets de
+// la fenêtre. Les widgets de page (ex. pill flottant) se repositionnent
+// alors pour ne pas passer sous le panneau.
+function broadcastPanelWidth(windowId, width) {
+  chrome.tabs.query({ windowId }, (tabs) => {
+    (tabs || []).forEach((tab) => {
+      chrome.tabs.sendMessage(tab.id, { type: 'rockstar:panel-width', width }, () => {
+        void chrome.runtime.lastError; // onglet sans content script : ignorer
+      });
+    });
+  });
+}
+
+function handlePanelWidthFromPort(port, width) {
+  const tabId = portTabIds.get(port);
+  if (tabId == null) return;
+  chrome.tabs.get(tabId, (tab) => {
+    if (chrome.runtime.lastError || !tab) return;
+    broadcastPanelWidth(tab.windowId, width);
+  });
+}
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== 'rockstar-panel') return;
@@ -50,8 +75,22 @@ chrome.runtime.onConnect.addListener((port) => {
     return;
   }
   panelPorts.set(tabId, port);
+  portTabIds.set(port, tabId);
+  port.onMessage.addListener((msg) => {
+    if (msg && msg.type === 'rockstar:panel-width' && typeof msg.width === 'number') {
+      handlePanelWidthFromPort(port, msg.width);
+    }
+  });
   port.onDisconnect.addListener(() => {
     if (panelPorts.get(tabId) === port) panelPorts.delete(tabId);
+    if (portTabIds.get(port) === tabId) {
+      // Panneau fermé (ou rechargé) : la zone masquée disparaît.
+      portTabIds.delete(port);
+      chrome.tabs.get(tabId, (tab) => {
+        if (chrome.runtime.lastError || !tab) return;
+        broadcastPanelWidth(tab.windowId, 0);
+      });
+    }
   });
 });
 

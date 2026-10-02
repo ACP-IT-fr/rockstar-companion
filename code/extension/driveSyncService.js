@@ -45,14 +45,52 @@ const driveSyncService = {
 
   // --- Auth -----------------------------------------------------------------
 
+  // Délai maximal d'attente du jeton Google. Sans lui, un échec silencieux de
+  // chrome.identity.getAuthToken (popup raté, bug MV3) laisse l'UI bloquée
+  // sur « Synchronisation… » pour toujours.
+  AUTH_TIMEOUT_MS: 90000,
+
   getToken() {
+    // 1) Essai silencieux : utilise le jeton en cache s'il est encore valable,
+    //    sans ouvrir de popup. Un cache pourri fait souvent pendre le flux
+    //    interactif ; l'échec silencieux, lui, remonte un vrai message.
     return new Promise((resolve, reject) => {
-      chrome.identity.getAuthToken({ interactive: true, scopes: [this.SCOPE] }, (token) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
+      chrome.identity.getAuthToken({ interactive: false, scopes: [this.SCOPE] }, (token) => {
+        if (!chrome.runtime.lastError && token) {
+          console.log('[driveSyncService] jeton obtenu (cache)');
+          resolve(token);
           return;
         }
-        resolve(token);
+        if (chrome.runtime.lastError) {
+          console.log('[driveSyncService] pas de jeton en cache :', chrome.runtime.lastError.message);
+        }
+        resolve(null);
+      });
+    }).then((cached) => {
+      if (cached) return cached;
+
+      // 2) Flux interactif, avec garde-fou : sans lui, un échec silencieux de
+      //    getAuthToken (popup ratée, bug MV3) laisse l'UI bloquée pour toujours.
+      return new Promise((resolve, reject) => {
+        const settled = { done: false };
+        const timer = setTimeout(() => {
+          if (settled.done) return;
+          settled.done = true;
+          reject(new Error('auth-timeout'));
+        }, this.AUTH_TIMEOUT_MS);
+        console.log('[driveSyncService] ouverture de la fenêtre de connexion Google…');
+        chrome.identity.getAuthToken({ interactive: true, scopes: [this.SCOPE] }, (token) => {
+          if (settled.done) return; // le timeout a déjà tranché
+          settled.done = true;
+          clearTimeout(timer);
+          if (chrome.runtime.lastError) {
+            console.error('[driveSyncService] jeton refusé :', chrome.runtime.lastError.message);
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          console.log('[driveSyncService] jeton obtenu');
+          resolve(token);
+        });
       });
     });
   },
@@ -60,14 +98,26 @@ const driveSyncService = {
   // --- Drive (appDataFolder) -------------------------------------------------
 
   _driveFetch(url, options, token) {
-    const opts = Object.assign({ headers: { Authorization: 'Bearer ' + token } }, options || {});
+    // Fusionner les en-têtes plutôt que les remplacer : sans ça, un appel qui
+    // passe son propre Content-Type écrase le Authorization et Google répond 401.
+    const extra = options || {};
+    const headers = Object.assign({ Authorization: 'Bearer ' + token }, extra.headers || {});
+    const opts = Object.assign({}, extra, { headers: headers });
     return fetch(url, opts).then((res) => {
       if (!res.ok) {
         // 401 : jeton expiré/revoqué → vider le cache Chrome et laisser retenter.
         if (res.status === 401 && chrome.identity.removeCachedAuthToken) {
           chrome.identity.removeCachedAuthToken({ token: token }, () => {});
         }
-        throw new Error('Drive HTTP ' + res.status);
+        // Le corps contient la vraie raison (api non activée, quota, etc.).
+        return res.json().then((err) => {
+          const detail = err && err.error && err.error.message;
+          if (detail) console.error('[driveSyncService] Drive ' + res.status + ' : ' + detail);
+          throw new Error('Drive HTTP ' + res.status + (detail ? ' : ' + detail : ''));
+        }).catch((e) => {
+          if (e.message && e.message.indexOf('Drive HTTP') === 0) throw e;
+          throw new Error('Drive HTTP ' + res.status);
+        });
       }
       return res;
     });
@@ -98,14 +148,27 @@ const driveSyncService = {
   writeFile(doc, token) {
     return this.findFileId(token).then((fileId) => {
       const body = JSON.stringify(doc);
-      const url = fileId
-        ? this.UPLOAD_BASE + '/files/' + fileId + '?uploadType=media'
-        : this.UPLOAD_BASE + '/files?uploadType=media&fields=id';
-      return this._driveFetch(url, {
-        method: fileId ? 'PATCH' : 'POST',
+      if (fileId) {
+        return this._driveFetch(this.UPLOAD_BASE + '/files/' + fileId + '?uploadType=media', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: body
+        }, token).then((res) => res.json());
+      }
+      // uploadType=media sans métadonnées crée le fichier à la racine du Drive
+      // (interdit avec le scope drive.appdata → 403). Créer d'abord le fichier
+      // DANS appDataFolder via ses métadonnées, puis écrire son contenu.
+      return this._driveFetch(this.APPDATA_BASE + '/files', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: body
-      }, token).then((res) => res.json());
+        body: JSON.stringify({ name: this.DRIVE_FILE_NAME, parents: ['appDataFolder'] })
+      }, token).then((res) => res.json()).then((meta) => {
+        return this._driveFetch(this.UPLOAD_BASE + '/files/' + meta.id + '?uploadType=media', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: body
+        }, token).then((res) => res.json());
+      });
     });
   },
 
@@ -230,15 +293,20 @@ const driveSyncService = {
    * @returns {Promise<{added: number, updated: number, deleted: number}>}
    */
   sync() {
+    if (this._syncing) {
+      return Promise.reject(new Error('already-running'));
+    }
     if (!this._hasChromeIdentity()) {
       return Promise.reject(new Error('no-identity'));
     }
     if (!this._clientId()) {
       return Promise.reject(new Error('no-client-id'));
     }
+    this._syncing = true;
     return this.getToken()
-      .then((token) =>
-        Promise.all([
+      .then((token) => {
+        console.log('[driveSyncService] synchro : lecture locale + Drive…');
+        return Promise.all([
           window.storageService ? window.storageService.getAllSongs() : Promise.resolve({}),
           this._getTombstones(),
           this.findFileId(token).then((fileId) => (fileId ? this.readFile(token) : Promise.resolve(null)))
@@ -262,8 +330,11 @@ const driveSyncService = {
           return this.writeFile(doc, token)
             .then(() => this.applyMerged(merged))
             .then(() => ({ added: added, updated: updated, deleted: deleted }));
-        })
-      );
+        });
+      })
+      .finally(() => {
+        this._syncing = false;
+      });
   }
 };
 
