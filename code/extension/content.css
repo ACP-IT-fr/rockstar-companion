@@ -916,7 +916,8 @@
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;
-  opacity: 0.4;
+  opacity: 0.85;
+  color: #e5e7eb;
   transition: opacity 0.2s, background-color 0.2s, border-color 0.2s;
   height: 20px;
   display: flex;
@@ -926,14 +927,15 @@
 }
 
 .metronome-opt-btn:hover {
-  opacity: 0.8;
+  opacity: 1;
   background-color: rgba(255, 255, 255, 0.1);
 }
 
 .metronome-opt-btn:disabled,
 .metronome-opt-btn:disabled:hover {
   cursor: default;
-  opacity: 0.25;
+  /* Grisé mais lisible : le bouton doit se voir même sans chanson au tempo. */
+  opacity: 0.45;
   background-color: transparent;
 }
 
