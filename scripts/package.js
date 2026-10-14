@@ -73,9 +73,22 @@ if (fs.existsSync(floatingBar)) {
   console.log(`  ✓ Nettoyé : ${path.relative(rootDir, floatingBar)}`);
 }
 
-// 5. Créer l'archive Zip
-console.log("🤐 Compresson du fichier zip de production...");
-execSync(`cd "${tempDir}" && zip -r "${zipFile}" .`, { stdio: 'inherit' });
+// 5. Créer l'archive Zip (zip CLI si dispo, sinon python3 stdlib)
+console.log("🤐 Compression du fichier zip de production...");
+let zipped = false;
+try {
+  execSync(`cd "${tempDir}" && zip -qr "${zipFile}" .`, { stdio: 'inherit' });
+  zipped = true;
+} catch (e) {
+  console.log("  ⚠ zip CLI indisponible, fallback python3...");
+  try {
+    execSync(`python3 -c "import shutil; shutil.make_archive('${zipFile.replace(/\.zip$/, '').replace(/'/g, "\\'")}', 'zip', '${tempDir.replace(/'/g, "\\'")}')"`, { stdio: 'inherit' });
+    zipped = true;
+  } catch (e2) {
+    console.error("❌ Impossible de créer l'archive (ni zip, ni python3).");
+  }
+}
+if (!zipped) process.exit(1);
 
 // 6. Nettoyer le dossier temporaire
 fs.rmSync(tempDir, { recursive: true, force: true });

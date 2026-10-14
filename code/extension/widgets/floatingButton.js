@@ -28,14 +28,14 @@
         </button>
       </div>
       <div class="rfp-actions">
-        <button class="rfp-act" id="rfp-panel-btn" title="Ouvrir / fermer le panneau latéral">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
-        </button>
-        <button class="rfp-act rfp-scroll" id="rfp-scroll-btn" title="Lancer / Arrêter le défilement automatique">
+        <button class="rfp-act rfp-scroll" id="rfp-scroll-btn" title="Chanson : lancer / arrêter le défilement automatique des paroles">
           <svg id="rfp-scroll-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:block;"><polygon points="5,3 19,12 5,21"/></svg>
           <svg id="rfp-scroll-stop" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
         </button>
-        <button class="rfp-act" id="rfp-repertoire-btn" title="Répertoire">📖</button>
+        <button class="rfp-act" id="rfp-repertoire-btn" title="Chanson : ouvrir la fiche dans le volet latéral">🎵</button>
+        <button class="rfp-act" id="rfp-panel-btn" title="Volet latéral : afficher / masquer les paroles et réglages">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
+        </button>
       </div>
       <div class="rfp-chips">
         <span class="rfp-chip rfp-ctrl" id="rfp-speed-ctrl" title="Vitesse de défilement">
@@ -72,6 +72,29 @@
     const cmdEl = pill.querySelector('#rfp-cmd');
 
     // --- Position (persistée) -------------------------------------------------
+    // Largeur du side panel (recouvre la page sans redimensionner le
+    // viewport) : le pill doit rester à gauche de cette zone masquée.
+    let panelWidth = 0;
+
+    // Positionne le pill à la position valide la plus proche : ancré dans le
+    // viewport et hors de la zone couverte par le side panel. Ne persiste
+    // pas : la position sauvegardée reste celle choisie à la poignée.
+    function repositionPill() {
+      const rect = pill.getBoundingClientRect();
+      // Ancrer en left/top uniquement : garder bottom défini en même temps
+      // étirerait le pill entre les deux ancres.
+      pill.style.right = 'auto';
+      pill.style.bottom = 'auto';
+      pill.style.left = rect.left + 'px';
+      pill.style.top = rect.top + 'px';
+      const maxLeft = Math.max(0, window.innerWidth - panelWidth - pill.offsetWidth);
+      const maxTop = Math.max(0, window.innerHeight - pill.offsetHeight);
+      const left = Math.max(0, Math.min(maxLeft, rect.left));
+      const top = Math.max(0, Math.min(maxTop, rect.top));
+      pill.style.left = left + 'px';
+      pill.style.top = top + 'px';
+    }
+
     function restorePosition() {
       try {
         window.RockstarCore.safeStorageGet([POS_KEY], (res) => {
@@ -84,10 +107,25 @@
             pill.style.left = pos.left + 'px';
             pill.style.top = pos.top + 'px';
           }
+          // La position sauvegardée peut tomber sous le panneau (volet
+          // élargi depuis) : on la ramène à la position valide la plus proche.
+          repositionPill();
         });
       } catch (e) { /* position par défaut */ }
     }
     restorePosition();
+
+    // Repositionnement à chaud : volet redimensionné (la largeur remonte du
+    // panneau via le hub) ou fenêtre redimensionnée.
+    if (chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener((msg) => {
+        if (msg && msg.type === 'rockstar:panel-width' && typeof msg.width === 'number') {
+          panelWidth = Math.max(0, msg.width);
+          repositionPill();
+        }
+      });
+    }
+    window.addEventListener('resize', repositionPill);
 
     // --- Déplacement par la poignée -------------------------------------------
     const handle = pill.querySelector('#rfp-handle');
@@ -106,10 +144,12 @@
     });
     handle.addEventListener('pointermove', (e) => {
       if (!drag) return;
-      const left = Math.max(0, Math.min(window.innerWidth - pill.offsetWidth, e.clientX - drag.dx));
+      const left = Math.max(0, Math.min(window.innerWidth - panelWidth - pill.offsetWidth, e.clientX - drag.dx));
       const top = Math.max(0, Math.min(window.innerHeight - pill.offsetHeight, e.clientY - drag.dy));
       pill.style.left = left + 'px';
       pill.style.top = top + 'px';
+      // La visite guidée (spotlight/carte sur le pill) suit le déplacement.
+      window.dispatchEvent(new Event('rockstar-pill-moved'));
     });
     handle.addEventListener('pointerup', () => {
       if (!drag) return;
@@ -216,12 +256,59 @@
       }
     });
 
-    // --- Bouton répertoire ------------------------------------------------------
-    // Le tiroir répertoire vit maintenant dans le panneau (onglet Répertoire).
-    pill.querySelector('#rfp-repertoire-btn').addEventListener('click', (e) => {
+    // --- Bouton répertoire / ajout de chanson -----------------------------------
+    // État dynamique selon la page courante :
+    //  - enregistrée → 🎵 ouvre la fiche dans le volet latéral ;
+    //  - non enregistrée → + ajoute la page au répertoire puis ouvre la fiche.
+    const repertoireBtn = pill.querySelector('#rfp-repertoire-btn');
+    let repertoireMode = 'add'; // 'open' | 'add'
+
+    function currentPageUrl() {
+      const core = window.RockstarCore;
+      const raw = window.location.href;
+      if (!core || typeof core.normalizeUrl !== 'function') return null;
+      return core.normalizeUrl(raw);
+    }
+
+    function refreshRepertoireBtn() {
+      if (!window.storageService) return;
+      const url = currentPageUrl();
+      if (!url) {
+        repertoireMode = 'add';
+        repertoireBtn.textContent = '+';
+        repertoireBtn.classList.add('rfp-add-mode');
+        repertoireBtn.title = 'Répertoire : ajouter cette page, puis ouvrir sa fiche';
+        return;
+      }
+      window.storageService.getSong(url).then((song) => {
+        repertoireMode = song ? 'open' : 'add';
+        repertoireBtn.textContent = song ? '🎵' : '+';
+        repertoireBtn.classList.toggle('rfp-add-mode', !song);
+        repertoireBtn.title = song
+          ? 'Chanson : ouvrir la fiche dans le volet latéral'
+          : 'Répertoire : ajouter cette page, puis ouvrir sa fiche';
+      }).catch(() => {});
+    }
+    refreshRepertoireBtn();
+    // Toute écriture song: (ajout, suppression, synchro Drive) met à jour le bouton.
+    if (chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && Object.keys(changes).some((k) => k.startsWith('song:'))) {
+          refreshRepertoireBtn();
+        }
+      });
+    }
+
+    // Le tiroir répertoire vit maintenant dans le panneau (onglet Chanson).
+    repertoireBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ type: 'rockstar:open-panel', kind: 'open', tab: 'song' });
+        chrome.runtime.sendMessage({
+          type: 'rockstar:open-panel',
+          kind: 'open',
+          tab: 'song',
+          addCurrent: repertoireMode === 'add'
+        });
       }
     });
 
@@ -329,7 +416,30 @@
       window.RockstarCore.showFeedback._t = setTimeout(() => {
         cmdEl.classList.remove('error');
       }, 4000);
+
+      // Confirmation visuelle : le contrôle du pill visé par la commande
+      // vocale s'illumine brièvement (retour « c'est bien lui qui a bougé »).
+      if (detail.success) flashControlForCommand(detail.action || '');
     });
+
+    // Action vocale → contrôle du pill correspondant.
+    function flashControlForCommand(action) {
+      const a = action.toLowerCase();
+      const chips = pill.querySelectorAll('.rfp-chip'); // [Vit, Capo, Tr, Ton]
+      let el = null;
+      if (/défile|c'est parti|scroll|pause/.test(a)) el = pill.querySelector('#rfp-scroll-btn');
+      else if (/vitesse|vite|speed/.test(a)) el = pill.querySelector('#rfp-speed-ctrl');
+      else if (/capo/.test(a)) el = chips[1];
+      else if (/transpos/.test(a)) el = chips[2];
+      else if (/tonalité|\bton\b|\bkey\b/.test(a)) el = pill.querySelector('#rfp-key-ctrl');
+      else if (/réveille|micro|wake/.test(a)) el = pill.querySelector('#rfp-mic-btn');
+      if (!el) return;
+      el.classList.remove('rfp-flash');
+      // Force le redémarrage de l'animation sur les commandes rapprochées.
+      void el.offsetWidth;
+      el.classList.add('rfp-flash');
+      setTimeout(() => el.classList.remove('rfp-flash'), 1300);
+    }
 
     // Le feedback des commandes arrive ici (au lieu des toasts de la barre)
     window.RockstarCore.showFeedback = (text, isSuccess) => {

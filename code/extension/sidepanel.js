@@ -24,23 +24,71 @@
   // Le port permet aussi au background de savoir que le panneau est ouvert.
   function setupPanelPort() {
     if (!chrome.runtime || !chrome.runtime.connect) return;
-    let port = null;
-    try {
-      port = chrome.runtime.connect({ name: 'rockstar-panel' });
-    } catch (e) { return; }
+    // Le background ne connaît l'onglet du panneau que si le port le lui
+    // annonce : sender.tab est null pour un document d'extension. On interroge
+    // donc l'onglet actif et on encode son id dans le nom du port.
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs && tabs[0];
+      const portName = tab && typeof tab.id === 'number'
+        ? `rockstar-panel:${tab.id}`
+        : 'rockstar-panel';
+      let port = null;
+      try {
+        port = chrome.runtime.connect({ name: portName });
+      } catch (e) { return; }
 
-    port.onMessage.addListener((msg) => {
-      if (!msg) return;
-      if (msg.type === 'rockstar:panel-toggle') {
-        try { window.close(); } catch (e) { /* ignore */ }
-      } else if (msg.type === 'rockstar:show-tab' && msg.tab) {
-        showMainTab(msg.tab);
+      port.onMessage.addListener((msg) => {
+        if (!msg) return;
+        if (msg.type === 'rockstar:panel-toggle') {
+          try { window.close(); } catch (e) { /* ignore */ }
+        } else if (msg.type === 'rockstar:show-tab' && msg.tab) {
+          // « + » du pill : ajouter la page au répertoire en même temps.
+          if (msg.addCurrent) {
+            window.dispatchEvent(new CustomEvent('rockstar-panel-add-current'));
+          }
+          showMainTab(msg.tab);
+        } else if (msg.type === 'rockstar:metronome-relay' && msg.text) {
+          // Commande vocale métronome relais depuis la page : la router vers
+          // le même moteur de commandes que la voix du panneau.
+          if (window.RockstarCore && window.RockstarCore.handleCommand) {
+            window.RockstarCore.handleCommand(msg.text);
+          }
+        }
+      });
+
+      // --- Largeur du panneau → onglets de la fenêtre --------------------------
+      // Le side panel recouvre la page sans redimensionner son viewport : la
+      // page ne peut pas mesurer la zone masquée. Le panneau se mesure
+      // lui-même et relaie sa largeur (au chargement, puis à chaque
+      // redimensionnement) ; le hub la broadcast aux onglets.
+      let widthTimer = null;
+      function reportPanelWidth() {
+        try { port.postMessage({ type: 'rockstar:panel-width', width: window.innerWidth }); } catch (e) { /* port fermé */ }
       }
+      reportPanelWidth();
+      window.addEventListener('resize', () => {
+        clearTimeout(widthTimer);
+        widthTimer = setTimeout(reportPanelWidth, 150);
+      });
     });
   }
 
   function showMainTab(name) {
     if (!KNOWN_TABS.includes(name)) return;
+    const nav = document.getElementById('sp-maintabs');
+    const btn = nav ? nav.querySelector(`[data-maintab="${name}"]`) : null;
+    // Onglet déjà actif (livre du pill) : petit effet visuel sur le contenu
+    // pour signifier « il est là » plutôt que de ne rien faire.
+    if (btn && btn.classList.contains('active')) {
+      const section = document.getElementById('sp-maintab-' + name);
+      if (section) {
+        section.classList.remove('sp-tab-flash');
+        void section.offsetWidth; // redémarre l'animation
+        section.classList.add('sp-tab-flash');
+        setTimeout(() => section.classList.remove('sp-tab-flash'), 1300);
+      }
+      return;
+    }
     document.querySelectorAll('.sp-maintab').forEach((b) => {
       b.classList.toggle('active', b.dataset.maintab === name);
     });
@@ -57,19 +105,28 @@
       if (btn) showMainTab(btn.dataset.maintab);
     });
 
-    // Onglet demandé avant l'ouverture (ex. 📖 du pill → Chanson).
+    // Onglet demandé avant l'ouverture (ex. 📖/+ du pill → Chanson).
     // Valeurs inconnues ou onglets hérités ignorés : on reste sur Studio.
-    chrome.storage.local.get('rockstar_panel_pending_tab', (res) => {
+    chrome.storage.local.get(['rockstar_panel_pending_tab', 'rockstar_panel_pending_action'], (res) => {
       const pending = res && res.rockstar_panel_pending_tab;
       if (pending) {
         showMainTab(pending);
-        chrome.storage.local.remove('rockstar_panel_pending_tab');
+      }
+      if (res && res.rockstar_panel_pending_action === 'add-current') {
+        // La liste du répertoire peut ne pas être encore initialisée :
+        // on pose un drapeau qu'elle consomme à son montage (+ événement
+        // au cas où elle serait déjà prête).
+        window.__rockstarPendingAddCurrent = true;
+        window.dispatchEvent(new CustomEvent('rockstar-panel-add-current'));
+      }
+      if (pending || (res && res.rockstar_panel_pending_action)) {
+        chrome.storage.local.remove(['rockstar_panel_pending_tab', 'rockstar_panel_pending_action']);
       }
     });
   }
 
   // Onglets connus ; 'repertoire' hérité du bouton 📖 historique → fiche (song).
-  const KNOWN_TABS = ['studio', 'song', 'repertoire'];
+  const KNOWN_TABS = ['studio', 'song', 'repertoire', 'settings'];
 
   // --- Accordéons (plusieurs sections peuvent être ouvertes à la fois) --------
   function setupAccordion() {
@@ -224,15 +281,6 @@
     return sendTabMessage({ kind: 'command', text });
   }
 
-  function showCmdStatus(text) {
-    const status = document.getElementById('sp-cmd-status');
-    if (!status) return;
-    status.hidden = false;
-    status.textContent = text;
-    clearTimeout(showCmdStatus._t);
-    showCmdStatus._t = setTimeout(() => { status.hidden = true; }, 2500);
-  }
-
   // --- Lecture : groupe affiché selon le site de l'onglet actif ----------------
   // Onglet YouTube → contrôles vidéo ; autre page avec l'extension → contrôles
   // de défilement ; page sans extension → note explicative.
@@ -253,25 +301,47 @@
   }
 
   function refreshPlaybackMode() {
-    const videoRow = document.getElementById('sp-playback-video');
-    const scrollRow = document.getElementById('sp-playback-scroll');
+    const videoGroup = document.getElementById('sp-playback-video-group');
+    const scrollGroup = document.getElementById('sp-playback-scroll-group');
     const unknown = document.getElementById('sp-playback-unknown');
-    const badge = document.getElementById('sp-playback-badge');
-    const title = document.getElementById('sp-playback-title');
-    if (!videoRow || !scrollRow) return;
+    if (!videoGroup || !scrollGroup) return;
 
+    refreshSongTabVisibility();
     sendTabMessage({ kind: 'getState' }).then((res) => {
       const domain = res && res.ok && res.state ? String(res.state.domain || '') : null;
       const isYouTube = Boolean(domain && domain.includes('youtube.com'));
       const hasExtension = Boolean(domain);
-      const sep = document.getElementById('sp-playback-sep');
-      videoRow.hidden = !isYouTube;
-      if (sep) sep.hidden = !isYouTube;
-      // Le défilement marche sur toute page avec l'extension (YouTube inclus)
-      scrollRow.hidden = !hasExtension;
+      // YouTube → contrôles vidéo ; autre page avec l'extension → défilement
+      videoGroup.hidden = !isYouTube;
+      scrollGroup.hidden = isYouTube || !hasExtension;
       if (unknown) unknown.hidden = hasExtension;
-      if (badge) badge.textContent = hasExtension ? (isYouTube ? 'YouTube' : 'Page') : 'aucune page';
-      if (title) title.textContent = isYouTube ? '▶️ Vidéo + défilement' : '📜 Défilement de la page';
+    });
+  }
+
+  // --- Onglet Chanson : visible seulement si la page active est enregistrée ---
+  // La page « à côté » est interrogée via son content script (getState) ;
+  // sans content script (page interne), l'onglet est masqué.
+  function setSongTabVisible(visible) {
+    const btn = document.querySelector('[data-maintab="song"]');
+    if (!btn) return;
+    btn.hidden = !visible;
+    // Onglet actif devenu masqué (suppression / autre page) : retour Studio.
+    if (!visible && btn.classList.contains('active')) showMainTab('studio');
+  }
+
+  function refreshSongTabVisibility() {
+    const btn = document.querySelector('[data-maintab="song"]');
+    if (!btn || !window.storageService) return;
+    sendTabMessage({ kind: 'getState' }).then((res) => {
+      const rawUrl = res && res.ok && res.state && res.state.url ? res.state.url : null;
+      if (!rawUrl) {
+        setSongTabVisible(false);
+        return;
+      }
+      const url = (window.RockstarCore && typeof window.RockstarCore.normalizeUrl === 'function')
+        ? window.RockstarCore.normalizeUrl(rawUrl)
+        : rawUrl;
+      window.storageService.getSong(url).then((song) => setSongTabVisible(Boolean(song)));
     });
   }
 
@@ -286,19 +356,20 @@
     }
     refreshPlaybackMode();
 
+    // Onglet Chanson visible uniquement si la page active est enregistrée.
+    if (chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && Object.keys(changes).some((k) => k.startsWith('song:'))) {
+          refreshSongTabVisibility();
+        }
+      });
+    }
+
     document.querySelectorAll('.sp-cmd[data-cmd]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
-          const res = await sendTabCommand(btn.dataset.cmd);
-          if (res && res.ok) {
-            showCmdStatus('✓ Commande envoyée à la page');
-          } else {
-            const why = res && res.error === 'no-content-script'
-              ? "La page active ne contient pas l'extension (essaie sur YouTube ou ultimate-guitar)"
-              : 'Commande non reconnue sur cette page';
-            showCmdStatus(why);
-          }
+          await sendTabCommand(btn.dataset.cmd);
         } finally {
           btn.disabled = false;
         }
@@ -336,6 +407,15 @@
   }
 
   // --- Bootstrap ----------------------------------------------------------------
+  function applyPanelTitle() {
+    // Le placeholder __MSG_panelTitle__ peut rester brut si Chrome n'a pas
+    // re-résolu les locales : on force via chrome.i18n côté JS.
+    const titleEl = document.querySelector('.sp-title');
+    const msg = chrome?.i18n?.getMessage?.('panelTitle');
+    if (titleEl && msg) titleEl.textContent = msg;
+    if (msg) document.title = `${msg} — Panneau`;
+  }
+
   function boot() {
     if (!window.RockstarCore || typeof window.RockstarCore.initialize !== 'function') {
       console.error('[SidePanel] RockstarCore indisponible');
@@ -344,6 +424,7 @@
 
     window.RockstarCore.initialize();
 
+    applyPanelTitle();
     mountWhenReady();
     setupPanelPort();
     setupMainTabs();

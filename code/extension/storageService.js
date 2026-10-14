@@ -13,6 +13,7 @@
 const storageService = {
   LEGACY_KEY: 'saved_songs',
   KEY_PREFIX: 'song:',
+  TOMBSTONE_PREFIX: 'song:deleted:',
 
   _keyFor(url) {
     return this.KEY_PREFIX + url;
@@ -119,6 +120,7 @@ const storageService = {
       key: song.key !== undefined ? song.key : ((existing && existing.key) || ''),
       capo: song.capo !== undefined ? (parseInt(song.capo, 10) || 0) : ((existing && existing.capo) || 0),
       transpose: song.transpose !== undefined ? (parseInt(song.transpose, 10) || 0) : ((existing && existing.transpose) || 0),
+      tempo: song.tempo !== undefined ? (parseInt(song.tempo, 10) || 0) : ((existing && existing.tempo) || 0),
       scrollSpeed: song.scrollSpeed !== undefined ? (parseInt(song.scrollSpeed, 10) || 1) : ((existing && existing.scrollSpeed) || 1),
       notes: notes,
       playingTips: song.playingTips !== undefined ? String(song.playingTips) : ((existing && existing.playingTips) || ''),
@@ -136,7 +138,7 @@ const storageService = {
     return this.migrate().then(() => this._get(null)).then((result) => {
       const map = {};
       Object.keys(result || {}).forEach((k) => {
-        if (k.startsWith(this.KEY_PREFIX) && result[k] && result[k].url) {
+        if (k.startsWith(this.KEY_PREFIX) && !k.startsWith(this.TOMBSTONE_PREFIX) && result[k] && result[k].url) {
           map[result[k].url] = result[k];
         }
       });
@@ -186,12 +188,15 @@ const storageService = {
 
   /**
    * Supprime un morceau à partir de son URL.
+   * Laisse une pierre tombale (url → date) pour que la synchronisation
+   * Google Drive ne ressuscite pas le morceau depuis un autre appareil.
    * @param {string} url - URL normalisée du morceau
    * @returns {Promise<void>}
    */
   deleteSong(url) {
     if (!url) return Promise.reject(new Error('Invalid URL: URL is required for deletion.'));
-    return this._remove(this._keyFor(url));
+    return this._set({ ['song:deleted:' + url]: { url: url, deletedAt: Date.now() } })
+      .then(() => this._remove(this._keyFor(url)));
   }
 };
 

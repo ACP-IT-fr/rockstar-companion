@@ -23,7 +23,7 @@
   const metronomeStopVariants = ['arrête le métronome', 'arrete le metronome', 'coupe le métronome', 'coupe le metronome', 'stop le métronome', 'stop le metronome', 'metronome stop', 'metronome pause', 'stop metronome', 'pause metronome'];
   const metronomeTempoRegex = /^(?:tempo|métronome tempo|metronome tempo|vitesse du métronome|vitesse du metronome|bpm)\s*(?:à|a|de\s+)?(\d{2,3})$/i;
   const metronomeMeasureRegex = /^(?:mesure|signature|time signature)\s*(4\s*4|4\/4|3\s*4|3\/4|2\s*4|2\/4|6\s*8|6\/8|1\s*4|1\/4|sans\s+accent|pas\s+d'accent|pas\s+d’accent)$/i;
-  const metronomeSoundRegex = /^(?:son|bruit|type de son|metronome sound|sound)\s*(bois|wood|digital|numérique|numerique|tambour|drum)$/i;
+  const metronomeSoundRegex = /^(?:son|bruit|type de son|metronome sound|sound)\s*(bois|wood|digital|numérique|numerique|tambour|drum|batterie|kit)$/i;
   const metronomeVolumeRegex = /^(?:volume|volume du métronome|volume du metronome|metronome volume)\s*(?:à|a|de\s+)?(\d{1,3})%?$/i;
   const metronomeOptWidgetRegex = /^(?:clignote[r]?\s+(?:le\s+)?widget|metronome flash card|flash card|flash widget)$/i;
   const metronomeOptScreenRegex = /^(?:clignote[r]?\s+(?:l'|l’)?écran|clignote[r]?\s+(?:l'|l’)?ecran|metronome flash screen|flash screen)$/i;
@@ -73,9 +73,12 @@
       playBtn.innerText = '▶';
       playBtn.classList.remove('playing');
     }
-    const led = document.getElementById('metronome-led');
+    const led = document.getElementById('metronome-beats');
     if (led) {
-      led.className = 'metronome-led';
+      const dots = led.children;
+      for (let i = 0; i < dots.length; i++) {
+        dots[i].classList.remove('active');
+      }
     }
     if (metronomeContainer) {
       metronomeContainer.classList.remove('flash-active', 'flash-accent');
@@ -118,47 +121,108 @@
     }
   }
 
+  // Un point par temps de la mesure ; le premier (temps accentué) s'allume
+  // en rouge, les autres en vert. Reconstruit quand la mesure change.
+  function renderBeatDots() {
+    const container = document.getElementById('metronome-beats');
+    if (!container) return;
+    const beats = getBeatsPerMeasure();
+    container.innerHTML = '';
+    for (let i = 0; i < beats; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'metronome-beat-dot' + (i === 0 && metronomeTimeSignature !== '1/4' ? ' accent' : '');
+      container.appendChild(dot);
+    }
+  }
+
+  // --- Synthèse des sons ------------------------------------------------------
+  // Chaque kit définit deux voix très contrastées (accent = temps fort) : la
+  // différence porte à la fois sur la hauteur, le timbre, la durée et le
+  // volume, pour être identifiable d'une seule oreille même à bas volume.
+
+  function playBeep(ctx, time, { type, freq, endFreq, gain, attack, duration }) {
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, time);
+    if (endFreq && endFreq !== freq) {
+      osc.frequency.exponentialRampToValueAtTime(endFreq, time + duration);
+    }
+    gainNode.gain.setValueAtTime(0, time);
+    gainNode.gain.linearRampToValueAtTime(gain * metronomeVolume, time + attack);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, time + attack + duration);
+    osc.start(time);
+    osc.stop(time + attack + duration + 0.05);
+  }
+
+  function getNoiseBuffer(ctx) {
+    if (!ctx.__rockstarNoiseBuffer) {
+      const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      ctx.__rockstarNoiseBuffer = buffer;
+    }
+    return ctx.__rockstarNoiseBuffer;
+  }
+
+  // Caisse claire : corps très court + souffle de bruit filtré
+  function playSnare(ctx, time) {
+    playBeep(ctx, time, { type: 'triangle', freq: 185, gain: 0.9, attack: 0.001, duration: 0.05 });
+    const noise = ctx.createBufferSource();
+    noise.buffer = getNoiseBuffer(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 1800;
+    const gainNode = ctx.createGain();
+    noise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    gainNode.gain.setValueAtTime(1.1 * metronomeVolume, time);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
+    noise.start(time);
+    noise.stop(time + 0.1);
+  }
+
+  // Grosse caisse : sweep grave rapide
+  function playKick(ctx, time) {
+    playBeep(ctx, time, { type: 'sine', freq: 160, endFreq: 45, gain: 2.8, attack: 0.002, duration: 0.13 });
+  }
+
+  const SOUND_KITS = {
+    wood: {
+      // Accent : "TOK" aigu, long et fort / temps faible : "tok" grave, bref, doux
+      accent: (ctx, time) => playBeep(ctx, time, { type: 'triangle', freq: 1800, endFreq: 650, gain: 2.6, attack: 0.002, duration: 0.05 }),
+      weak: (ctx, time) => playBeep(ctx, time, { type: 'triangle', freq: 950, endFreq: 400, gain: 1.4, attack: 0.001, duration: 0.028 })
+    },
+    digital: {
+      // Accent : bip aigu tenu (G5) / temps faible : bip une octave dessous, moitié moins fort
+      accent: (ctx, time) => playBeep(ctx, time, { type: 'sine', freq: 1568, gain: 2.2, attack: 0.002, duration: 0.07 }),
+      weak: (ctx, time) => playBeep(ctx, time, { type: 'sine', freq: 784, gain: 1.1, attack: 0.001, duration: 0.04 })
+    },
+    drum: {
+      // Accent : tom médium-aigu descend / temps faible : thud grave court
+      accent: (ctx, time) => playBeep(ctx, time, { type: 'sine', freq: 320, endFreq: 120, gain: 2.8, attack: 0.002, duration: 0.1 }),
+      weak: (ctx, time) => playBeep(ctx, time, { type: 'sine', freq: 150, endFreq: 55, gain: 1.6, attack: 0.002, duration: 0.07 })
+    },
+    kit: {
+      // Batterie : grosse caisse sur les temps accentués, caisse claire sur les autres
+      accent: playKick,
+      weak: playSnare
+    }
+  };
+
   function scheduleBeat(beatIndex, time) {
     const audioContext = window.RockstarCore.getAudioContext();
     if (!audioContext) return;
-    
-    const osc = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    osc.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
+
     const isAccent = (metronomeTimeSignature !== '1/4' && beatIndex === 0);
-    
-    if (metronomeSoundType === 'digital') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(isAccent ? 1200 : 800, time);
-      
-      gainNode.gain.setValueAtTime(0, time);
-      gainNode.gain.linearRampToValueAtTime(2.0 * metronomeVolume, time + 0.002);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-    } else if (metronomeSoundType === 'drum') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(isAccent ? 150 : 100, time);
-      osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.08);
-      
-      gainNode.gain.setValueAtTime(0, time);
-      gainNode.gain.linearRampToValueAtTime(2.8 * metronomeVolume, time + 0.002);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
-    } else {
-      // Default: 'wood'
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(isAccent ? 1400 : 1000, time);
-      osc.frequency.exponentialRampToValueAtTime(100, time + 0.04);
-      
-      gainNode.gain.setValueAtTime(0, time);
-      gainNode.gain.linearRampToValueAtTime(2.4 * metronomeVolume, time + 0.002);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
-    }
-    
-    osc.start(time);
-    osc.stop(time + 0.1);
-    
+    const kit = SOUND_KITS[metronomeSoundType] || SOUND_KITS.wood;
+    (isAccent ? kit.accent : kit.weak)(audioContext, time);
+
     const delay = (time - audioContext.currentTime) * 1000;
     setTimeout(() => {
       flashLED(beatIndex, isAccent);
@@ -166,13 +230,18 @@
   }
 
   function flashLED(beatIndex, isAccent) {
-    const led = document.getElementById('metronome-led');
-    if (led) {
-      led.classList.remove('active', 'accent');
-      void led.offsetWidth; // Force reflow
-      led.classList.add('active');
-      if (isAccent) {
-        led.classList.add('accent');
+    // Un point par temps : celui du temps courant s'allume (rouge pour
+    // l'accent), les autres s'éteignent — on lit la position dans la mesure.
+    const container = document.getElementById('metronome-beats');
+    if (container) {
+      const dots = container.children;
+      for (let i = 0; i < dots.length; i++) {
+        dots[i].classList.remove('active');
+      }
+      const dot = dots[beatIndex];
+      if (dot) {
+        void dot.offsetWidth; // Force reflow pour relancer la transition
+        dot.classList.add('active');
       }
     }
 
@@ -228,14 +297,78 @@
       metronomeTimeSignature = sig;
       const select = document.getElementById('metronome-measure');
       if (select) select.value = sig;
+      renderBeatDots();
       return true;
     }
     return false;
   }
 
+  // --- Relais des commandes vocales vers le panneau ---------------------------
+  // En mode panneau latéral, le widget ne se monte pas dans la page : sans
+  // relais, la voix pilote une instance fantôme (audio sans interface). La
+  // commande est alors transmise au panneau via le hub background ; si le
+  // panneau est fermé, on retombe sur une exécution locale de secours.
+  function shouldRelayToPanel() {
+    const core = window.RockstarCore;
+    if (!core || core.isExtensionPage) return false;
+    if (core.shouldMountInPage && core.shouldMountInPage()) return false;
+    return typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.sendMessage === 'function';
+  }
+
+  function registerMetronomeCommand(def) {
+    const localHandler = def.handler;
+    def.handler = (cmdText, match) => {
+      if (shouldRelayToPanel()) {
+        try {
+          chrome.runtime.sendMessage({ type: 'rockstar:metronome-relay', text: cmdText }, (res) => {
+            if (chrome.runtime.lastError) void chrome.runtime.lastError;
+            if (!res || !res.relayed) localHandler(cmdText, match); // panneau fermé : secours local
+          });
+        } catch (e) {
+          localHandler(cmdText, match); // contexte d'extension invalide : secours local
+        }
+        const relayAction = typeof def.relayAction === 'function' ? def.relayAction(cmdText, match) : def.relayAction;
+        return { success: true, action: relayAction || 'Commande envoyée au panneau' };
+      }
+      return localHandler(cmdText, match);
+    };
+    window.RockstarCore.registerCommand(def);
+  }
+
+  // --- Tempo de la chanson courante -------------------------------------------
+  // Bouton « ♪ » : applique le tempo enregistré sur la fiche de la chanson
+  // affichée. Désactivé tant qu'aucun tempo n'est défini (zéro validation
+  // visible, cf. préférences UI invités).
+  function getSongTempo() {
+    const song = window.RockstarCore.getCurrentSong ? window.RockstarCore.getCurrentSong() : null;
+    return song && song.tempo ? song.tempo : 0;
+  }
+
+  function updateSongTempoButton() {
+    const btn = document.getElementById('metronome-song-tempo-btn');
+    if (!btn) return;
+    const tempo = getSongTempo();
+    btn.disabled = !tempo;
+    btn.title = tempo
+      ? `Régler le métronome sur le tempo de la chanson (${tempo} BPM)`
+      : 'Aucun tempo défini pour cette chanson';
+  }
+
+  function applySongTempo() {
+    const tempo = getSongTempo();
+    if (!tempo) return;
+    setMetronomeBpm(tempo);
+    const btn = document.getElementById('metronome-song-tempo-btn');
+    if (btn) {
+      btn.classList.add('active');
+      setTimeout(() => btn.classList.remove('active'), 350);
+    }
+  }
+
   // Register commands on RockstarCore
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Start Metronome',
+    relayAction: 'Démarrage du métronome (panneau)',
     variants: metronomeStartVariants,
     handler: () => {
       startMetronome();
@@ -243,8 +376,9 @@
     }
   });
 
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Stop Metronome',
+    relayAction: 'Arrêt du métronome (panneau)',
     variants: metronomeStopVariants,
     handler: () => {
       stopMetronome();
@@ -252,8 +386,9 @@
     }
   });
 
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Set Metronome Tempo',
+    relayAction: (cmdText, match) => `Tempo réglé sur ${match[1]} BPM (panneau)`,
     regex: metronomeTempoRegex,
     handler: (cmdText, match) => {
       const bpm = parseInt(match[1], 10);
@@ -265,8 +400,9 @@
     }
   });
 
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Set Metronome Time Signature',
+    relayAction: 'Mesure du métronome réglée (panneau)',
     regex: metronomeMeasureRegex,
     handler: (cmdText, match) => {
       const rawMeasure = match[1];
@@ -278,8 +414,9 @@
     }
   });
 
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Set Metronome Sound Type',
+    relayAction: 'Son du métronome réglé (panneau)',
     regex: metronomeSoundRegex,
     handler: (cmdText, match) => {
       const rawSound = match[1].toLowerCase();
@@ -288,17 +425,20 @@
         sound = 'digital';
       } else if (rawSound === 'tambour' || rawSound === 'drum') {
         sound = 'drum';
+      } else if (rawSound === 'batterie' || rawSound === 'kit') {
+        sound = 'kit';
       }
       metronomeSoundType = sound;
       const select = document.getElementById('metronome-sound');
       if (select) select.value = sound;
-      const displaySound = sound === 'wood' ? 'Bois' : sound === 'digital' ? 'Digital' : 'Tambour';
+      const displaySound = sound === 'wood' ? 'Bois' : sound === 'digital' ? 'Digital' : sound === 'drum' ? 'Tambour' : 'Batterie';
       return { success: true, action: `Son du métronome réglé sur ${displaySound}` };
     }
   });
 
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Set Metronome Volume',
+    relayAction: (cmdText, match) => `Volume du métronome réglé à ${match[1]}% (panneau)`,
     regex: metronomeVolumeRegex,
     handler: (cmdText, match) => {
       const vol = parseInt(match[1], 10);
@@ -312,8 +452,9 @@
     }
   });
 
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Toggle Metronome Flash Widget',
+    relayAction: 'Clignotement du widget réglé (panneau)',
     regex: metronomeOptWidgetRegex,
     handler: () => {
       metronomeFlashWidget = !metronomeFlashWidget;
@@ -323,8 +464,9 @@
     }
   });
 
-  window.RockstarCore.registerCommand({
+  registerMetronomeCommand({
     name: 'Toggle Metronome Flash Screen',
+    relayAction: "Clignotement de l'écran réglé (panneau)",
     regex: metronomeOptScreenRegex,
     handler: () => {
       metronomeFlashScreen = !metronomeFlashScreen;
@@ -364,10 +506,13 @@
       <div class="metronome-header">
         <span class="tuner-label">Métronome</span>
         <div class="metronome-options">
+          <button id="metronome-song-tempo-btn" class="metronome-opt-btn" title="Régler le tempo sur celui de la chanson" disabled>♪</button>
           <button id="metronome-opt-flash-widget" class="metronome-opt-btn" title="Faire clignoter le widget">🔳</button>
           <button id="metronome-opt-flash-screen" class="metronome-opt-btn" title="Faire clignoter l'écran">🚨</button>
         </div>
-        <div class="metronome-led" id="metronome-led"></div>
+      </div>
+      <div class="metronome-beats-row">
+        <div class="metronome-beats" id="metronome-beats"></div>
       </div>
       <div class="metronome-play-tempo-row">
         <button id="metronome-play-btn" class="metronome-btn">▶</button>
@@ -394,6 +539,7 @@
           <option value="wood">Bois</option>
           <option value="digital">Digital</option>
           <option value="drum">Tambour</option>
+          <option value="kit">Batterie</option>
         </select>
       </div>
     `;
@@ -408,6 +554,7 @@
     const metronomeSoundSelect = metronomeContainer.querySelector('#metronome-sound');
     const optFlashWidget = metronomeContainer.querySelector('#metronome-opt-flash-widget');
     const optFlashScreen = metronomeContainer.querySelector('#metronome-opt-flash-screen');
+    const songTempoBtn = metronomeContainer.querySelector('#metronome-song-tempo-btn');
 
     metronomePlayBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -438,7 +585,18 @@
 
     metronomeMeasureSelect.addEventListener('change', (e) => {
       metronomeTimeSignature = e.target.value;
+      renderBeatDots();
     });
+
+    songTempoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applySongTempo();
+    });
+
+    // Le tempo de la fiche peut changer (chargement d'une chanson, édition,
+    // sauvegarde) : le bouton suit sans rechargement.
+    window.addEventListener('rockstar-song-changed', updateSongTempoButton);
+    window.addEventListener('rockstar-song-updated', updateSongTempoButton);
 
     metronomeSoundSelect.addEventListener('change', (e) => {
       metronomeSoundType = e.target.value;
@@ -463,6 +621,8 @@
 
     // Synchronisation de l'état initial
     metronomeContainer.classList.add('visible');
+    renderBeatDots();
+    updateSongTempoButton();
     if (metronomeFlashScreen) {
       createScreenFlashOverlay();
     }

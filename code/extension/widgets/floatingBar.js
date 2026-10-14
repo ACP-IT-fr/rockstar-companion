@@ -212,7 +212,7 @@
     '#ug-commands-panel', '#ug-voice-activation-banner',
     '#ug-chord', '#ug-tuner', '#ug-metronome', '#ug-metronome-screen-overlay',
     '#ug-singing-tracker', '#rockstar-piano-widget', '#rockstar-drawer',
-    '.rockstar-onboarding-card', '.rockstar-spotlight'
+    '.rockstar-onboarding-card', '.rockstar-onboarding-overlay'
   ].join(',');
   const externalBarCandidates = new Set();
   let externalBarOffset = 0;
@@ -832,7 +832,7 @@
             <li><b>"arrête le métronome"</b></li>
             <li><b>"tempo [40 - 240]"</b> (ex: "tempo 120")</li>
             <li><b>"mesure [4/4, 3/4...]"</b></li>
-            <li><b>"son [bois, digital...]"</b></li>
+            <li><b>"son [bois, digital, batterie...]"</b></li>
             <li><b>"volume [0 - 100]"</b></li>
           </ul>
         </div>

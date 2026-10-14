@@ -192,12 +192,130 @@
     });
   }
 
+  // --- Indicateur de synchro Drive ----------------------------------------------
+  // Le service écrit son état dans le storage ('drive:status') à chaque synchro
+  // (manuelle ou automatique) : l'indicateur le lit et le reflète.
+  // Cloud neutre au repos, spinner pendant, tick vert 4 s après succès,
+  // croix rouge en erreur (le détail humain va dans l'infobulle du bouton).
+  const DRIVE_OK_LINGER_MS = 4000;
+  let driveOkTimer = null;
+
+  function driveIndicatorEl() {
+    return document.getElementById('sp-drive-indicator');
+  }
+
+  function humanDriveError(msg) {
+    if (/no-client-id|not-configured/.test(msg)) {
+      return 'Google Drive n\'est pas encore configuré pour cette extension.';
+    }
+    if (/no-token/.test(msg)) {
+      return 'Connexion à Google requise. Lance une synchro pour autoriser l\'accès.';
+    }
+    if (/auth-timeout/.test(msg)) {
+      return 'Google n\'a pas répondu. Si une fenêtre de connexion Google est restée ouverte derrière cette fenêtre, termine-la, puis réessaie.';
+    }
+    if (/access_denied|authError|idpiframe|network|Failed to fetch/i.test(msg)) {
+      return 'Connexion à Google impossible pour le moment. Réessaie plus tard.';
+    }
+    return 'La synchronisation n\'a pas abouti. Réessaie dans un instant.';
+  }
+
+  function renderDriveStatus(status) {
+    const el = driveIndicatorEl();
+    if (!el) return;
+    const state = (status && status.state) || 'idle';
+    const at = (status && status.at) || 0;
+
+    if (driveOkTimer) {
+      clearTimeout(driveOkTimer);
+      driveOkTimer = null;
+    }
+
+    // Un « ok » ancien (ex. panneau rouvert longtemps après) redevient neutre.
+    if (state === 'ok' && Date.now() - at > DRIVE_OK_LINGER_MS) {
+      setDriveIndicator('idle', 'Synchro avec Google Drive terminée');
+      return;
+    }
+
+    if (state === 'error') {
+      const msg = humanDriveError(status.message || '');
+      setDriveIndicator('error', msg);
+      return;
+    }
+
+    if (state === 'busy') {
+      setDriveIndicator('busy', 'Synchronisation…');
+      return;
+    }
+
+    if (state === 'ok') {
+      setDriveIndicator('ok', 'À jour ✓');
+      driveOkTimer = setTimeout(() => {
+        driveOkTimer = null;
+        setDriveIndicator('idle', 'Synchronisation automatique à chaque modification');
+      }, DRIVE_OK_LINGER_MS - (Date.now() - at));
+      return;
+    }
+
+    setDriveIndicator('idle', 'Synchronisation automatique à chaque modification');
+  }
+
+  function setDriveIndicator(state, title) {
+    const el = driveIndicatorEl();
+    if (!el) return;
+    el.dataset.state = state;
+    el.textContent = state === 'ok' ? '✓' : state === 'error' ? '✕' : state === 'busy' ? '' : '☁';
+    const btn = el.closest('button');
+    if (btn) {
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+    }
+  }
+
+  function runDriveSync() {
+    const svc = window.driveSyncService;
+    if (!svc || !window.storageService) return;
+
+    if (!svc.isAvailable()) {
+      svc._setStatus('error', 'not-configured');
+      return;
+    }
+
+    // Le service publie lui-même busy/ok/error dans le storage ; le rendu
+    // passe par l'écouteur storage.onChanged. Erreurs déjà traduites là-bas.
+    svc.sync(true).catch((e) => {
+      if (!/already-running/.test((e && e.message) || '')) {
+        console.error('[driveSync]', e);
+      }
+    });
+  }
+
   function setup() {
     renderList();
+
+    // État de synchro courant (persisté) + suivi en direct.
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get('drive:status', (result) => {
+        renderDriveStatus(result && result['drive:status']);
+      });
+    }
 
     const addBtn = document.getElementById('sp-add-song-btn');
     if (addBtn) {
       addBtn.addEventListener('click', addCurrentPage);
+    }
+
+    // « + » du pill (onglet fermé → action en attente, ou volet déjà ouvert) :
+    // même chemin que « Ajouter cette page » du bouton ci-dessus.
+    if (window.__rockstarPendingAddCurrent) {
+      window.__rockstarPendingAddCurrent = false;
+      addCurrentPage();
+    }
+    window.addEventListener('rockstar-panel-add-current', addCurrentPage);
+
+    const driveBtn = document.getElementById('sp-drive-sync-btn');
+    if (driveBtn) {
+      driveBtn.addEventListener('click', runDriveSync);
     }
 
     // La liste suit les modifications du répertoire, où qu'elles viennent
@@ -205,7 +323,11 @@
     window.addEventListener('rockstar-song-updated', scheduleRefresh);
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener((changes, area) => {
-        if (area === 'local' && Object.keys(changes).some((k) => k.startsWith('song:'))) {
+        if (area !== 'local') return;
+        if (changes['drive:status']) {
+          renderDriveStatus(changes['drive:status'].newValue);
+        }
+        if (Object.keys(changes).some((k) => k.startsWith('song:'))) {
           scheduleRefresh();
         }
       });
