@@ -47,6 +47,12 @@
             window.dispatchEvent(new CustomEvent('rockstar-panel-add-current'));
           }
           showMainTab(msg.tab);
+        } else if (msg.type === 'rockstar:metronome-relay' && msg.text) {
+          // Commande vocale métronome relais depuis la page : la router vers
+          // le même moteur de commandes que la voix du panneau.
+          if (window.RockstarCore && window.RockstarCore.handleCommand) {
+            window.RockstarCore.handleCommand(msg.text);
+          }
         }
       });
 

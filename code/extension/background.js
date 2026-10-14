@@ -207,6 +207,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return true; // réponse asynchrone
     }
 
+    case 'rockstar:metronome-relay': {
+      // Commande vocale métronome émise depuis la page : en mode panneau
+      // latéral le widget ne se monte pas dans la page, c'est l'instance du
+      // panneau qui doit l'exécuter (sinon métronome fantôme). Panneau fermé :
+      // relayed:false → la page garde une exécution locale de secours.
+      const relayTabId = sender && sender.tab ? sender.tab.id : null;
+      const panelPort = relayTabId != null ? panelPorts.get(relayTabId) : null;
+      if (panelPort) {
+        panelPort.postMessage({ type: 'rockstar:metronome-relay', text: msg.text });
+        sendResponse({ ok: true, relayed: true });
+      } else {
+        sendResponse({ ok: true, relayed: false });
+      }
+      break;
+    }
+
     case 'rockstar:tab-to-panel': {
       // Broadcast vers tous les contextes d'extension (le panneau est un
       // document d'extension : il reçoit runtime.sendMessage).

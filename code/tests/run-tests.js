@@ -231,9 +231,35 @@ function testNormalizeUrl() {
   return Promise.resolve();
 }
 
+// --- 4. champ tempo (fiche chanson) ------------------------------------------
+function testTempoField() {
+  console.log('\n[tempo]');
+  const g = freshGlobals();
+  load(path.join(EXT, 'storageService.js'), { chrome: g.chrome, window: g.window, document: g.document });
+  const svc = global.window.storageService;
+  return svc.saveSong({ url: 'https://www.youtube.com/watch?v=abc12345678', title: 'T1', tempo: 128 })
+    .then(() => svc.getSong('https://www.youtube.com/watch?v=abc12345678'))
+    .then((song) => {
+      check('tempo persisté', song && song.tempo === 128);
+      // Mise à jour sans tempo : l'existant est conservé (pas de remise à zéro).
+      return svc.saveSong({ url: 'https://www.youtube.com/watch?v=abc12345678', notes: 'x' })
+        .then(() => svc.getSong('https://www.youtube.com/watch?v=abc12345678'))
+        .then((updated) => {
+          check('tempo conservé après édition d\u2019un autre champ', updated.tempo === 128);
+          // Valeur pourrie → 0 (comme capo).
+          return svc.saveSong({ url: 'https://www.youtube.com/watch?v=abc12345678', tempo: 'abc' })
+            .then(() => svc.getSong('https://www.youtube.com/watch?v=abc12345678'))
+            .then((bad) => {
+              check('tempo invalide → 0', bad.tempo === 0);
+            });
+        });
+    });
+}
+
 testStorageService()
   .then(testDriveMerge)
   .then(testNormalizeUrl)
+  .then(testTempoField)
   .then(() => {
     console.log(`\n${count} assertions, ${failures} échec(s)`);
     process.exit(failures > 0 ? 1 : 0);

@@ -832,7 +832,7 @@
             <li><b>"arrête le métronome"</b></li>
             <li><b>"tempo [40 - 240]"</b> (ex: "tempo 120")</li>
             <li><b>"mesure [4/4, 3/4...]"</b></li>
-            <li><b>"son [bois, digital...]"</b></li>
+            <li><b>"son [bois, digital, batterie...]"</b></li>
             <li><b>"volume [0 - 100]"</b></li>
           </ul>
         </div>

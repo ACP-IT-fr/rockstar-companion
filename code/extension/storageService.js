@@ -120,6 +120,7 @@ const storageService = {
       key: song.key !== undefined ? song.key : ((existing && existing.key) || ''),
       capo: song.capo !== undefined ? (parseInt(song.capo, 10) || 0) : ((existing && existing.capo) || 0),
       transpose: song.transpose !== undefined ? (parseInt(song.transpose, 10) || 0) : ((existing && existing.transpose) || 0),
+      tempo: song.tempo !== undefined ? (parseInt(song.tempo, 10) || 0) : ((existing && existing.tempo) || 0),
       scrollSpeed: song.scrollSpeed !== undefined ? (parseInt(song.scrollSpeed, 10) || 1) : ((existing && existing.scrollSpeed) || 1),
       notes: notes,
       playingTips: song.playingTips !== undefined ? String(song.playingTips) : ((existing && existing.playingTips) || ''),

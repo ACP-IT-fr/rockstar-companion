@@ -111,6 +111,7 @@
     const capoInput = drawerContainer.querySelector('#drawer-capo');
     const transInput = drawerContainer.querySelector('#drawer-transpose');
     const speedInput = drawerContainer.querySelector('#drawer-speed');
+    const tempoInput = drawerContainer.querySelector('#drawer-tempo');
     const notesText = drawerContainer.querySelector('#drawer-notes');
     const tipsText = drawerContainer.querySelector('#drawer-tips');
 
@@ -138,6 +139,9 @@
           window.RockstarCore.scrollSpeed = currentSong.scrollSpeed;
         }
       }
+      if (tempoInput) {
+        currentSong.tempo = parseInt(tempoInput.value, 10) || 0;
+      }
       if (notesText) {
         // Champ canonique unique (l'alias historique interpretationNotes est
         // converti à la migration, on n'écrit plus jamais deux champs).
@@ -158,6 +162,7 @@
     if (capoInput) capoInput.addEventListener('change', saveDrawerData);
     if (transInput) transInput.addEventListener('change', saveDrawerData);
     if (speedInput) speedInput.addEventListener('change', saveDrawerData);
+    if (tempoInput) tempoInput.addEventListener('change', saveDrawerData);
 
     let debounceSave = null;
     function debouncedSave() {
@@ -302,6 +307,10 @@
             <div class="drawer-input-group">
               <label>Vitesse</label>
               <input type="number" id="drawer-speed" min="1" max="10" value="1">
+            </div>
+            <div class="drawer-input-group drawer-input-wide">
+              <label>Tempo (BPM)</label>
+              <input type="number" id="drawer-tempo" min="40" max="240" placeholder="40 - 240">
             </div>
           </div>
         </div>
@@ -470,6 +479,7 @@
           key: "",
           capo: metadata.capo,
           transpose: 0,
+          tempo: 0,
           scrollSpeed: window.RockstarCore ? window.RockstarCore.scrollSpeed : 1,
           notes: "",
           playingTips: "",
@@ -500,6 +510,10 @@
     const speedInput = drawerContainer.querySelector('#drawer-speed');
     if (speedInput) {
       speedInput.value = currentSong.scrollSpeed || 1;
+    }
+    const tempoInput = drawerContainer.querySelector('#drawer-tempo');
+    if (tempoInput) {
+      tempoInput.value = currentSong.tempo || '';
     }
     drawerContainer.querySelector('#drawer-notes').value = currentSong.notes || currentSong.interpretationNotes || '';
     drawerContainer.querySelector('#drawer-tips').value = currentSong.playingTips || '';
@@ -960,6 +974,7 @@
         key: '',
         capo: 0,
         transpose: 0,
+        tempo: 0,
         scrollSpeed: window.RockstarCore ? window.RockstarCore.scrollSpeed : 1,
         notes: '',
         playingTips: '',
