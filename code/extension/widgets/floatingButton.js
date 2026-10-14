@@ -54,6 +54,10 @@
           <i>Ton</i>
           <b id="rfp-key" class="rfp-key-value">–</b>
         </span>
+        <span class="rfp-chip rfp-ctrl" id="rfp-tempo-ctrl" title="Tempo du métronome (BPM)">
+          <i>♪</i>
+          <button class="rfp-step" data-field="tempo" data-dir="-1">−</button><b id="rfp-tempo">120</b><button class="rfp-step" data-field="tempo" data-dir="1">+</button>
+        </span>
       </div>
       <div class="rfp-transcript">
         <div class="rfp-line">
@@ -333,22 +337,44 @@
         keyEl.textContent = song.key || '–';
       }
     }
+
+    // Puce Tempo : suit le métronome (voix, widget, bouton ♪ de la chanson).
+    function updateTempoChip() {
+      const tempoEl = pill.querySelector('#rfp-tempo');
+      if (tempoEl && window.RockstarCore.getMetronomeBpm) {
+        tempoEl.textContent = window.RockstarCore.getMetronomeBpm();
+      }
+    }
+    updateTempoChip();
     updateSongChips(window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong());
     updateSpeedChip();
     window.addEventListener('rockstar-song-changed', (e) => {
       updateSongChips(e.detail && e.detail.song);
       updateSpeedChip();
+      updateTempoChip();
     });
-    // La vitesse peut aussi changer via la voix / la barre : refresh léger
-    setInterval(updateSpeedChip, 1000);
+    // La vitesse / le tempo peuvent aussi changer via la voix / le widget : refresh léger
+    setInterval(() => { updateSpeedChip(); updateTempoChip(); }, 1000);
 
-    // Steppers discrets : − / + sur vitesse (±0,25), capo et transposition (±1)
-    const STEP_LIMITS = { capo: [0, 12], transpose: [-12, 12], scrollSpeed: [0.25, 5] };
+    // Steppers discrets : − / + sur vitesse (±0,25), capo et transposition (±1),
+    // tempo (±5 — pas grossier, un BPM à la fois ne sert à rien).
+    const STEP_LIMITS = { capo: [0, 12], transpose: [-12, 12], scrollSpeed: [0.25, 5], tempo: [40, 240] };
     pill.querySelectorAll('.rfp-step').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const field = btn.dataset.field;
         const dir = parseInt(btn.dataset.dir, 10);
+        if (field === 'tempo') {
+          const current = window.RockstarCore.getMetronomeBpm ? window.RockstarCore.getMetronomeBpm() : 120;
+          const next = current + dir * 5;
+          const [min, max] = STEP_LIMITS.tempo;
+          if (next < min || next > max) return;
+          if (window.RockstarCore.setMetronomeBpm) {
+            window.RockstarCore.setMetronomeBpm(next);
+            updateTempoChip();
+          }
+          return;
+        }
         const song = (window.RockstarCore.getCurrentSong && window.RockstarCore.getCurrentSong()) || {};
         const current = field === 'scrollSpeed'
           ? (song.scrollSpeed || window.RockstarCore.scrollSpeed || 1)
@@ -429,6 +455,7 @@
       let el = null;
       if (/défile|c'est parti|scroll|pause/.test(a)) el = pill.querySelector('#rfp-scroll-btn');
       else if (/vitesse|vite|speed/.test(a)) el = pill.querySelector('#rfp-speed-ctrl');
+      else if (/tempo|bpm|métronome|metronome/.test(a)) el = pill.querySelector('#rfp-tempo-ctrl');
       else if (/capo/.test(a)) el = chips[1];
       else if (/transpos/.test(a)) el = chips[2];
       else if (/tonalité|\bton\b|\bkey\b/.test(a)) el = pill.querySelector('#rfp-key-ctrl');

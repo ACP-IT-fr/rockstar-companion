@@ -800,6 +800,9 @@
   // Expose play methods
   window.RockstarCore.startMetronome = startMetronome;
   window.RockstarCore.stopMetronome = stopMetronome;
+  // Tempo exposé pour le pill flottant (puce Tempo ± )
+  window.RockstarCore.getMetronomeBpm = () => metronomeBpm;
+  window.RockstarCore.setMetronomeBpm = (bpm) => setMetronomeBpm(Math.round(bpm));
   // Motifs exposés pour les tests hors navigateur (fractions, silences, n-olets)
   window.RockstarCore.metronomeRhythmPatterns = RHYTHM_PATTERNS;
 })();
