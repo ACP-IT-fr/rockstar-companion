@@ -10,6 +10,10 @@
   let metronomeVolume = 0.5; // 0.0 to 1.0
   let metronomeFlashWidget = false;
   let metronomeFlashScreen = false;
+  let metronomeRhythm = 'noire';
+  // Facteur appliqué au gain des sous-temps (croches, doubles, etc.) pour
+  // qu'ils restent derrière le temps lui-même, comme sur un vrai métronome.
+  let gainScale = 1;
   let screenFlashOverlay = null;
 
   let nextBeatTime = 0.0;
@@ -135,6 +139,101 @@
     }
   }
 
+  // --- Motifs rythmiques -------------------------------------------------------
+  // Chaque motif répartit des événements sur UN temps (o = offset 0..1,
+  // d = nombre de ligatures pour le dessin, rest = silence). Les motifs
+  // irréguliers (n-olets) répartissent n croches égales sur le temps.
+  const RHYTHM_PATTERNS = [
+    { id: 'noire',    name: 'Noire',                         events: [{ o: 0, d: 0 }] },
+    { id: 'croches',  name: 'Deux croches',                  events: [{ o: 0, d: 1 }, { o: 0.5, d: 1 }] },
+    { id: 'triolet',  name: 'Triolet de croches',            events: [{ o: 0, d: 1 }, { o: 1 / 3, d: 1 }, { o: 2 / 3, d: 1 }], tuplet: 3 },
+    { id: 'doubles',  name: 'Quatre doubles croches',        events: [{ o: 0, d: 2 }, { o: 0.25, d: 2 }, { o: 0.5, d: 2 }, { o: 0.75, d: 2 }] },
+    { id: 'pointee',  name: 'Croche pointée + double',       events: [{ o: 0, d: 1, dot: true }, { o: 0.75, d: 2 }] },
+    { id: 'doublePointee', name: 'Double + croche pointée',  events: [{ o: 0, d: 2 }, { o: 0.5, d: 1, dot: true }] },
+    { id: 'soupirCroche', name: 'Silence puis croche',       events: [{ o: 0, rest: true }, { o: 0.5, d: 1 }] },
+    { id: 'crocheSoupir', name: 'Croche puis silence',       events: [{ o: 0, d: 1 }, { o: 0.5, rest: true }] },
+    { id: 'silenceDoubles', name: 'Silence puis deux doubles', events: [{ o: 0, rest: true }, { o: 0.5, d: 2 }, { o: 0.75, d: 2 }] },
+    { id: 'quintole', name: 'Quintole de croches',           events: [0, 1, 2, 3, 4].map((i) => ({ o: i / 5, d: 1 })), tuplet: 5 },
+    { id: 'sextolet', name: 'Sextolet de croches',           events: [0, 1, 2, 3, 4, 5].map((i) => ({ o: i / 6, d: 2 })), tuplet: 6 },
+    { id: 'septolet', name: 'Septolet de croches',           events: [0, 1, 2, 3, 4, 5, 6].map((i) => ({ o: i / 7, d: 2 })), tuplet: 7 },
+    { id: 'octolet',  name: 'Huit triples croches',          events: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ o: i / 8, d: 3 })), tuplet: 8 }
+  ];
+
+  function getRhythmPattern() {
+    return RHYTHM_PATTERNS.find((p) => p.id === metronomeRhythm) || RHYTHM_PATTERNS[0];
+  }
+
+  function setMetronomeRhythm(id) {
+    const p = RHYTHM_PATTERNS.find((x) => x.id === id);
+    if (!p) return false;
+    metronomeRhythm = id;
+    persistMetronomeState();
+    const grid = document.getElementById('metronome-rhythm-grid');
+    if (grid) {
+      Array.prototype.forEach.call(grid.children, (btn) => {
+        btn.classList.toggle('active', btn.dataset.rhythm === id);
+      });
+    }
+    return true;
+  }
+
+  // Dessin de la figure en SVG inline (pas d'emoji, pas d'image externe) :
+  // têtes de note + hampes + ligatures, chiffre du n-olet au-dessus,
+  // silences dessinés en petit glyphe.
+  function rhythmGlyphSVG(events, tuplet) {
+    const W = 46, H = 30;
+    const xFor = (o) => 6 + o * 32;
+    const parts = [];
+    const notes = events.filter((e) => !e.rest);
+    const maxBeam = notes.reduce((m, e) => Math.max(m, e.d || 0), 0);
+    events.forEach((ev) => {
+      const x = xFor(ev.o);
+      if (ev.rest) {
+        // Petit silence de croche : parenthèse + pointe, lisible à petite taille.
+        parts.push(`<path d="M ${x + 2} 22 q -3 -2 -2 -6 q 1 2 4 3 q 1 2 -2 3" fill="none" stroke="currentColor" stroke-width="1.4"/>`);
+        return;
+      }
+      const stemTop = 7;
+      parts.push(`<ellipse cx="${x}" cy="21" rx="3.4" ry="2.4" transform="rotate(-18 ${x} 21)"/>`);
+      parts.push(`<rect x="${x + 2.4}" y="${stemTop}" width="1.3" height="${21 - stemTop}" rx="0.6"/>`);
+      if (ev.dot) parts.push(`<circle cx="${x + 6.5}" cy="20" r="1.3"/>`);
+    });
+    if (notes.length > 1 && maxBeam > 0) {
+      const x1 = xFor(notes[0].o) + 2.4, x2 = xFor(notes[notes.length - 1].o) + 2.4;
+      for (let b = 0; b < maxBeam; b++) {
+        const y = 6.5 + b * 3.2;
+        parts.push(`<rect x="${x1 - 1}" y="${y}" width="${x2 - x1 + 1}" height="2.2" rx="1"/>`);
+      }
+    } else if (notes.length === 1 && (notes[0].d || 0) > 0) {
+      // Note isolée avec ligature : crochet court vers la droite.
+      const x = xFor(notes[0].o) + 2.4;
+      parts.push(`<rect x="${x}" y="6.5" width="7" height="2.2" rx="1"/>`);
+      if ((notes[0].d || 0) > 1) parts.push(`<rect x="${x}" y="9.7" width="5.5" height="2.2" rx="1"/>`);
+    }
+    if (tuplet) {
+      parts.push(`<text x="${W / 2}" y="5" font-size="7" text-anchor="middle" fill="currentColor">${tuplet}</text>`);
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" fill="currentColor">${parts.join('')}</svg>`;
+  }
+
+  function renderRhythmGrid() {
+    const grid = document.getElementById('metronome-rhythm-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    RHYTHM_PATTERNS.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.className = 'metronome-rhythm-btn' + (p.id === metronomeRhythm ? ' active' : '');
+      btn.dataset.rhythm = p.id;
+      btn.title = p.name;
+      btn.innerHTML = rhythmGlyphSVG(p.events, p.tuplet);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setMetronomeRhythm(p.id);
+      });
+      grid.appendChild(btn);
+    });
+  }
+
   // --- Synthèse des sons ------------------------------------------------------
   // Chaque kit définit deux voix très contrastées (accent = temps fort) : la
   // différence porte à la fois sur la hauteur, le timbre, la durée et le
@@ -151,7 +250,7 @@
       osc.frequency.exponentialRampToValueAtTime(endFreq, time + duration);
     }
     gainNode.gain.setValueAtTime(0, time);
-    gainNode.gain.linearRampToValueAtTime(gain * metronomeVolume, time + attack);
+    gainNode.gain.linearRampToValueAtTime(gain * metronomeVolume * gainScale, time + attack);
     gainNode.gain.exponentialRampToValueAtTime(0.001, time + attack + duration);
     osc.start(time);
     osc.stop(time + attack + duration + 0.05);
@@ -181,7 +280,7 @@
     noise.connect(filter);
     filter.connect(gainNode);
     gainNode.connect(ctx.destination);
-    gainNode.gain.setValueAtTime(1.1 * metronomeVolume, time);
+    gainNode.gain.setValueAtTime(1.1 * metronomeVolume * gainScale, time);
     gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
     noise.start(time);
     noise.stop(time + 0.1);
@@ -219,9 +318,24 @@
     const audioContext = window.RockstarCore.getAudioContext();
     if (!audioContext) return;
 
+    const secondsPerBeat = 60.0 / metronomeBpm;
     const isAccent = (metronomeTimeSignature !== '1/4' && beatIndex === 0);
     const kit = SOUND_KITS[metronomeSoundType] || SOUND_KITS.wood;
-    (isAccent ? kit.accent : kit.weak)(audioContext, time);
+
+    // Le motif répartit des événements sur le temps : le premier sonne
+    // normalement, les suivants sont des sous-temps plus discrets ; les
+    // silences ne sonnent pas (l'indicateur à points reste inchangé).
+    getRhythmPattern().events.forEach((ev) => {
+      const evTime = time + ev.o * secondsPerBeat;
+      if (ev.rest) return;
+      if (ev.o === 0) {
+        (isAccent ? kit.accent : kit.weak)(audioContext, evTime);
+      } else {
+        gainScale = 0.55;
+        kit.weak(audioContext, evTime);
+        gainScale = 1;
+      }
+    });
 
     const delay = (time - audioContext.currentTime) * 1000;
     setTimeout(() => {
@@ -277,9 +391,33 @@
     }
   }
 
+  // --- Persistance de l'état (dernier tempo, dernier motif) --------------------
+  // Le métronome reprend au prochain lancement là où on l'a laissé : sans
+  // override (bouton ♪ de la chanson, voix), le dernier BPM reste affiché.
+  const METRONOME_STATE_KEY = 'metronome_state';
+
+  function persistMetronomeState() {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+      chrome.storage.local.set({ [METRONOME_STATE_KEY]: { bpm: metronomeBpm, rhythm: metronomeRhythm } });
+    } catch (e) { /* contexte d'extension indisponible : rien à persister */ }
+  }
+
+  function restoreMetronomeState() {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+      chrome.storage.local.get(METRONOME_STATE_KEY, (res) => {
+        const st = res && res[METRONOME_STATE_KEY];
+        if (st && st.bpm) setMetronomeBpm(st.bpm);
+        if (st && st.rhythm) setMetronomeRhythm(st.rhythm);
+      });
+    } catch (e) { /* idem */ }
+  }
+
   function setMetronomeBpm(newBpm) {
     metronomeBpm = Math.max(40, Math.min(240, newBpm));
-    
+    persistMetronomeState();
+
     const display = document.getElementById('metronome-bpm-display');
     if (display) display.innerText = `${metronomeBpm} BPM`;
     
@@ -414,6 +552,34 @@
     }
   });
 
+  const metronomeRhythmRegex = /^(?:rythme|rhythm|motif|figure)\s*(?:de\s+|en\s+)?(noire|noires|croches|croche pointée|croche pointee|double pointée|double pointee|double croche|doubles croches|triolet|triolet de croches|silence puis croche|croche puis silence|silence puis deux doubles|quintole|quintolet|sextolet|septolet|octolet)$/i;
+
+  const RHYTHM_VOICE_MAP = {
+    'noire': 'noire', 'noires': 'noire',
+    'croches': 'croches',
+    'triolet': 'triolet', 'triolet de croches': 'triolet',
+    'double croche': 'doubles', 'doubles croches': 'doubles',
+    'croche pointée': 'pointee', 'croche pointee': 'pointee',
+    'double pointée': 'doublePointee', 'double pointee': 'doublePointee',
+    'silence puis croche': 'soupirCroche', 'croche puis silence': 'crocheSoupir',
+    'silence puis deux doubles': 'silenceDoubles',
+    'quintole': 'quintole', 'quintolet': 'quintole',
+    'sextolet': 'sextolet', 'septolet': 'septolet', 'octolet': 'octolet'
+  };
+
+  registerMetronomeCommand({
+    name: 'Set Metronome Rhythm',
+    relayAction: 'Rythme du métronome réglé (panneau)',
+    regex: metronomeRhythmRegex,
+    handler: (cmdText, match) => {
+      const id = RHYTHM_VOICE_MAP[match[1].toLowerCase()];
+      if (id && setMetronomeRhythm(id)) {
+        return { success: true, action: `Rythme réglé sur ${getRhythmPattern().name}` };
+      }
+      return { success: false, action: `Rythme inconnu: ${match[1]}` };
+    }
+  });
+
   registerMetronomeCommand({
     name: 'Set Metronome Sound Type',
     relayAction: 'Son du métronome réglé (panneau)',
@@ -542,6 +708,7 @@
           <option value="kit">Batterie</option>
         </select>
       </div>
+      <div class="metronome-rhythm-grid" id="metronome-rhythm-grid" title="Rythme"></div>
     `;
     document.body.appendChild(metronomeContainer);
 
@@ -622,6 +789,8 @@
     // Synchronisation de l'état initial
     metronomeContainer.classList.add('visible');
     renderBeatDots();
+    renderRhythmGrid();
+    restoreMetronomeState();
     updateSongTempoButton();
     if (metronomeFlashScreen) {
       createScreenFlashOverlay();
@@ -631,4 +800,6 @@
   // Expose play methods
   window.RockstarCore.startMetronome = startMetronome;
   window.RockstarCore.stopMetronome = stopMetronome;
+  // Motifs exposés pour les tests hors navigateur (fractions, silences, n-olets)
+  window.RockstarCore.metronomeRhythmPatterns = RHYTHM_PATTERNS;
 })();

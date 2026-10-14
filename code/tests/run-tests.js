@@ -256,10 +256,43 @@ function testTempoField() {
     });
 }
 
+// --- 5. motifs rythmiques du métronome ---------------------------------------
+// Le widget ne tourne pas hors navigateur : on vérifie la logique pure des
+// motifs (fractions dans [0;1), premier temps sonné, offsets uniques).
+function testMetronomeRhythm() {
+  console.log('\n[metronomeRhythm]');
+  const g = freshGlobals();
+  g.window.RockstarCore = {
+    isExtensionPage: true,
+    registerCommand() {},
+    registerHelpCommand() {},
+    registerInit() {},
+    onListeningChanged() {},
+    onSettingsChanged() {}
+  };
+  load(path.join(EXT, 'widgets', 'metronome.js'), { chrome: g.chrome, window: g.window, document: g.document });
+  const patterns = g.window.RockstarCore.metronomeRhythmPatterns;
+  check('motifs exposés', Array.isArray(patterns) && patterns.length >= 10);
+  if (!Array.isArray(patterns)) return Promise.resolve();
+
+  patterns.forEach((p) => {
+    const offsets = p.events.map((e) => e.o);
+    check(`${p.id} : commence au temps`, offsets[0] === 0);
+    check(`${p.id} : offsets croissants`, offsets.every((o, i) => i === 0 || o > offsets[i - 1]));
+    check(`${p.id} : offsets dans le temps`, offsets.every((o) => o >= 0 && o < 1));
+    check(`${p.id} : au moins une note sonnée`, p.events.some((e) => !e.rest));
+    if (p.tuplet) {
+      check(`${p.id} : n-olet de ${p.tuplet}`, p.events.length === p.tuplet);
+    }
+  });
+  return Promise.resolve();
+}
+
 testStorageService()
   .then(testDriveMerge)
   .then(testNormalizeUrl)
   .then(testTempoField)
+  .then(testMetronomeRhythm)
   .then(() => {
     console.log(`\n${count} assertions, ${failures} échec(s)`);
     process.exit(failures > 0 ? 1 : 0);

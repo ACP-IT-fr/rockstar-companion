@@ -1100,6 +1100,37 @@
   border-color: #ff9f1c;
 }
 
+/* Grille des motifs rythmiques : boutons avec figure dessinée (SVG inline),
+   le motif actif est cerclé d'orange, comme une sélection de notation. */
+.metronome-rhythm-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.metronome-rhythm-btn {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #4fc3f7;
+  padding: 3px 4px 1px 4px;
+  line-height: 0;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.metronome-rhythm-btn:hover {
+  border-color: #777;
+  opacity: 0.9;
+}
+
+.metronome-rhythm-btn.active {
+  border-color: #ff9f1c;
+  background: #3a2c17;
+}
+
 .metronome-slider {
   -webkit-appearance: none;
   appearance: none;
