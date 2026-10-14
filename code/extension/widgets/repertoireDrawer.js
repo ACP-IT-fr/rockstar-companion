@@ -1014,6 +1014,32 @@
     
     isNumberingInitialized = true;
 
+    // Anti-freeze : la version historique dédupliquait les URLs mais testait
+    // `hasUnnumbered` sur TOUS les liens — dès que deux <a> partageaient la
+    // même URL (doublon dans les résultats, nœud injecté par la page/pub),
+    // le check ne convergeait jamais : renumérotation infinie en microtâches
+    // → page figée. On numérote maintenant une séquence dédupliquée signée :
+    // renumérotation uniquement quand la séquence change, sinon on se
+    // contente de reposer les pastilles manquantes (boucle convergente).
+    let lastSignature = null;
+    let urlToNum = new Map();
+
+    function makeBadge(num) {
+      const badge = document.createElement('span');
+      badge.className = 'ug-result-badge';
+      badge.innerText = num;
+      badge.style.display = 'inline-block';
+      badge.style.backgroundColor = '#f6921e';
+      badge.style.color = '#fff';
+      badge.style.fontSize = '11px';
+      badge.style.fontWeight = 'bold';
+      badge.style.padding = '1px 5px';
+      badge.style.borderRadius = '3px';
+      badge.style.marginRight = '6px';
+      badge.style.verticalAlign = 'middle';
+      return badge;
+    }
+
     function numberSearchResults() {
       if (!activeConfig.isSearchPage()) return;
 
@@ -1022,34 +1048,35 @@
       // MutationObserver relancera le numérotage quand ils apparaîtront.
       if (tabLinks.length === 0) return;
 
-      // Remove existing badges to avoid duplicates on re-render
-      document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());
-
-      window.ugSearchResultLinks = {};
-      let counter = 1;
-      const processedUrls = new Set();
-
+      // Séquence d'URLs dédupliquée (ordre du DOM).
+      const seq = [];
+      const seen = new Set();
       tabLinks.forEach(link => {
         const url = normalizeUrl(link.href);
-        if (!processedUrls.has(url)) {
-          processedUrls.add(url);
-          window.ugSearchResultLinks[counter] = link.href;
+        if (url && !seen.has(url)) {
+          seen.add(url);
+          seq.push({ url, href: link.href });
+        }
+      });
 
-          const badge = document.createElement('span');
-          badge.className = 'ug-result-badge';
-          badge.innerText = counter;
-          badge.style.display = 'inline-block';
-          badge.style.backgroundColor = '#f6921e';
-          badge.style.color = '#fff';
-          badge.style.fontSize = '11px';
-          badge.style.fontWeight = 'bold';
-          badge.style.padding = '1px 5px';
-          badge.style.borderRadius = '3px';
-          badge.style.marginRight = '6px';
-          badge.style.verticalAlign = 'middle';
+      const signature = seq.map(s => s.url).join('|');
+      if (signature !== lastSignature) {
+        lastSignature = signature;
+        document.querySelectorAll('.ug-result-badge').forEach(el => el.remove());
+        urlToNum.clear();
+        window.ugSearchResultLinks = {};
+        seq.forEach((s, i) => {
+          urlToNum.set(s.url, i + 1);
+          window.ugSearchResultLinks[i + 1] = s.href;
+        });
+      }
 
-          link.insertBefore(badge, link.firstChild);
-          counter++;
+      // Repose uniquement les pastilles manquantes (re-rendu partiel du site).
+      tabLinks.forEach(link => {
+        if (link.querySelector('.ug-result-badge')) return;
+        const num = urlToNum.get(normalizeUrl(link.href));
+        if (num !== undefined) {
+          link.insertBefore(makeBadge(num), link.firstChild);
         }
       });
     }
@@ -1059,25 +1086,32 @@
 
     // Mutation observer to handle SPA routing / dynamic DOM updates on search pages
     let lastUrl = window.location.href;
+    let observerTimer = null;
     const searchObserver = new MutationObserver(() => {
-      const currentUrl = window.location.href;
-      const isSearchPage = activeConfig.isSearchPage();
-      
-      if (isSearchPage) {
-        if (currentUrl !== lastUrl) {
-          lastUrl = currentUrl;
-          numberSearchResults();
-        } else {
-          // Check if there are unnumbered links in the DOM
-          const tabLinks = activeConfig.getLinks();
-          const hasUnnumbered = tabLinks.some(link => !link.querySelector('.ug-result-badge'));
-          if (hasUnnumbered && tabLinks.length > 0) {
+      // Coalesce les rafales de mutations (pubs, re-rendus) : au plus un
+      // passage par 150 ms, la logique interne converge de toute façon.
+      if (observerTimer) return;
+      observerTimer = setTimeout(() => {
+        observerTimer = null;
+        const currentUrl = window.location.href;
+        const isSearchPage = activeConfig.isSearchPage();
+
+        if (isSearchPage) {
+          if (currentUrl !== lastUrl) {
+            lastUrl = currentUrl;
             numberSearchResults();
+          } else {
+            // Check if there are unnumbered links in the DOM
+            const tabLinks = activeConfig.getLinks();
+            const hasUnnumbered = tabLinks.some(link => !link.querySelector('.ug-result-badge'));
+            if (hasUnnumbered && tabLinks.length > 0) {
+              numberSearchResults();
+            }
           }
+        } else {
+          lastUrl = currentUrl;
         }
-      } else {
-        lastUrl = currentUrl;
-      }
+      }, 150);
     });
     
     searchObserver.observe(document.documentElement, {
