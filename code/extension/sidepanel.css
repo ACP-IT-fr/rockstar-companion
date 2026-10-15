@@ -216,6 +216,23 @@ html, body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+/* La grille des motifs du métronome s'ouvre en overlay (position absolue)
+   qui déborde de la carte : deux dérogations nécessaires.
+   1. overflow:visible sur la carte ET son corps (widget-card-body rognerait
+      sinon, le widget se monte dedans).
+   2. z-index sur la CARTE elle-même : backdrop-filter fait de chaque carte
+      un contexte d'empilement, un z-index interne à l'overlay ne peut donc
+      pas passer au-dessus de la carte suivante (tuner) peinte après. */
+#sp-card-metronome,
+#sp-card-metronome .widget-card-body {
+  overflow: visible;
+}
+
+#sp-card-metronome {
+  position: relative;
+  z-index: 2;
+}
+
 .widget-card-header {
   display: flex;
   align-items: center;

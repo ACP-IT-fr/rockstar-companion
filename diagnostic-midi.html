@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Diagnostic MIDI</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 15px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+    margin: 0; padding: 24px; background: transparent; color: inherit;
+    background: #f8fafc; color: #0f172a;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #0b1220; color: #e2e8f0; } }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { opacity: .6; margin-bottom: 20px; }
+  .card {
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+  }
+  .state { font-weight: 700; }
+  .ok { color: #10b981; } .warn { color: #f59e0b; } .bad { color: #ef4444; }
+  button {
+    font: inherit; padding: 8px 16px; border-radius: 8px; border: none;
+    cursor: pointer; background: #10b981; color: #fff; font-weight: 600;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  #log {
+    max-height: 50vh; overflow-y: auto; white-space: pre; font-size: 13px;
+    border-top: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+    padding-top: 10px; margin-top: 10px;
+  }
+  .hint { font-size: 13px; opacity: .75; }
+</style>
+</head>
+<body>
+<h1>🎹 Diagnostic MIDI</h1>
+<p class="sub">Ouvre ce fichier dans Chrome, clique « Autoriser », accepte le prompt, puis joue sur ton clavier.</p>
+
+<div class="card">
+  <div>Support Web MIDI : <span id="support" class="state">…</span></div>
+  <div>Permission : <span id="perm" class="state">—</span></div>
+  <div style="margin-top:10px">
+    <button id="btn">Autoriser le MIDI</button>
+  </div>
+</div>
+
+<div class="card">
+  <div><b>Périphériques d'entrée</b></div>
+  <div id="inputs">—</div>
+</div>
+
+<div class="card">
+  <div><b>Messages reçus</b> <span class="hint">(note-on = 144+i, note-off = 128+i)</span></div>
+  <div id="log">—</div>
+</div>
+
+<p class="hint">Si les messages arrivent ici mais pas dans l'extension : le code est en cause.
+Si rien n'arrive ici non plus : le problème est côté Chrome/OS/pilote (câble, port « DAW », DAW qui capture le clavier).</p>
+
+<script>
+const $ = id => document.getElementById(id);
+let access = null;
+
+$('support').textContent = navigator.requestMIDIAccess ? '✓ disponible' : '✗ absent';
+$('support').className = 'state ' + (navigator.requestMIDIAccess ? 'ok' : 'bad');
+
+function queryPerm() {
+  try {
+    navigator.permissions.query({ name: 'midi' }).then(s => {
+      $('perm').textContent = s.state;
+      $('perm').className = 'state ' + (s.state === 'granted' ? 'ok' : s.state === 'denied' ? 'bad' : 'warn');
+    }).catch(() => { $('perm').textContent = 'non interrogeable'; });
+  } catch (e) { $('perm').textContent = 'non interrogeable'; }
+}
+queryPerm();
+
+function listInputs() {
+  const inputs = Array.from(access.inputs.values());
+  $('inputs').textContent = inputs.length
+    ? inputs.map(i => `• ${i.name} (id=${i.id.slice(0,8)}…, état=${i.state})`).join('\n')
+    : 'AUCUN périphérique d\'entrée détecté';
+}
+
+function attach() {
+  access.inputs.forEach(i => {
+    i.onmidimessage = e => {
+      const [st, d1, d2] = e.data;
+      const kind = (st & 0xF0) === 0x90 && d2 > 0 ? 'NOTE-ON ' : (st & 0xF0) === 0x80 || d2 === 0 ? 'note-off' : 'autre   ';
+      const line = `${new Date().toLocaleTimeString()}  [${e.target.name}]  ${kind}  [${Array.from(e.data).join(', ')}]\n`;
+      const log = $('log');
+      log.textContent = line + log.textContent;
+    };
+  });
+}
+
+$('btn').addEventListener('click', async () => {
+  $('btn').disabled = true;
+  $('btn').textContent = 'Demande en cours…';
+  try {
+    access = await navigator.requestMIDIAccess({ sysex: false });
+    $('btn').textContent = '✓ Accès accordé';
+    listInputs(); attach();
+    access.onstatechange = () => { listInputs(); attach(); };
+  } catch (e) {
+    $('btn').textContent = '✗ ' + e.name + ' — voir note ci-dessous';
+    $('btn').disabled = false;
+  }
+});
+</script>
+</body>
+</html>

@@ -182,6 +182,7 @@
         btn.classList.toggle('active', btn.dataset.rhythm === id);
       });
     }
+    updateRhythmCurrent();
     return true;
   }
 
@@ -262,7 +263,32 @@ const METRONOME_GLYPH_SVGS = {
 };
 // END GENERATED METRONOME GLYPHS
 
-  function renderRhythmGrid() {
+  // Les motifs restent affichés en GLYPHES (figures de notation), mais
+  // repliés derrière le motif courant : fermé, le sélecteur ne prend qu'une
+  // ligne ; un clic ouvre la grille complète. Noms et figures pilotés par
+  // RHYTHM_PATTERNS (un ajout suffit).
+  function updateRhythmCurrent() {
+    const cur = document.getElementById('metronome-rhythm-current');
+    if (!cur) return;
+    const p = getRhythmPattern();
+    cur.innerHTML = METRONOME_GLYPH_SVGS[p.id] || rhythmGlyphSVG(p.events, p.tuplet);
+    cur.title = 'Rythme : ' + p.name;
+  }
+
+  function setRhythmPickerOpen(open) {
+    const grid = document.getElementById('metronome-rhythm-grid');
+    const cur = document.getElementById('metronome-rhythm-current');
+    if (!grid || !cur) return;
+    grid.hidden = !open;
+    cur.classList.toggle('open', open);
+    cur.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function closeRhythmPicker() {
+    setRhythmPickerOpen(false);
+  }
+
+  function renderRhythmPicker() {
     const grid = document.getElementById('metronome-rhythm-grid');
     if (!grid) return;
     grid.innerHTML = '';
@@ -275,9 +301,11 @@ const METRONOME_GLYPH_SVGS = {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         setMetronomeRhythm(p.id);
+        closeRhythmPicker();
       });
       grid.appendChild(btn);
     });
+    updateRhythmCurrent();
   }
 
   // --- Synthèse des sons ------------------------------------------------------
@@ -794,7 +822,10 @@ const METRONOME_GLYPH_SVGS = {
           <option value="kit">Batterie</option>
         </select>
       </div>
-      <div class="metronome-rhythm-grid" id="metronome-rhythm-grid" title="Rythme"></div>
+      <div class="metronome-rhythm-picker">
+        <button id="metronome-rhythm-current" class="metronome-rhythm-current" title="Rythme" aria-expanded="false" aria-controls="metronome-rhythm-grid"></button>
+        <div class="metronome-rhythm-grid" id="metronome-rhythm-grid" hidden></div>
+      </div>
     `;
     document.body.appendChild(metronomeContainer);
 
@@ -855,6 +886,20 @@ const METRONOME_GLYPH_SVGS = {
       metronomeSoundType = e.target.value;
     });
 
+    metronomeContainer.querySelector('#metronome-rhythm-current').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const grid = metronomeContainer.querySelector('#metronome-rhythm-grid');
+      setRhythmPickerOpen(grid.hidden);
+    });
+    // Fermeture au clic ailleurs sur la page (enregistre une seule fois).
+    if (!window.__rockstarRhythmOutsideClose) {
+      window.__rockstarRhythmOutsideClose = true;
+      document.addEventListener('click', (e) => {
+        const picker = document.querySelector('.metronome-rhythm-picker');
+        if (picker && !picker.contains(e.target)) closeRhythmPicker();
+      });
+    }
+
     optFlashWidget.addEventListener('click', (e) => {
       e.stopPropagation();
       metronomeFlashWidget = !metronomeFlashWidget;
@@ -875,7 +920,7 @@ const METRONOME_GLYPH_SVGS = {
     // Synchronisation de l'état initial
     metronomeContainer.classList.add('visible');
     renderBeatDots();
-    renderRhythmGrid();
+    renderRhythmPicker();
     restoreMetronomeState();
     updateSongTempoButton();
     if (metronomeFlashScreen) {

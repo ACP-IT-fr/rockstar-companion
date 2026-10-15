@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Glyphes métronome — comparaison</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    color: var(--foreground, #e8eaf0);
+    background: transparent;
+    padding: 14px 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  p.sub { font-size: 11.5px; color: var(--muted-foreground, #9aa0ae); margin-bottom: 12px; }
+  .variant { margin-bottom: 18px; }
+  .variant h2 { font-size: 12px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; }
+  .variant h2 .tag { font-size: 10.5px; font-weight: 400; color: var(--muted-foreground, #9aa0ae); }
+  .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; max-width: 560px; }
+  button.cell {
+    background: var(--card, #262b36);
+    border: 1px solid var(--border, #3a4050);
+    border-radius: 8px;
+    color: #4cc9f0;
+    padding: 8px 4px 5px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  button.cell:hover { border-color: #4cc9f0; }
+  button.cell.active { border-color: #4cc9f0; background: rgba(76,201,240,.08); }
+  button.cell .lbl { font-size: 8.5px; color: var(--muted-foreground, #9aa0ae); line-height: 1.1; text-align: center; }
+  .uni { font-size: 20px; line-height: 30px; color: #4cc9f0; font-family: "Noto Music", "Segoe UI Symbol", "Apple Symbols", sans-serif; height: 30px; display:flex; align-items:center; }
+  .uni small { font-size: 9px; margin-left: 1px; }
+</style>
+</head>
+<body>
+<h1>Les notes du métronome, trois façons de les dessiner</h1>
+<p class="sub">Clique sur une case pour ta préférée — le badge en haut de chaque rangée suit ta sélection.</p>
+<div id="root"></div>
+<script>
+const RHYTHM_PATTERNS = [
+  { id: 'noire',           name: 'Noire',                      events: [{ o: 0, d: 0 }] },
+  { id: 'croches',         name: 'Deux croches',               events: [{ o: 0, d: 1 }, { o: 0.5, d: 1 }] },
+  { id: 'triolet',         name: 'Triolet',                    events: [{ o: 0, d: 1 }, { o: 1/3, d: 1 }, { o: 2/3, d: 1 }], tuplet: 3 },
+  { id: 'doubles',         name: 'Quatre doubles',             events: [{ o: 0, d: 2 }, { o: 0.25, d: 2 }, { o: 0.5, d: 2 }, { o: 0.75, d: 2 }] },
+  { id: 'crocheDoubles',   name: 'Croche et 2 doubles',        events: [{ o: 0, d: 1 }, { o: 0.5, d: 2 }, { o: 0.75, d: 2 }] },
+  { id: 'doublesCroche',   name: '2 doubles et croche',        events: [{ o: 0, d: 2 }, { o: 0.25, d: 2 }, { o: 0.5, d: 1 }] },
+  { id: 'pointee',         name: 'Croche pointée + double',    events: [{ o: 0, d: 1, dot: true }, { o: 0.75, d: 2 }] },
+  { id: 'doublePointee',   name: 'Double + croche pointée',    events: [{ o: 0, d: 2 }, { o: 0.5, d: 1, dot: true }] },
+  { id: 'soupirCroche',    name: 'Silence puis croche',        events: [{ o: 0, rest: true }, { o: 0.5, d: 1 }] },
+  { id: 'crocheSoupir',    name: 'Croche puis silence',        events: [{ o: 0, d: 1 }, { o: 0.5, rest: true }] },
+  { id: 'quintole',        name: 'Quintole',                   events: [0,1,2,3,4].map(i => ({ o: i/5, d: 1 })), tuplet: 5 },
+  { id: 'septolet',        name: 'Septolet',                   events: [0,1,2,3,4,5,6].map(i => ({ o: i/7, d: 2 })), tuplet: 7 }
+];
+
+// --- shared geometry helper -------------------------------------------------
+function build(events, opt) {
+  const W = 46, H = 30;
+  const xFor = o => opt.left + o * opt.span;
+  const parts = [];
+  const notes = events.filter(e => !e.rest);
+  events.forEach(ev => {
+    const x = xFor(ev.o);
+    if (ev.rest) {
+      parts.push(opt.rest(x));
+      return;
+    }
+    parts.push(opt.head(x));
+    parts.push(opt.stem(x));
+    if (ev.dot) parts.push(`<circle cx="${x + 7}" cy="19.5" r="1.5"/>`);
+  });
+  if (notes.length === 1 && (notes[0].d || 0) > 0) {
+    const x = xFor(notes[0].o) + opt.stemX;
+    for (let b = 1; b <= notes[0].d; b++)
+      parts.push(`<rect x="${x}" y="${opt.beamY(b)}" width="${opt.flagW}" height="${opt.beamH}" rx="${opt.round}"/>`);
+  } else if (notes.length > 1) {
+    for (let i = 0; i < notes.length - 1; i++) {
+      const shared = Math.min(notes[i].d || 0, notes[i+1].d || 0);
+      if (shared < 1) continue;
+      const x1 = xFor(notes[i].o) + opt.stemX, x2 = xFor(notes[i+1].o) + opt.stemX;
+      for (let b = 1; b <= shared; b++)
+        parts.push(`<rect x="${x1 - opt.over}" y="${opt.beamY(b)}" width="${x2 - x1 + opt.over * 2 + opt.stemW}" height="${opt.beamH}" rx="${opt.round}"/>`);
+    }
+    notes.forEach((n, i) => {
+      const d = n.d || 0;
+      const left = i > 0 ? Math.min(d, notes[i-1].d || 0) : 0;
+      const right = i < notes.length - 1 ? Math.min(d, notes[i+1].d || 0) : 0;
+      const connected = Math.max(left, right);
+      if (d <= connected) return;
+      const x = xFor(n.o) + opt.stemX;
+      const stubLeft = right >= left && i < notes.length - 1 ? false : i > 0;
+      for (let b = connected + 1; b <= d; b++)
+        parts.push(`<rect x="${stubLeft ? x - opt.flagW : x}" y="${opt.beamY(b)}" width="${opt.flagW}" height="${opt.beamH}" rx="${opt.round}"/>`);
+    });
+  }
+  if (events.tuplet) parts.push(`<text x="${W/2}" y="5.5" font-size="7" font-weight="600" text-anchor="middle" fill="currentColor">${events.tuplet}</text>`);
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" fill="currentColor">${parts.join('')}</svg>`;
+}
+
+// --- variant A : actuel ------------------------------------------------------
+const current = {
+  left: 6, span: 32, stemX: 2.4, over: 0, beamH: 2.2, round: 1, flagW: 7, stemW: 1.3,
+  beamY: b => 6.5 + (b - 1) * 3.2,
+  head: x => `<ellipse cx="${x}" cy="21" rx="3.4" ry="2.4" transform="rotate(-18 ${x} 21)"/>`,
+  stem: x => `<rect x="${x + 2.4}" y="7" width="1.3" height="14" rx="0.6"/>`,
+  rest: x => `<path d="M ${x + 2} 22 q -3 -2 -2 -6 q 1 2 4 3 q 1 2 -2 3" fill="none" stroke="currentColor" stroke-width="1.4"/>`
+};
+function renderCurrent(events, tuplet) { return build(events, current); }
+
+// --- variant B : affiné ------------------------------------------------------
+const fine = {
+  left: 5, span: 34, stemX: 3.1, over: 0, beamH: 2.3, round: 1.1, flagW: 7.5, stemW: 1.5,
+  beamY: b => 6 + (b - 1) * 3.6,
+  head: x => `<path d="M ${x - 3.8} ${21.6} a 3.9 2.7 0 1 0 7.6 -1.4 a 3.9 2.7 0 1 0 -7.6 1.4 Z" transform="rotate(-21 ${x} 21)"/>`,
+  stem: x => `<rect x="${x + 2.6}" y="6" width="1.5" height="15" rx="0.75"/>`,
+  rest: x => `<path d="M ${x + 5.2} 8.5 c 0 3.5 -2.2 6.2 -5 7.6 c 3 -2.5 4 -4.5 4.2 -7.6 Z M ${x + 1.6} 18.6 a 1.7 1.7 0 1 0 3.4 0 a 1.7 1.7 0 1 0 -3.4 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>`
+};
+function renderFine(events, tuplet) { return build(events, fine); }
+
+// --- variant C : plein (corrigé) --------------------------------------------
+// Les ligatures s'arrêtent exactement aux hampes : pas de débord.
+const bold = {
+  left: 4, span: 34, stemX: 3.4, over: 0, beamH: 3, round: 0.8, flagW: 7.4, stemW: 2,
+  beamY: b => 5.5 + (b - 1) * 4.2,
+  head: x => `<ellipse cx="${x}" cy="21" rx="4.2" ry="3" transform="rotate(-20 ${x} 21)"/>`,
+  stem: x => `<rect x="${x + 3}" y="5.5" width="2" height="15.5" rx="1"/>`,
+  rest: x => `<path d="M ${x + 6} 8 c 0 4 -2.5 7 -5.8 8.8 c 3.5 -3 4.6 -5 4.9 -8.8 Z M ${x + 1.2} 19 a 1.9 1.9 0 1 0 3.8 0 a 1.9 1.9 0 1 0 -3.8 0"/>`
+};
+function renderBold(events, tuplet) { return build(events, bold); }
+
+// --- variant D : unicode -----------------------------------------------------
+const UNICODE_MAP = {
+  noire: '♩', croches: '♫', triolet: '♪<small>3</small>', doubles: '♬♬',
+  crocheDoubles: '♪♬', doublesCroche: '♬♪', pointee: '♪.', doublePointee: '♬.',
+  soupirCroche: '♪<small>𝄽</small>', crocheSoupir: '♪<small>𝄽</small>',
+  quintole: '♪<small>5</small>', septolet: '♬<small>7</small>'
+};
+
+const VARIANTS = [
+  { id: 'current', name: 'Actuel', desc: 'le rendu tel qu\'il est aujourd\'hui', render: renderCurrent },
+  { id: 'fine',    name: 'Affiné',  desc: 'têtes inclinées façon gravure, hampes fines, ligatures aérées', render: renderFine },
+  { id: 'bold',    name: 'Plein',   desc: 'notes épaisses et rondes, lisibles en tout petit', render: renderBold },
+  { id: 'unicode', name: 'Unicode', desc: 'caractères musicaux du système (♪ ♫ ♬) — largeurs inégales', render: null }
+];
+
+const selection = {};
+const root = document.getElementById('root');
+VARIANTS.forEach(v => {
+  const sec = document.createElement('div');
+  sec.className = 'variant';
+  const h2 = document.createElement('h2');
+  h2.innerHTML = `<span class="name">${v.name}</span><span class="tag">${v.desc}${v.id === 'current' ? ' (repère)' : ''}</span>`;
+  sec.appendChild(h2);
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  RHYTHM_PATTERNS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'cell';
+    b.innerHTML = (v.render ? v.render(p.events, p.tuplet) : `<span class="uni">${UNICODE_MAP[p.id] || '♪'}</span>`)
+      + `<span class="lbl">${p.name}</span>`;
+    b.addEventListener('click', () => {
+      selection[v.id] = p.id;
+      grid.querySelectorAll('.cell').forEach(c => c.classList.toggle('active', c === b));
+      h2.querySelector('.name').textContent = `${v.name} — ${p.name}`;
+    });
+    grid.appendChild(b);
+  });
+  sec.appendChild(grid);
+  root.appendChild(sec);
+});
+</script>
+</body>
+</html>
