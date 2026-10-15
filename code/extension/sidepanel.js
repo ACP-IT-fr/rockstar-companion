@@ -57,10 +57,10 @@
       });
 
       // --- Largeur du panneau → onglets de la fenêtre --------------------------
-      // Le side panel recouvre la page sans redimensionner son viewport : la
-      // page ne peut pas mesurer la zone masquée. Le panneau se mesure
-      // lui-même et relaie sa largeur (au chargement, puis à chaque
-      // redimensionnement) ; le hub la broadcast aux onglets.
+      // Le panneau se mesure lui-même et relaie sa largeur (au chargement,
+      // puis à chaque redimensionnement) ; le hub la broadcast aux onglets.
+      // Le viewport de la page rétrécit déjà avec le volet : les widgets
+      // clampent sur window.innerWidth, cette valeur est informative.
       let widthTimer = null;
       function reportPanelWidth() {
         try { port.postMessage({ type: 'rockstar:panel-width', width: window.innerWidth }); } catch (e) { /* port fermé */ }
@@ -365,16 +365,100 @@
       });
     }
 
+    // Dernière commande activée (clic ou voix) : son bouton passe en orange
+    // et le reste jusqu'à la commande suivante.
+    function setActiveCmdBtn(btn) {
+      document.querySelectorAll('.sp-cmd.sp-cmd-active').forEach((b) => b.classList.remove('sp-cmd-active'));
+      btn.classList.add('sp-cmd-active');
+    }
+    function normCmdText(text) {
+      // La voix ne rend pas toujours les accents (« arrete », « demarre ») :
+      // on compare sans accents ni espaces superflus.
+      return String(text)
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ');
+    }
+    function markActiveCmd(text) {
+      if (typeof text !== 'string') return;
+      const wanted = normCmdText(text);
+      if (!wanted) return;
+      const buttons = Array.prototype.filter.call(
+        document.querySelectorAll('.sp-cmd[data-cmd]'),
+        (b) => b.offsetParent !== null // visible : groupe ouvert et onglet affiché
+      );
+      let btn = buttons.find((b) => normCmdText(b.dataset.cmd) === wanted);
+      if (!btn) {
+        // Tolérance : la transcription peut tronquer la fin de la commande.
+        btn = buttons.find((b) => normCmdText(b.dataset.cmd).startsWith(wanted));
+      }
+      if (btn) setActiveCmdBtn(btn);
+    }
+
+    // Accordéon des rappels de commandes : replié par défaut, l'état est
+    // retenu d'une session à l'autre.
+    const cmdsToggle = document.getElementById('sp-playback-toggle');
+    const cmdsBox = document.getElementById('sp-playback-cmds');
+    if (cmdsToggle && cmdsBox) {
+      const setCmdsOpen = (open) => {
+        cmdsBox.hidden = !open;
+        cmdsToggle.classList.toggle('open', open);
+        cmdsToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      if (chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get('rockstar_panel_cmds_open', (res) => {
+          setCmdsOpen(Boolean(res && res.rockstar_panel_cmds_open));
+        });
+      }
+      cmdsToggle.addEventListener('click', () => {
+        const open = cmdsBox.hidden;
+        setCmdsOpen(open);
+        if (chrome.storage && chrome.storage.local) {
+          chrome.storage.local.set({ rockstar_panel_cmds_open: open });
+        }
+      });
+    }
+
     document.querySelectorAll('.sp-cmd[data-cmd]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         btn.disabled = true;
+        setActiveCmdBtn(btn);
         try {
-          await sendTabCommand(btn.dataset.cmd);
+          if (btn.dataset.local) {
+            // Métronome / répertoire : ces commandes s'exécutent dans le
+            // panneau lui-même (les widgets y vivent), pas dans l'onglet
+            // actif — on passe par le même router que la voix du panneau.
+            const ok = window.RockstarCore && window.RockstarCore.handleCommand
+              ? window.RockstarCore.handleCommand(btn.dataset.cmd)
+              : false;
+            if (!ok && window.RockstarCore && window.RockstarCore.showFeedback) {
+              window.RockstarCore.showFeedback(`✗ « ${btn.dataset.cmd} » : commande non reconnue`, false);
+            }
+          } else {
+            await sendTabCommand(btn.dataset.cmd);
+          }
         } finally {
           btn.disabled = false;
         }
       });
     });
+
+    // Voix : commandes exécutées dans le panneau (relais métronome depuis
+    // l'onglet) + commandes vocales de l'onglet (broadcast rockstar:tab-event,
+    // cf. core.js handleCommand). Le bouton correspondant passe en orange.
+    window.addEventListener('rockstar-voice-command', (e) => {
+      const detail = e.detail || {};
+      if (detail.success !== false) markActiveCmd(detail.text || '');
+    });
+    if (chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener((msg) => {
+        if (msg && msg.type === 'rockstar:tab-event' && msg.payload && msg.payload.kind === 'voice-command') {
+          markActiveCmd(msg.payload.text);
+        }
+      });
+    }
   }
 
   // --- Piano : mode compact (une octave) par défaut, bouton "Déployer" ----------

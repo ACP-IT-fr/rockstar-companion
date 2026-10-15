@@ -835,6 +835,8 @@
             <li><b>"rythme [noire, croches, triolet, doubles croches...]"</b></li>
             <li><b>"son [bois, digital, batterie...]"</b></li>
             <li><b>"volume [0 - 100]"</b></li>
+            <li><b>"lance le tempo de la chanson"</b></li>
+            <li><b>"tempo de la chanson"</b> (régler sans lancer)</li>
           </ul>
         </div>
         <div class="settings-section" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">

@@ -76,13 +76,11 @@
     const cmdEl = pill.querySelector('#rfp-cmd');
 
     // --- Position (persistée) -------------------------------------------------
-    // Largeur du side panel (recouvre la page sans redimensionner le
-    // viewport) : le pill doit rester à gauche de cette zone masquée.
-    let panelWidth = 0;
-
-    // Positionne le pill à la position valide la plus proche : ancré dans le
-    // viewport et hors de la zone couverte par le side panel. Ne persiste
-    // pas : la position sauvegardée reste celle choisie à la poignée.
+    // NB : le side panel Chrome partage la fenêtre avec la page — il réduit
+    // déjà window.innerWidth (la page se réorganise). On clampe donc
+    // uniquement sur innerWidth : soustraire en plus la largeur du panneau
+    // (relaie rockstar:panel-width) compterait la zone deux fois et
+    // écraserait le pill vers la gauche de façon irrattrapable à la poignée.
     function repositionPill() {
       const rect = pill.getBoundingClientRect();
       // Ancrer en left/top uniquement : garder bottom défini en même temps
@@ -91,7 +89,7 @@
       pill.style.bottom = 'auto';
       pill.style.left = rect.left + 'px';
       pill.style.top = rect.top + 'px';
-      const maxLeft = Math.max(0, window.innerWidth - panelWidth - pill.offsetWidth);
+      const maxLeft = Math.max(0, window.innerWidth - pill.offsetWidth);
       const maxTop = Math.max(0, window.innerHeight - pill.offsetHeight);
       const left = Math.max(0, Math.min(maxLeft, rect.left));
       const top = Math.max(0, Math.min(maxTop, rect.top));
@@ -119,16 +117,7 @@
     }
     restorePosition();
 
-    // Repositionnement à chaud : volet redimensionné (la largeur remonte du
-    // panneau via le hub) ou fenêtre redimensionnée.
-    if (chrome.runtime && chrome.runtime.onMessage) {
-      chrome.runtime.onMessage.addListener((msg) => {
-        if (msg && msg.type === 'rockstar:panel-width' && typeof msg.width === 'number') {
-          panelWidth = Math.max(0, msg.width);
-          repositionPill();
-        }
-      });
-    }
+    // La fenêtre (volet latéral inclus) se redimensionne : le pill suit.
     window.addEventListener('resize', repositionPill);
 
     // --- Déplacement par la poignée -------------------------------------------
@@ -148,7 +137,7 @@
     });
     handle.addEventListener('pointermove', (e) => {
       if (!drag) return;
-      const left = Math.max(0, Math.min(window.innerWidth - panelWidth - pill.offsetWidth, e.clientX - drag.dx));
+      const left = Math.max(0, Math.min(window.innerWidth - pill.offsetWidth, e.clientX - drag.dx));
       const top = Math.max(0, Math.min(window.innerHeight - pill.offsetHeight, e.clientY - drag.dy));
       pill.style.left = left + 'px';
       pill.style.top = top + 'px';

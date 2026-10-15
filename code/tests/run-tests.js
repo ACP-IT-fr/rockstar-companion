@@ -288,11 +288,89 @@ function testMetronomeRhythm() {
   return Promise.resolve();
 }
 
+// --- 6. commandes vocales (métronome chanson + répertoire) --------------------
+// Le routeur vocal est piloté par des regex enregistrées : on charge les deux
+// modules avec un noyau factice qui capture les commandes, puis on vérifie
+// les expressions directement.
+function testVoiceCommands() {
+  console.log('\n[voiceCommands]');
+  function loadWithCapture(file, extraCore) {
+    const g = freshGlobals();
+    const commands = [];
+    g.window.RockstarCore = Object.assign({
+      currentDomain: 'www.ultimate-guitar.com',
+      isExtensionPage: false,
+      registerCommand(def) { commands.push(def); },
+      registerHelpCommand() {},
+      registerInit() {},
+      onListeningChanged() {},
+      onSettingsChanged() {},
+      scrollSpeed: 1
+    }, extraCore || {});
+    load(path.join(EXT, file), { chrome: g.chrome, window: g.window, document: g.document });
+    return { commands, globals: g };
+  }
+
+  const met = loadWithCapture(path.join('widgets', 'metronome.js'), { isExtensionPage: true });
+  const playSongTempo = met.commands.find((c) => c.name === 'Play Song Tempo');
+  const setSongTempo = met.commands.find((c) => c.name === 'Set Song Tempo');
+  check('commande "lance le tempo de la chanson" enregistrée', !!playSongTempo && !!playSongTempo.regex);
+  check('commande "tempo de la chanson" (réglage seul) enregistrée', !!setSongTempo && !!setSongTempo.regex);
+  if (playSongTempo) {
+    check('"lance le tempo de la chanson" reconnu (lancement)', playSongTempo.regex.test('lance le tempo de la chanson'));
+    check('"tempo 120" ne capte pas la commande chanson', !playSongTempo.regex.test('tempo 120'));
+    check('lancement exposé sur le noyau', typeof met.globals.window.RockstarCore.playSongTempo === 'function');
+    check('réglage seul exposé sur le noyau', typeof met.globals.window.RockstarCore.setSongTempo === 'function');
+  }
+  if (setSongTempo) {
+    check('"tempo de la chanson" reconnu (réglage seul)', setSongTempo.regex.test('tempo de la chanson'));
+    check('"mets le tempo de cette chanson" reconnu (réglage seul)', setSongTempo.regex.test('mets le tempo de cette chanson'));
+    check('"lance le tempo de la chanson" ne capte pas le réglage seul', !setSongTempo.regex.test('lance le tempo de la chanson'));
+    check('"tempo 120" ne capte pas le réglage seul', !setSongTempo.regex.test('tempo 120'));
+  }
+
+  const drawer = loadWithCapture(path.join('widgets', 'repertoireDrawer.js'));
+  const byName = (name) => drawer.commands.find((c) => c.name === name);
+
+  const openSong = byName('Open Song');
+  check('commande "ouvre la chanson X" enregistrée', !!openSong && !!openSong.regex);
+  if (openSong) {
+    const m1 = 'ouvre la chanson wonderwall'.match(openSong.regex);
+    check('"ouvre la chanson wonderwall" reconnu', !!m1 && m1[1].trim() === 'wonderwall');
+    check('"lance la fiche de la chanson X" reconnu', openSong.regex.test('lance la fiche de la chanson zone'));
+    check('"montre la fiche" ne déclenche pas la recherche', !openSong.regex.test('montre la fiche'));
+  }
+
+  const showFiche = byName('Show Song Sheet');
+  check('commande "montre la fiche" enregistrée', !!showFiche && !!showFiche.regex);
+  if (showFiche) {
+    check('"montre la fiche" reconnu', showFiche.regex.test('montre la fiche'));
+    check('"ouvre la fiche" reconnu', showFiche.regex.test('ouvre la fiche'));
+  }
+
+  const showRep = byName('Show Repertoire');
+  check('commande "montre le répertoire" enregistrée', !!showRep && !!showRep.regex);
+  if (showRep) {
+    check('"montre le répertoire" reconnu', showRep.regex.test('montre le répertoire'));
+    check('"ouvre répertoire" reconnu', showRep.regex.test('ouvre répertoire'));
+  }
+
+  const saveSong = byName('Save Current Song');
+  check('commande "enregistre cette page" enregistrée', !!saveSong && !!saveSong.regex);
+  if (saveSong) {
+    check('"enregistre cette page" reconnu', saveSong.regex.test('enregistre cette page'));
+    check('"ajoute cette chanson au répertoire" reconnu', saveSong.regex.test('ajoute cette chanson au répertoire'));
+    check('"sauvegarde au répertoire" reconnu', saveSong.regex.test('sauvegarde au répertoire'));
+    check('"enregistre le repère 1" ne capte pas la commande', !saveSong.regex.test('enregistre le repère 1'));
+  }
+}
+
 testStorageService()
   .then(testDriveMerge)
   .then(testNormalizeUrl)
   .then(testTempoField)
   .then(testMetronomeRhythm)
+  .then(testVoiceCommands)
   .then(() => {
     console.log(`\n${count} assertions, ${failures} échec(s)`);
     process.exit(failures > 0 ? 1 : 0);

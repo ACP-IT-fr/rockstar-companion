@@ -164,6 +164,20 @@
     if (speedInput) speedInput.addEventListener('change', saveDrawerData);
     if (tempoInput) tempoInput.addEventListener('change', saveDrawerData);
 
+    // Bouton ▶ du tempo : règle le métronome sur le tempo de la fiche SANS le
+    // lancer (on sauvegarde d'abord la valeur saisie, puis on relaie au
+    // métronome — RockstarCore.setSongTempo gère le relais vers le panneau).
+    const tempoPlayBtn = drawerContainer.querySelector('#drawer-tempo-play');
+    if (tempoPlayBtn && tempoInput) {
+      tempoPlayBtn.addEventListener('click', () => {
+        saveDrawerData();
+        if (window.RockstarCore && window.RockstarCore.setSongTempo) {
+          window.RockstarCore.setSongTempo();
+        }
+      });
+      tempoInput.addEventListener('input', updateTempoPlayBtn);
+    }
+
     let debounceSave = null;
     function debouncedSave() {
       clearTimeout(debounceSave);
@@ -310,7 +324,10 @@
             </div>
             <div class="drawer-input-group drawer-input-wide">
               <label>Tempo (BPM)</label>
-              <input type="number" id="drawer-tempo" min="40" max="240" placeholder="40 - 240">
+              <div class="drawer-tempo-row" style="display:flex; gap:6px; align-items:stretch;">
+                <input type="number" id="drawer-tempo" min="40" max="240" placeholder="40 - 240" style="flex:1; min-width:0;">
+                <button id="drawer-tempo-play" title="Régler le métronome sur le tempo de la chanson" style="flex:none; padding:4px 10px;" disabled>▶</button>
+              </div>
             </div>
           </div>
         </div>
@@ -500,6 +517,17 @@
     window.dispatchEvent(new CustomEvent('rockstar-song-changed', { detail: { song: currentSong } }));
   }
 
+  // Bouton ▶ du tempo : désactivé tant qu'aucun tempo n'est saisi (validation
+  // par :disabled, zéro message d'erreur visible).
+  function updateTempoPlayBtn() {
+    if (!drawerContainer) return;
+    const playBtn = drawerContainer.querySelector('#drawer-tempo-play');
+    const tempoInput = drawerContainer.querySelector('#drawer-tempo');
+    if (playBtn && tempoInput) {
+      playBtn.disabled = !((parseInt(tempoInput.value, 10) || 0) > 0);
+    }
+  }
+
   function populateDrawerFields() {
     if (!drawerContainer) return;
     drawerContainer.querySelector('#drawer-title-input').value = currentSong.title || '';
@@ -515,6 +543,7 @@
     if (tempoInput) {
       tempoInput.value = currentSong.tempo || '';
     }
+    updateTempoPlayBtn();
     drawerContainer.querySelector('#drawer-notes').value = currentSong.notes || currentSong.interpretationNotes || '';
     drawerContainer.querySelector('#drawer-tips').value = currentSong.playingTips || '';
     
@@ -956,6 +985,115 @@
 
   // Help command mapping
   window.RockstarCore.registerHelpCommand({ label: "🔍 Chercher Playlist", cmd: "cherche dans ma playlist ", env: "tab" });
+
+  // --- Commandes vocales répertoire / fiches (hors métronome) -------------------
+
+  // Navigation vers une fiche : dans le panneau on pilote l'onglet actif,
+  // dans la page on navigue comme les autres commandes de recherche.
+  function navigateToSong(url) {
+    if (window.RockstarCore.isExtensionPage) {
+      if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.tabs.query) return;
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs && tabs[0];
+        if (tab && chrome.tabs.update) {
+          chrome.tabs.update(tab.id, { url: url });
+        }
+      });
+      return;
+    }
+    if (window.RockstarCore.stopListening) {
+      window.RockstarCore.stopListening();
+    }
+    if (window.RockstarCore.safeStorageSet) {
+      window.RockstarCore.safeStorageSet({ rockstar_wake_on_load: true }, () => {
+        window.location.href = url;
+      });
+    } else {
+      window.location.href = url;
+    }
+  }
+
+  // « ouvre la chanson wonderwall » : recherche dans le répertoire par
+  // titre ou artiste (premier morceau le plus récemment sauvegardé).
+  window.RockstarCore.registerCommand({
+    name: 'Open Song',
+    regex: /^(?:ouvre|lance|montre|joue)\s+(?:la\s+)?(?:fiche(?:\s+de\s+la)?\s+chanson|chanson)\s+(.+)$/i,
+    handler: (cmdText, match) => {
+      const query = match[1].trim().toLowerCase();
+      if (!query) return { success: false, action: 'Titre de chanson manquant' };
+      if (!window.storageService) return { success: false, action: 'Répertoire indisponible' };
+      window.storageService.getAllSongsList().then((songs) => {
+        const found = songs.find((s) =>
+          (s.title || '').toLowerCase().includes(query) ||
+          (s.artist || '').toLowerCase().includes(query));
+        if (!found) {
+          if (window.RockstarCore.showFeedback) {
+            window.RockstarCore.showFeedback(`🎤 Aucune fiche « ${match[1].trim()} » dans le répertoire`, false);
+          }
+          return;
+        }
+        navigateToSong(found.url);
+      });
+      return { success: true, action: `Recherche de la fiche « ${match[1].trim()} »` };
+    }
+  });
+
+  // « montre la fiche » : ouvre/ferme le tiroir (page) ou l'onglet Chanson
+  // (panneau latéral).
+  window.RockstarCore.registerCommand({
+    name: 'Show Song Sheet',
+    regex: /^(?:montre|ouvre|affiche)\s+(?:la\s+)?fiche$/i,
+    handler: () => {
+      if (window.RockstarCore.isExtensionPage) {
+        const btn = document.querySelector('#sp-maintabs [data-maintab="song"]');
+        if (btn) btn.click();
+      } else {
+        toggleDrawer();
+      }
+      return { success: true, action: 'Fiche de la chanson' };
+    }
+  });
+
+  // « montre le répertoire » : liste complète des fiches.
+  window.RockstarCore.registerCommand({
+    name: 'Show Repertoire',
+    regex: /^(?:montre|ouvre|affiche)\s+(?:le\s+)?répertoire$/i,
+    handler: () => {
+      if (window.RockstarCore.isExtensionPage) {
+        const btn = document.querySelector('#sp-maintabs [data-maintab="repertoire"]');
+        if (btn) btn.click();
+      } else if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'rockstar:open-panel', kind: 'open', tab: 'repertoire' });
+      }
+      return { success: true, action: 'Répertoire' };
+    }
+  });
+
+  // « enregistre cette page » : ajoute la fiche courante au répertoire.
+  window.RockstarCore.registerCommand({
+    name: 'Save Current Song',
+    regex: /^(?:enregistre|sauvegarde|ajoute)\s+(?:cette\s+page|cette\s+chanson)(?:\s+au\s+répertoire)?$|^(?:enregistre|sauvegarde)\s+au\s+répertoire$/i,
+    handler: () => {
+      if (!window.storageService) return { success: false, action: 'Répertoire indisponible' };
+      const song = window.RockstarCore.getCurrentSong ? window.RockstarCore.getCurrentSong() : null;
+      if (!song || !song.url) return { success: false, action: 'Aucune fiche à enregistrer' };
+      // handleCommand est synchrone : on répond tout de suite, la sauvegarde
+      // (asynchrone) signale son issue via showFeedback.
+      window.storageService.saveSong(song).then(() => {
+        if (window.RockstarCore.showFeedback) {
+          window.RockstarCore.showFeedback(`🎵 « ${song.title || 'Sans titre'} » ajoutée au répertoire`, true);
+        }
+      }).catch(() => {
+        if (window.RockstarCore.showFeedback) {
+          window.RockstarCore.showFeedback("🎵 Échec de l'enregistrement", false);
+        }
+      });
+      return { success: true, action: 'Enregistrement de la fiche en cours' };
+    }
+  });
+
+  window.RockstarCore.registerHelpCommand({ label: "🎵 Ouvrir une fiche", cmd: "ouvre la chanson ", env: "tab" });
+  window.RockstarCore.registerHelpCommand({ label: "📖 Répertoire", cmd: "montre le répertoire", env: "tab" });
 
   // Expose methods on core namespace
   window.RockstarCore.initializeDrawer = initializeDrawer;

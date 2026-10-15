@@ -5,10 +5,15 @@
   "scripts": {
     "zip": "node scripts/package.js",
     "test": "node code/tests/run-tests.js",
+    "glyphs": "node code/tools/generate-metronome-glyphs.js",
     "dev": "npx -y live-server landing-page",
     "deploy": "bash deploy.sh"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@vexflow-fonts/bravura": "^1.0.2",
+    "opentype.js": "^2.0.0"
+  }
 }

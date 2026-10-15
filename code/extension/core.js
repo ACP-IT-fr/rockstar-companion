@@ -256,6 +256,19 @@
       window.RockstarCore.showFeedback(`🎤 Heard: "${transcript}"\n${actionName}`, isSuccess);
     }
     window.dispatchEvent(new CustomEvent('rockstar-voice-command', { detail: { text: transcript, success: isSuccess, action: actionName } }));
+    // La voix vit dans l'onglet : le panneau latéral n'entend pas l'événement
+    // local. On lui relaie la commande (broadcast rockstar:tab-event) pour
+    // qu'il mette en avant le bouton correspondant (dernière commande en orange).
+    if (!isExtensionPage && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      try {
+        chrome.runtime.sendMessage({
+          type: 'rockstar:tab-to-panel',
+          payload: { kind: 'voice-command', text: transcript, success: isSuccess, action: actionName }
+        }, () => {
+          if (chrome.runtime.lastError) void chrome.runtime.lastError;
+        });
+      } catch (e) { /* hub indisponible : l'événement local suffit */ }
+    }
     return isSuccess;
   }
 
