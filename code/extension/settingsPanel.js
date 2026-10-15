@@ -150,6 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const originPattern2 = `https://${currentDomain}/*`;
       const scriptId = `rockstar-dynamic-${currentDomain.replace(/[^a-z0-9]/gi, '-')}`;
 
+      // Liste des fichiers à injecter : source unique (contentFiles.js chargé
+      // par le HTML hôte). Fallback défensif si absent.
+      const contentFiles = (typeof ROCKSTAR_CONTENT_FILES !== 'undefined')
+        ? ROCKSTAR_CONTENT_FILES
+        : { js: ['storageService.js', 'core.js', 'voiceEngine.js', 'widgets/floatingBar.js', 'widgets/scroll.js', 'widgets/metronome.js', 'widgets/tuner.js', 'widgets/chordDetector.js', 'widgets/repertoireDrawer.js', 'widgets/youtubeController.js', 'widgets/singingTracker.js', 'widgets/onboarding.js'], css: ['content.css'] };
+
       if (domainActivationCb.checked) {
         // Demander l'autorisation pour ce domaine
         chrome.permissions.request({
@@ -167,21 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.scripting.registerContentScripts([{
               id: scriptId,
               matches: [originPattern1, originPattern2],
-              js: [
-                "storageService.js",
-                "core.js",
-                "voiceEngine.js",
-                "widgets/floatingBar.js",
-                "widgets/scroll.js",
-                "widgets/metronome.js",
-                "widgets/tuner.js",
-                "widgets/chordDetector.js",
-                "widgets/repertoireDrawer.js",
-                "widgets/youtubeController.js",
-                "widgets/singingTracker.js",
-                "widgets/onboarding.js"
-              ],
-              css: ["content.css"],
+              js: contentFiles.js,
+              css: contentFiles.css,
               runAt: "document_idle"
             }]).catch(err => {
               console.error(`Failed to register dynamic content scripts for ${currentDomain}:`, err);

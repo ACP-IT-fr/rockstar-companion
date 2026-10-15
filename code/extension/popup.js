@@ -21,6 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs && tabs[0]) {
         const tabId = tabs[0].id;
+
+        // Pages non-supportées : chrome://, chrome-extension://, Web Store,
+        // file://... Chrome refuse l'injection. On désactive le bouton et on
+        // explique pourquoi plutôt qu'un échec silencieux au clic.
+        const tabUrl = tabs[0].url || '';
+        const injectable = /^https?:\/\//.test(tabUrl) && !/^https:\/\/(chrome\.google\.com\/webstore|chromewebstore\.google\.com)/.test(tabUrl);
+        if (!injectable) {
+          injectBtn.disabled = true;
+          injectBtn.style.opacity = '0.5';
+          injectBtn.style.cursor = 'not-allowed';
+          injectBtn.innerText = 'Indisponible sur cette page';
+          console.warn('[RockstarPopup] Injection impossible sur', tabUrl);
+          return;
+        }
+
         chrome.scripting.executeScript({
           target: { tabId: tabId },
           func: () => {
@@ -46,11 +61,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const tabId = tabs[0].id;
 
         if (isCoreActiveOnTab) {
-          // DEACTIVATION
+          // DEACTIVATION — teardown centralisé dans core.js (une seule source
+          // de vérité pour ce que chaque widget a créé) ; fallback sur le
+          // nettoyage manuel pour les injections antérieures sans teardown.
           injectBtn.innerText = "⏳ Désactivation...";
           chrome.scripting.executeScript({
             target: { tabId: tabId },
             func: () => {
+              if (window.RockstarCore && typeof window.RockstarCore.teardown === 'function') {
+                window.RockstarCore.teardown();
+                return;
+              }
+              // Fallback legacy : nettoyage manuel (listes d'IDs codées en dur).
               if (window.RockstarCore) {
                 // Stop listening
                 if (typeof window.RockstarCore.stopListening === 'function') {
@@ -119,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           }).then(() => {
             // 2. Sequential JS Injections to respect dependencies (storageService -> core -> others)
-            const jsFiles = [
+            // Liste partagée : contentFiles.js (source unique).
+            const fallbackFiles = [
               "storageService.js",
               "core.js",
               "voiceEngine.js",
@@ -133,6 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
               "widgets/singingTracker.js",
               "widgets/onboarding.js"
             ];
+            const jsFiles = (typeof ROCKSTAR_CONTENT_FILES !== 'undefined')
+              ? ROCKSTAR_CONTENT_FILES.js
+              : fallbackFiles;
 
             // Helper to chain promises sequentially
             return jsFiles.reduce((promise, file) => {

@@ -456,6 +456,46 @@
     showActivationBanner: null,
     removeActivationBanner: null,
 
+    // Teardown complet : arrête l'écoute, ferme l'audio, retire tout ce que
+    // l'extension a ajouté au DOM, puis supprime window.RockstarCore.
+    // Source de vérité unique pour la désactivation (popup.js l'appelle).
+    teardown: () => {
+      try {
+        if (typeof window.RockstarCore.stopListening === 'function') window.RockstarCore.stopListening();
+      } catch (e) { console.error('[RockstarCore] teardown stopListening:', e); }
+      try {
+        if (audioContext && typeof audioContext.close === 'function') audioContext.close().catch(() => {});
+      } catch (e) {}
+      audioContext = null;
+      analyser = null;
+
+      const idsToRemove = [
+        'rockstar-floating-bar',
+        'rockstar-floating-button',
+        'rockstar-floating-pill',
+        'ug-voice-btn',
+        'ug-voice-live-text',
+        'ug-song-summary-bar',
+        'ug-chord',
+        'ug-tuner',
+        'ug-singing-tracker',
+        'ug-metronome',
+        'ug-metronome-screen-overlay',
+        'rockstar-drawer',
+        'ug-drawer-btn',
+        'rockstar-banner'
+      ];
+      idsToRemove.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+
+      document.body.classList.remove('rockstar-bar-top', 'rockstar-bar-bottom', 'rockstar-bar-left', 'rockstar-bar-right');
+
+      // La suppression de window.RockstarCore doit être la dernière opération.
+      try { delete window.RockstarCore; } catch (e) { window.RockstarCore = undefined; }
+    },
+
     // Initialisation globale
     initialize: () => {
       if (window.RockstarCore.isInitialized) return;

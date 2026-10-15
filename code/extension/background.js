@@ -2,7 +2,8 @@
  * background.js — Service worker (MV3) : hub de communication.
  *
  * Rôles :
- *  1. Ouvrir le side panel au clic sur l'icône de l'extension.
+ *  1. Au clic sur l'icône : injecter les widgets dans l'onglet actif
+ *     (pill flottante incluse) PUIS ouvrir le side panel.
  *  2. Router les messages entre le side panel et les content scripts.
  *
  * Le side panel (sidepanel.html) ne partage pas le DOM avec la page :
@@ -11,16 +12,75 @@
  * (état de lecture, etc.) reviennent au panneau via chrome.runtime.sendMessage.
  */
 
-// Panneau ouvert au clic sur l'icône (comportement déclaré à l'install
-// et réappliqué au démarrage du service worker pour rester robuste).
-function enableOpenOnActionClick() {
-  if (!chrome.sidePanel || !chrome.sidePanel.setPanelBehavior) return;
-  chrome.sidePanel
-    .setPanelBehavior({ openPanelOnActionClick: true })
-    .catch((e) => console.error('[VoxRoddy BG] setPanelBehavior:', e));
+// NB : on ne peut PAS utiliser setPanelBehavior({ openPanelOnActionClick: true })
+// ici — quand ce comportement est actif, Chrome n'émet PAS action.onClicked,
+// donc la pill ne serait jamais injectée. On pilote les deux actions nous-même
+// dans le handler ci-dessous (sidePanel.open dans le geste utilisateur).
+
+// Source unique des fichiers à injecter (même liste que popup.js /
+// settingsPanel.js). contentFiles.js définit ROCKSTAR_CONTENT_FILES.
+importScripts('contentFiles.js');
+
+/**
+ * Injecte les widgets dans l'onglet s'ils ne le sont pas déjà.
+ * Ne requiert pas de geste : activeTab est accordé par le clic sur l'icône.
+ */
+function injectWidgetsIntoTab(tabId) {
+  return chrome.scripting
+    .executeScript({
+      target: { tabId },
+      func: () => typeof window.RockstarCore !== 'undefined' && window.RockstarCore.isInitialized === true
+    })
+    .then((results) => {
+      if (results && results[0] && results[0].result === true) return; // déjà actif
+      return chrome.scripting
+        .insertCSS({ target: { tabId }, files: ['content.css'] })
+        .then(() => chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => { window.__rockstarDynamicInjectionInProgress = true; }
+        }))
+        .then(() => (globalThis.ROCKSTAR_CONTENT_FILES
+          ? globalThis.ROCKSTAR_CONTENT_FILES.js
+          : ['storageService.js', 'core.js', 'voiceEngine.js',
+             'widgets/floatingBar.js', 'widgets/floatingButton.js', 'widgets/scroll.js',
+             'widgets/metronome.js', 'widgets/tuner.js', 'widgets/chordDetector.js',
+             'widgets/repertoireDrawer.js', 'widgets/youtubeController.js',
+             'widgets/singingTracker.js', 'widgets/pianoKeyboard.js',
+             'widgets/midiInput.js', 'widgets/onboarding.js'])
+          .reduce(
+            (p, file) => p.then(() => chrome.scripting.executeScript({ target: { tabId }, files: [file] })),
+            Promise.resolve()
+          ))
+        .then(() => chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => {
+            delete window.__rockstarDynamicInjectionInProgress;
+            if (window.RockstarCore && typeof window.RockstarCore.initialize === 'function') {
+              window.RockstarCore.initialize();
+            }
+          }
+        }));
+    });
 }
-chrome.runtime.onInstalled.addListener(enableOpenOnActionClick);
-enableOpenOnActionClick();
+
+chrome.action.onClicked.addListener((tab) => {
+  if (!tab || tab.id == null) return;
+  const openPanel = () => {
+    // Dans le cycle du geste utilisateur : si on attend la fin de
+    // l'injection (asynchrone), Chrome peut considérer le geste perdu.
+    chrome.sidePanel.open({ tabId: tab.id }).catch((e) =>
+      console.error('[VoxRoddy BG] sidePanel.open:', e));
+  };
+  const url = tab.url || '';
+  if (!/^https?:\/\//.test(url)) {
+    // Page non injectable (chrome://, store, PDF...) : panneau quand même.
+    openPanel();
+    return;
+  }
+  openPanel();
+  injectWidgetsIntoTab(tab.id).catch((e) =>
+    console.error('[VoxRoddy BG] injection widgets:', e));
+});
 
 // --- Synchro Drive automatique ----------------------------------------------
 // Le répertoire change (ajout, édition, suppression n'importe où dans
@@ -63,6 +123,40 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // Au démarrage de Chrome : rattraper ce qui a pu changer ailleurs.
 chrome.runtime.onStartup.addListener(scheduleAutoSync);
 
+// Au démarrage (et à l'install/mise à jour) : s'assurer que les scripts
+// dynamiques des domaines « toujours actifs » (settingsPanel → allowedDomains)
+// sont bien enregistrés. Chrome peut les perdre (ex. mise à jour de
+// l'extension) ; on répare silencieusement au lieu d'attendre un clic.
+const DYNAMIC_SCRIPT_PREFIX = 'rockstar-dynamic-';
+function ensureDynamicRegistrations() {
+  if (!chrome.scripting || !chrome.scripting.getRegisteredContentScripts) return;
+  chrome.storage.sync.get('allowedDomains', (res) => {
+    const allowed = (res && res.allowedDomains) || {};
+    chrome.scripting.getRegisteredContentScripts((registered) => {
+      const registeredIds = new Set((registered || []).map((s) => s.id));
+      Object.keys(allowed).forEach((domain) => {
+        if (!allowed[domain]) return;
+        const scriptId = DYNAMIC_SCRIPT_PREFIX + domain.replace(/[^a-z0-9]/gi, '-');
+        if (registeredIds.has(scriptId)) return;
+        chrome.scripting.registerContentScripts([{
+          id: scriptId,
+          matches: [`http://${domain}/*`, `https://${domain}/*`],
+          js: ['storageService.js', 'core.js', 'voiceEngine.js',
+               'widgets/floatingBar.js', 'widgets/floatingButton.js', 'widgets/scroll.js',
+               'widgets/metronome.js', 'widgets/tuner.js', 'widgets/chordDetector.js',
+               'widgets/repertoireDrawer.js', 'widgets/youtubeController.js',
+               'widgets/singingTracker.js', 'widgets/pianoKeyboard.js',
+               'widgets/midiInput.js', 'widgets/onboarding.js'],
+          css: ['content.css'],
+          runAt: 'document_idle'
+        }]).catch((e) => console.warn('[Rockstar BG] re-register failed for', domain, e.message));
+      });
+    });
+  });
+}
+chrome.runtime.onStartup.addListener(ensureDynamicRegistrations);
+chrome.runtime.onInstalled.addListener(ensureDynamicRegistrations);
+
 /**
  * Hub de messages. Conventions :
  *  - { type: 'rockstar:open-panel' }        → ouvrir le panneau (depuis un bouton de page)
@@ -84,11 +178,10 @@ chrome.runtime.onStartup.addListener(scheduleAutoSync);
 const panelPorts = new Map(); // tabId → port du panneau
 const portTabIds = new Map(); // port → tabId (pour relayer la largeur du panneau)
 
-// La largeur du side panel n'est pas mesurable depuis la page (le panneau
-// recouvre le contenu sans redimensionner le viewport) : le panneau se
-// mesure lui-même et relaie sa largeur, que l'on broadcast aux onglets de
-// la fenêtre. Les widgets de page (ex. pill flottant) se repositionnent
-// alors pour ne pas passer sous le panneau.
+// NB : le side panel Chrome partage la fenêtre — il RÉDUIT déjà le viewport
+// de la page (window.innerWidth rétrécit). La page peut donc se clamp
+// d'elle-même sur innerWidth ; la largeur relaée ici n'est plus nécessaire
+// aux widgets (aucun consommateur), on la broadcast pour compat éventuelle.
 function broadcastPanelWidth(windowId, width) {
   chrome.tabs.query({ windowId }, (tabs) => {
     (tabs || []).forEach((tab) => {
