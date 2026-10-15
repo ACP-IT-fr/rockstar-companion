@@ -1029,6 +1029,15 @@
       startNoteVoice(midi, getFrequency(note, oct), note, oct);
       setTimeout(() => stopNoteVoice(midi), 1200);
     },
+    // API bas niveau pour les entrées externes (clavier MIDI, etc.)
+    startNote: (midi) => {
+      const m = Math.max(21, Math.min(108, Math.round(midi)));
+      const n = midiToNote(m);
+      startNoteVoice(m, n.freq, n.note, n.octave);
+    },
+    stopNote: (midi) => {
+      stopNoteVoice(Math.max(21, Math.min(108, Math.round(midi))));
+    },
     setInstrument: (inst) => { selectedInstrument = inst; }
   };
 })();

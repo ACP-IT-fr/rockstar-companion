@@ -10,7 +10,8 @@
     "scripting",
     "storage",
     "sidePanel",
-    "identity"
+    "identity",
+    "midi"
   ],
   "oauth2": {
     "client_id": "362560146224-b34obma44aud4a1pdelfgee17b2nii8k.apps.googleusercontent.com",
@@ -45,6 +46,7 @@
         "widgets/youtubeController.js",
         "widgets/singingTracker.js",
         "widgets/pianoKeyboard.js",
+        "widgets/midiInput.js",
         "widgets/onboarding.js"
       ],
       "run_at": "document_idle"
